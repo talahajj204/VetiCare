@@ -19,6 +19,8 @@ import Prescriptions from "./pages/Prescriptions";
 import Inventory from "./pages/Inventory";
 
 import Billing from "./pages/Billing";
+import Financial from "./pages/Financial";
+
 
 import Reports from "./pages/Reports";
 import Settings from "./pages/Settings";
@@ -47,6 +49,8 @@ function App() {
         <Route path="/prescriptions" element={<Prescriptions />} />
         <Route path="/inventory" element={<Inventory />} />
         <Route path="/billing" element={<Billing />} />
+
+        <Route path="/financial" element={<Financial />} />
         <Route path="/reports" element={<Reports />} />
         <Route path="/settings" element={<Settings />} />
         

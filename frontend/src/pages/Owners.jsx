@@ -1,10 +1,14 @@
 import { useState } from "react";
 import Sidebar from "../components/Sidebar";
+
 import {
   FaEye,
   FaPen,
   FaTrash,
   FaSortAmountDown,
+  FaSearch,
+  FaTimes,
+  FaFileExport,
 } from "react-icons/fa";
 
 function Owners() {
@@ -20,6 +24,7 @@ function Owners() {
       email: "talaelhajj4@gmail.com",
       phone: "03 123 456",
       address: "Beirut",
+      status: "active",
     },
     {
       id: 2,
@@ -28,6 +33,7 @@ function Owners() {
       email: "fatima@gmail.com",
       phone: "70 456 789",
       address: "Dahye",
+      status: "active",
     },
     {
       id: 3,
@@ -36,15 +42,24 @@ function Owners() {
       email: "karen@email.com",
       phone: "71 555 222",
       address: "Tripoli",
+      status: "inactive",
     },
   ]);
 
   // =========================
-  // SEARCH + SORT
+  // SEARCH / FILTER / SORT
   // =========================
 
   const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
   const [sortBy, setSortBy] = useState("default");
+
+  // =========================
+  // PAGINATION
+  // =========================
+
+  const [itemsPerPage, setItemsPerPage] = useState(5);
+  const [currentPage, setCurrentPage] = useState(1);
 
   // =========================
   // MODALS
@@ -53,8 +68,14 @@ function Owners() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showViewModal, setShowViewModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
-
   const [selectedOwner, setSelectedOwner] = useState(null);
+
+  // =========================
+  // DELETE POPUP
+  // =========================
+
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [ownerToDelete, setOwnerToDelete] = useState(null);
 
   // =========================
   // NEW OWNER
@@ -66,22 +87,28 @@ function Owners() {
     email: "",
     phone: "",
     address: "",
+    status: "active",
   });
 
   // =========================
-  // SEARCH
+  // SEARCH + FILTER
   // =========================
 
   const filteredOwners = owners.filter((owner) => {
     const searchText = search.trim().toLowerCase();
 
-    return (
+    const matchesSearch =
       owner.firstName.toLowerCase().includes(searchText) ||
       owner.lastName.toLowerCase().includes(searchText) ||
       owner.email.toLowerCase().includes(searchText) ||
       owner.phone.toLowerCase().includes(searchText) ||
-      owner.address.toLowerCase().includes(searchText)
-    );
+      owner.address.toLowerCase().includes(searchText) ||
+      owner.status.toLowerCase().includes(searchText);
+
+    const matchesStatus =
+      statusFilter === "all" || owner.status === statusFilter;
+
+    return matchesSearch && matchesStatus;
   });
 
   // =========================
@@ -92,13 +119,8 @@ function Owners() {
     const nameA = `${a.firstName} ${a.lastName}`.toLowerCase();
     const nameB = `${b.firstName} ${b.lastName}`.toLowerCase();
 
-    if (sortBy === "name-asc") {
-      return nameA.localeCompare(nameB);
-    }
-
-    if (sortBy === "name-desc") {
-      return nameB.localeCompare(nameA);
-    }
+    if (sortBy === "name-asc") return nameA.localeCompare(nameB);
+    if (sortBy === "name-desc") return nameB.localeCompare(nameA);
 
     if (sortBy === "address-asc") {
       return a.address.localeCompare(b.address);
@@ -108,11 +130,97 @@ function Owners() {
       return b.address.localeCompare(a.address);
     }
 
+    if (sortBy === "active") {
+      return a.status === "active" ? -1 : 1;
+    }
+
+    if (sortBy === "inactive") {
+      return a.status === "inactive" ? -1 : 1;
+    }
+
     return a.id - b.id;
   });
 
   // =========================
-  // ADD OWNER INPUT CHANGE
+  // PAGINATION CALCULATIONS
+  // =========================
+
+  const totalPages = Math.max(
+    1,
+    Math.ceil(sortedOwners.length / itemsPerPage)
+  );
+
+  const safeCurrentPage = Math.min(currentPage, totalPages);
+
+  const indexOfLastOwner = safeCurrentPage * itemsPerPage;
+  const indexOfFirstOwner = indexOfLastOwner - itemsPerPage;
+
+  const currentOwners = sortedOwners.slice(
+    indexOfFirstOwner,
+    indexOfLastOwner
+  );
+
+  // =========================
+  // CLEAR FILTERS
+  // =========================
+
+  const handleClearFilters = () => {
+    setSearch("");
+    setStatusFilter("all");
+    setSortBy("default");
+    setCurrentPage(1);
+  };
+
+  // =========================
+  // EXPORT
+  // =========================
+
+  const handleExport = () => {
+    const headers = [
+      "First Name",
+      "Last Name",
+      "Email",
+      "Phone",
+      "Address",
+      "Status",
+    ];
+
+    const rows = sortedOwners.map((owner) => [
+      owner.firstName,
+      owner.lastName,
+      owner.email,
+      owner.phone,
+      owner.address,
+      owner.status,
+    ]);
+
+    const escapeCSV = (value) =>
+      `"${String(value ?? "").replace(/"/g, '""')}"`;
+
+    const csvContent = [
+      headers.map(escapeCSV).join(","),
+      ...rows.map((row) => row.map(escapeCSV).join(",")),
+    ].join("\n");
+
+    const blob = new Blob(["\uFEFF" + csvContent], {
+      type: "text/csv;charset=utf-8;",
+    });
+
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+
+    link.href = url;
+    link.download = "owners-data.csv";
+
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    URL.revokeObjectURL(url);
+  };
+
+  // =========================
+  // ADD OWNER
   // =========================
 
   const handleNewOwnerChange = (e) => {
@@ -124,16 +232,13 @@ function Owners() {
     });
   };
 
-  // =========================
-  // ADD OWNER
-  // =========================
-
   const handleAddOwner = (e) => {
     e.preventDefault();
 
     const owner = {
       id: Date.now(),
       ...newOwner,
+      status: "active",
     };
 
     setOwners([...owners, owner]);
@@ -144,13 +249,14 @@ function Owners() {
       email: "",
       phone: "",
       address: "",
+      status: "active",
     });
 
     setShowAddModal(false);
   };
 
   // =========================
-  // VIEW OWNER
+  // VIEW / EDIT
   // =========================
 
   const handleViewOwner = (owner) => {
@@ -158,18 +264,10 @@ function Owners() {
     setShowViewModal(true);
   };
 
-  // =========================
-  // OPEN EDIT
-  // =========================
-
   const handleOpenEdit = (owner) => {
     setSelectedOwner({ ...owner });
     setShowEditModal(true);
   };
-
-  // =========================
-  // EDIT CHANGE
-  // =========================
 
   const handleEditChange = (e) => {
     const { name, value } = e.target;
@@ -180,18 +278,12 @@ function Owners() {
     });
   };
 
-  // =========================
-  // UPDATE OWNER
-  // =========================
-
   const handleUpdateOwner = (e) => {
     e.preventDefault();
 
     setOwners(
       owners.map((owner) =>
-        owner.id === selectedOwner.id
-          ? selectedOwner
-          : owner
+        owner.id === selectedOwner.id ? selectedOwner : owner
       )
     );
 
@@ -200,230 +292,564 @@ function Owners() {
   };
 
   // =========================
-  // DELETE OWNER
+  // STATUS
   // =========================
 
-  const handleDelete = (id) => {
-    const confirmDelete = window.confirm(
-      "Are you sure you want to delete this owner?"
+  const handleToggleStatus = (id) => {
+    setOwners(
+      owners.map((owner) =>
+        owner.id === id
+          ? {
+              ...owner,
+              status:
+                owner.status === "active" ? "inactive" : "active",
+            }
+          : owner
+      )
+    );
+  };
+
+  // =========================
+  // DELETE
+  // =========================
+
+  const handleDelete = (owner) => {
+    if (owner.status === "active") {
+      alert("You must set this owner as Inactive before deleting.");
+      return;
+    }
+
+    setOwnerToDelete(owner);
+    setShowDeleteModal(true);
+  };
+
+  const confirmDelete = () => {
+    if (!ownerToDelete) return;
+
+    setOwners(
+      owners.filter((owner) => owner.id !== ownerToDelete.id)
     );
 
-    if (confirmDelete) {
-      setOwners(
-        owners.filter((owner) => owner.id !== id)
-      );
+    setShowDeleteModal(false);
+    setOwnerToDelete(null);
+
+    if (currentOwners.length === 1 && safeCurrentPage > 1) {
+      setCurrentPage(safeCurrentPage - 1);
     }
+  };
+
+  const cancelDelete = () => {
+    setShowDeleteModal(false);
+    setOwnerToDelete(null);
   };
 
   return (
     <div className="dashboard-layout">
-
       <Sidebar />
 
       <main className="dashboard-main">
-
-        {/* =========================
-            HEADER
-        ========================= */}
+        {/* HEADER */}
 
         <div className="page-header">
-
           <div>
             <h1>Pet Owners</h1>
             <p>Manage pet owner information</p>
           </div>
-
         </div>
 
-        {/* =========================
-            SEARCH + SORT + ADD
-        ========================= */}
+        {/* TOOLBAR */}
 
-        <div className="inventory-toolbar">
-
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "10px",
+            width: "100%",
+            marginBottom: "22px",
+            flexWrap: "wrap",
+          }}
+        >
           {/* SEARCH */}
 
-          <div className="search-container inventory-search">
+          <div
+            style={{
+              position: "relative",
+              flex: "1 1 280px",
+              minWidth: "240px",
+            }}
+          >
+            <FaSearch
+              style={{
+                position: "absolute",
+                left: "15px",
+                top: "50%",
+                transform: "translateY(-50%)",
+                color: "#7f9997",
+                fontSize: "15px",
+                pointerEvents: "none",
+                zIndex: 2,
+              }}
+            />
+
             <input
               type="text"
               placeholder="Search owners..."
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setCurrentPage(1);
+              }}
+              style={{
+                width: "100%",
+                height: "44px",
+                padding: "0 42px",
+                border: "1px solid #d5e5e3",
+                borderRadius: "8px",
+                outline: "none",
+                boxSizing: "border-box",
+                background: "#fff",
+              }}
             />
-          </div>
 
-          {/* ACTIONS */}
-
-          <div className="inventory-toolbar-actions">
-
-            {/* SORT */}
-
-            <div className="sort-container">
-
-              <FaSortAmountDown className="sort-icon" />
-
-              <select
-                className="sort-select"
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
+            {(search ||
+              statusFilter !== "all" ||
+              sortBy !== "default") && (
+              <button
+                type="button"
+                onClick={handleClearFilters}
+                title="Clear filters"
+                style={{
+                  position: "absolute",
+                  right: "8px",
+                  top: "50%",
+                  transform: "translateY(-50%)",
+                  width: "28px",
+                  minWidth: "28px",
+                  height: "28px",
+                  padding: 0,
+                  margin: 0,
+                  border: "none",
+                  borderRadius: "50%",
+                  background: "transparent",
+                  color: "#78908e",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
               >
-                <option value="default">
-                  Sort By
-                </option>
-
-                <option value="name-asc">
-                  Name A-Z
-                </option>
-
-                <option value="name-desc">
-                  Name Z-A
-                </option>
-
-                <option value="address-asc">
-                  Address A-Z
-                </option>
-
-                <option value="address-desc">
-                  Address Z-A
-                </option>
-
-              </select>
-
-            </div>
-
-            {/* ADD OWNER */}
-
-            <button
-              type="button"
-              className="add-button"
-              onClick={() => setShowAddModal(true)}
-            >
-              + Add Owner
-            </button>
-
+                <FaTimes />
+              </button>
+            )}
           </div>
 
+          {/* STATUS */}
+
+          <select
+            value={statusFilter}
+            onChange={(e) => {
+              setStatusFilter(e.target.value);
+              setCurrentPage(1);
+            }}
+            style={{
+              width: "145px",
+              height: "44px",
+              padding: "0 12px",
+              border: "1px solid #d5e5e3",
+              borderRadius: "8px",
+              background: "#fff",
+              outline: "none",
+              cursor: "pointer",
+            }}
+          >
+            <option value="all">All Status</option>
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+          </select>
+
+          {/* SORT */}
+
+          <div
+            style={{
+              position: "relative",
+              width: "180px",
+            }}
+          >
+            <FaSortAmountDown
+              style={{
+                position: "absolute",
+                left: "13px",
+                top: "50%",
+                transform: "translateY(-50%)",
+                color: "#319c97",
+                pointerEvents: "none",
+              }}
+            />
+
+            <select
+              value={sortBy}
+              onChange={(e) => {
+                setSortBy(e.target.value);
+                setCurrentPage(1);
+              }}
+              style={{
+                width: "100%",
+                height: "44px",
+                padding: "0 12px 0 38px",
+                border: "1px solid #d5e5e3",
+                borderRadius: "8px",
+                background: "#fff",
+                outline: "none",
+                cursor: "pointer",
+              }}
+            >
+              <option value="default">Sort By</option>
+              <option value="name-asc">Name A-Z</option>
+              <option value="name-desc">Name Z-A</option>
+              <option value="address-asc">Address A-Z</option>
+              <option value="address-desc">Address Z-A</option>
+              <option value="active">Active First</option>
+              <option value="inactive">Inactive First</option>
+            </select>
+          </div>
+
+          {/* EXPORT */}
+
+          <button
+            type="button"
+            onClick={handleExport}
+            style={{
+              width: "auto",
+              minWidth: "110px",
+              height: "44px",
+              padding: "0 16px",
+              border: "none",
+              borderRadius: "8px",
+              background: "#55b7b3",
+              color: "#fff",
+              cursor: "pointer",
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "7px",
+              fontWeight: "600",
+              whiteSpace: "nowrap",
+            }}
+          >
+            <FaFileExport />
+            Export
+          </button>
+
+          {/* ADD */}
+
+          <button
+            type="button"
+            onClick={() => setShowAddModal(true)}
+            style={{
+              width: "auto",
+              minWidth: "120px",
+              height: "44px",
+              padding: "0 16px",
+              border: "none",
+              borderRadius: "8px",
+              background: "#55b7b3",
+              color: "#fff",
+              cursor: "pointer",
+              fontWeight: "600",
+              whiteSpace: "nowrap",
+            }}
+          >
+            + Add Owner
+          </button>
         </div>
 
-        {/* =========================
-            TABLE
-        ========================= */}
+        {/* TABLE */}
 
         <div className="owners-table-container">
-
           <table className="owners-table">
-
             <thead>
               <tr>
                 <th>Name</th>
                 <th>Email</th>
                 <th>Phone</th>
                 <th>Address</th>
+                <th>Status</th>
                 <th>Actions</th>
               </tr>
             </thead>
 
             <tbody>
-
-              {sortedOwners.length > 0 ? (
-
-                sortedOwners.map((owner) => (
-
+              {currentOwners.length > 0 ? (
+                currentOwners.map((owner) => (
                   <tr key={owner.id}>
-
                     <td>
                       {owner.firstName} {owner.lastName}
                     </td>
 
                     <td>{owner.email}</td>
-
                     <td>{owner.phone}</td>
-
                     <td>{owner.address}</td>
 
                     <td>
+                      <button
+                        type="button"
+                        className={`owner-status-button ${
+                          owner.status === "active"
+                            ? "owner-status-active"
+                            : "owner-status-inactive"
+                        }`}
+                        onClick={() => handleToggleStatus(owner.id)}
+                      >
+                        <span className="status-dot"></span>
+                        {owner.status === "active"
+                          ? "Active"
+                          : "Inactive"}
+                      </button>
+                    </td>
 
+                    <td>
                       <div className="table-actions">
-
-                        {/* VIEW */}
-
                         <button
                           type="button"
                           className="view-button icon-button"
                           onClick={() => handleViewOwner(owner)}
                           title="View"
-                          aria-label="View owner"
                         >
                           <FaEye />
                         </button>
-
-                        {/* EDIT */}
 
                         <button
                           type="button"
                           className="edit-button icon-button"
                           onClick={() => handleOpenEdit(owner)}
                           title="Edit"
-                          aria-label="Edit owner"
                         >
                           <FaPen />
                         </button>
 
-                        {/* DELETE */}
-
-                        <button
-                          type="button"
-                          className="delete-button icon-button"
-                          onClick={() => handleDelete(owner.id)}
-                          title="Delete"
-                          aria-label="Delete owner"
-                        >
-                          <FaTrash />
-                        </button>
-
+                        {owner.status === "inactive" && (
+                          <button
+                            type="button"
+                            className="delete-button icon-button"
+                            onClick={() => handleDelete(owner)}
+                            title="Delete"
+                          >
+                            <FaTrash />
+                          </button>
+                        )}
                       </div>
-
                     </td>
-
                   </tr>
-
                 ))
-
               ) : (
-
                 <tr>
-
-                  <td
-                    colSpan="5"
-                    className="no-results"
-                  >
+                  <td colSpan="6" className="no-results">
                     No owners found
                   </td>
-
                 </tr>
-
               )}
-
             </tbody>
-
           </table>
-
         </div>
 
+        {/* =========================
+            PAGINATION
+        ========================= */}
+
+        <div
+          style={{
+            width: "100%",
+            marginTop: "20px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: "20px",
+          }}
+        >
+          {/* LEFT */}
+
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "10px",
+              whiteSpace: "nowrap",
+            }}
+          >
+            <span
+              style={{
+                fontSize: "14px",
+                color: "#52605f",
+              }}
+            >
+              Rows per page:
+            </span>
+
+            <select
+              value={itemsPerPage}
+              onChange={(e) => {
+                setItemsPerPage(Number(e.target.value));
+                setCurrentPage(1);
+              }}
+              style={{
+                width: "75px",
+                height: "36px",
+                padding: "0 10px",
+                border: "1px solid #d5e5e3",
+                borderRadius: "7px",
+                background: "#fff",
+                cursor: "pointer",
+                outline: "none",
+              }}
+            >
+              <option value={5}>5</option>
+              <option value={10}>10</option>
+              <option value={20}>20</option>
+              <option value={50}>50</option>
+            </select>
+          </div>
+
+          {/* RIGHT - SMALL PAGINATION */}
+
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "flex-end",
+              gap: "6px",
+              whiteSpace: "nowrap",
+            }}
+          >
+            {/* PREVIOUS < */}
+
+            <button
+              type="button"
+              disabled={safeCurrentPage === 1}
+              onClick={() =>
+                setCurrentPage((page) => Math.max(page - 1, 1))
+              }
+              style={{
+                width: "34px",
+                minWidth: "34px",
+                height: "34px",
+                padding: 0,
+                margin: 0,
+                border: "1px solid #d5e5e3",
+                borderRadius: "7px",
+                background:
+                  safeCurrentPage === 1 ? "#edf3f2" : "#fff",
+                color:
+                  safeCurrentPage === 1
+                    ? "#9aa8a7"
+                    : "#52605f",
+                cursor:
+                  safeCurrentPage === 1
+                    ? "not-allowed"
+                    : "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: "18px",
+                fontWeight: "600",
+                lineHeight: 1,
+              }}
+            >
+              &lt;
+            </button>
+
+            {/* PAGE NUMBERS */}
+
+            {Array.from(
+              { length: totalPages },
+              (_, index) => index + 1
+            ).map((page) => (
+              <button
+                key={page}
+                type="button"
+                onClick={() => setCurrentPage(page)}
+                style={{
+                  width: "34px",
+                  minWidth: "34px",
+                  height: "34px",
+                  padding: 0,
+                  margin: 0,
+                  border:
+                    page === safeCurrentPage
+                      ? "1px solid #419c99"
+                      : "1px solid #d5e5e3",
+                  borderRadius: "7px",
+                  background:
+                    page === safeCurrentPage
+                      ? "#419c99"
+                      : "#fff",
+                  color:
+                    page === safeCurrentPage
+                      ? "#fff"
+                      : "#52605f",
+                  cursor: "pointer",
+                  fontSize: "13px",
+                  fontWeight: "600",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                {page}
+              </button>
+            ))}
+
+            {/* NEXT > */}
+
+            <button
+              type="button"
+              disabled={safeCurrentPage === totalPages}
+              onClick={() =>
+                setCurrentPage((page) =>
+                  Math.min(page + 1, totalPages)
+                )
+              }
+              style={{
+                width: "34px",
+                minWidth: "34px",
+                height: "34px",
+                padding: 0,
+                margin: 0,
+                border: "1px solid #d5e5e3",
+                borderRadius: "7px",
+                background:
+                  safeCurrentPage === totalPages
+                    ? "#edf3f2"
+                    : "#fff",
+                color:
+                  safeCurrentPage === totalPages
+                    ? "#9aa8a7"
+                    : "#52605f",
+                cursor:
+                  safeCurrentPage === totalPages
+                    ? "not-allowed"
+                    : "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: "18px",
+                fontWeight: "600",
+                lineHeight: 1,
+              }}
+            >
+              &gt;
+            </button>
+          </div>
+        </div>
       </main>
 
-      {/* =========================================
+      {/* =========================
           ADD OWNER MODAL
-      ========================================= */}
+      ========================= */}
 
       {showAddModal && (
-
         <div className="modal-overlay">
-
           <div className="modal-container">
-
             <div className="modal-header">
-
               <div>
                 <h2>Add Owner</h2>
                 <p>Enter owner information</p>
@@ -436,17 +862,11 @@ function Owners() {
               >
                 ×
               </button>
-
             </div>
 
             <form onSubmit={handleAddOwner}>
-
-              {/* FIRST + LAST NAME */}
-
               <div className="form-row">
-
                 <div className="form-field">
-
                   <label>First Name</label>
 
                   <input
@@ -457,11 +877,9 @@ function Owners() {
                     onChange={handleNewOwnerChange}
                     required
                   />
-
                 </div>
 
                 <div className="form-field">
-
                   <label>Last Name</label>
 
                   <input
@@ -472,17 +890,11 @@ function Owners() {
                     onChange={handleNewOwnerChange}
                     required
                   />
-
                 </div>
-
               </div>
 
-              {/* EMAIL + PHONE */}
-
               <div className="form-row">
-
                 <div className="form-field">
-
                   <label>Email</label>
 
                   <input
@@ -493,11 +905,9 @@ function Owners() {
                     onChange={handleNewOwnerChange}
                     required
                   />
-
                 </div>
 
                 <div className="form-field">
-
                   <label>Phone</label>
 
                   <input
@@ -508,15 +918,10 @@ function Owners() {
                     onChange={handleNewOwnerChange}
                     required
                   />
-
                 </div>
-
               </div>
 
-              {/* ADDRESS */}
-
               <div className="form-field">
-
                 <label>Address</label>
 
                 <input
@@ -526,13 +931,9 @@ function Owners() {
                   value={newOwner.address}
                   onChange={handleNewOwnerChange}
                 />
-
               </div>
 
-              {/* ACTIONS */}
-
               <div className="form-actions">
-
                 <button
                   type="button"
                   className="modal-cancel-button"
@@ -541,35 +942,23 @@ function Owners() {
                   Cancel
                 </button>
 
-                <button
-                  type="submit"
-                  className="save-button"
-                >
+                <button type="submit" className="save-button">
                   Add Owner
                 </button>
-
               </div>
-
             </form>
-
           </div>
-
         </div>
-
       )}
 
-      {/* =========================================
+      {/* =========================
           VIEW OWNER MODAL
-      ========================================= */}
+      ========================= */}
 
       {showViewModal && selectedOwner && (
-
         <div className="modal-overlay">
-
           <div className="modal-container">
-
             <div className="modal-header">
-
               <div>
                 <h2>Owner Details</h2>
                 <p>View owner information</p>
@@ -585,61 +974,50 @@ function Owners() {
               >
                 ×
               </button>
-
             </div>
 
             <div className="detail-row">
-
               <span>First Name</span>
-
-              <strong>
-                {selectedOwner.firstName}
-              </strong>
-
+              <strong>{selectedOwner.firstName}</strong>
             </div>
 
             <div className="detail-row">
-
               <span>Last Name</span>
-
-              <strong>
-                {selectedOwner.lastName}
-              </strong>
-
+              <strong>{selectedOwner.lastName}</strong>
             </div>
 
             <div className="detail-row">
-
               <span>Email</span>
-
-              <strong>
-                {selectedOwner.email}
-              </strong>
-
+              <strong>{selectedOwner.email}</strong>
             </div>
 
             <div className="detail-row">
-
               <span>Phone</span>
-
-              <strong>
-                {selectedOwner.phone}
-              </strong>
-
+              <strong>{selectedOwner.phone}</strong>
             </div>
 
             <div className="detail-row">
-
               <span>Address</span>
+              <strong>{selectedOwner.address || "—"}</strong>
+            </div>
 
-              <strong>
-                {selectedOwner.address || "—"}
+            <div className="detail-row">
+              <span>Status</span>
+
+              <strong
+                className={
+                  selectedOwner.status === "active"
+                    ? "status-text-active"
+                    : "status-text-inactive"
+                }
+              >
+                {selectedOwner.status === "active"
+                  ? "Active"
+                  : "Inactive"}
               </strong>
-
             </div>
 
             <div className="form-actions">
-
               <button
                 type="button"
                 className="modal-cancel-button"
@@ -659,35 +1037,24 @@ function Owners() {
                   setShowEditModal(true);
                 }}
               >
-
                 <FaPen />
-
                 <span style={{ marginLeft: "7px" }}>
                   Edit Owner
                 </span>
-
               </button>
-
             </div>
-
           </div>
-
         </div>
-
       )}
 
-      {/* =========================================
+      {/* =========================
           EDIT OWNER MODAL
-      ========================================= */}
+      ========================= */}
 
       {showEditModal && selectedOwner && (
-
         <div className="modal-overlay">
-
           <div className="modal-container">
-
             <div className="modal-header">
-
               <div>
                 <h2>Edit Owner</h2>
                 <p>Update owner information</p>
@@ -703,17 +1070,11 @@ function Owners() {
               >
                 ×
               </button>
-
             </div>
 
             <form onSubmit={handleUpdateOwner}>
-
-              {/* FIRST + LAST NAME */}
-
               <div className="form-row">
-
                 <div className="form-field">
-
                   <label>First Name</label>
 
                   <input
@@ -723,11 +1084,9 @@ function Owners() {
                     onChange={handleEditChange}
                     required
                   />
-
                 </div>
 
                 <div className="form-field">
-
                   <label>Last Name</label>
 
                   <input
@@ -737,17 +1096,11 @@ function Owners() {
                     onChange={handleEditChange}
                     required
                   />
-
                 </div>
-
               </div>
 
-              {/* EMAIL + PHONE */}
-
               <div className="form-row">
-
                 <div className="form-field">
-
                   <label>Email</label>
 
                   <input
@@ -757,11 +1110,9 @@ function Owners() {
                     onChange={handleEditChange}
                     required
                   />
-
                 </div>
 
                 <div className="form-field">
-
                   <label>Phone</label>
 
                   <input
@@ -771,15 +1122,10 @@ function Owners() {
                     onChange={handleEditChange}
                     required
                   />
-
                 </div>
-
               </div>
 
-              {/* ADDRESS */}
-
               <div className="form-field">
-
                 <label>Address</label>
 
                 <input
@@ -788,13 +1134,22 @@ function Owners() {
                   value={selectedOwner.address}
                   onChange={handleEditChange}
                 />
-
               </div>
 
-              {/* ACTIONS */}
+              <div className="form-field">
+                <label>Owner Status</label>
+
+                <select
+                  name="status"
+                  value={selectedOwner.status}
+                  onChange={handleEditChange}
+                >
+                  <option value="active">Active</option>
+                  <option value="inactive">Inactive</option>
+                </select>
+              </div>
 
               <div className="form-actions">
-
                 <button
                   type="button"
                   className="modal-cancel-button"
@@ -806,23 +1161,101 @@ function Owners() {
                   Cancel
                 </button>
 
-                <button
-                  type="submit"
-                  className="save-button"
-                >
+                <button type="submit" className="save-button">
                   Save Changes
                 </button>
-
               </div>
-
             </form>
-
           </div>
-
         </div>
-
       )}
 
+      {/* =========================
+          DELETE POPUP
+      ========================= */}
+
+      {showDeleteModal && ownerToDelete && (
+        <div className="modal-overlay">
+          <div
+            className="modal-container"
+            style={{
+              maxWidth: "420px",
+            }}
+          >
+            <div className="modal-header">
+              <div>
+                <h2>Delete Owner</h2>
+                <p>This action cannot be undone</p>
+              </div>
+
+              <button
+                type="button"
+                className="modal-close"
+                onClick={cancelDelete}
+              >
+                ×
+              </button>
+            </div>
+
+            <div
+              style={{
+                padding: "10px 0 5px",
+              }}
+            >
+              <p
+                style={{
+                  fontSize: "16px",
+                  color: "#333",
+                  marginBottom: "8px",
+                }}
+              >
+                Are you sure you want to delete this?
+              </p>
+
+              <p
+                style={{
+                  fontSize: "14px",
+                  color: "#718181",
+                }}
+              >
+                {ownerToDelete.firstName} {ownerToDelete.lastName}{" "}
+                will be permanently deleted.
+              </p>
+            </div>
+
+            <div className="form-actions">
+              <button
+                type="button"
+                className="modal-cancel-button"
+                onClick={cancelDelete}
+              >
+                Cancel
+              </button>
+
+              <button
+                type="button"
+                onClick={confirmDelete}
+                style={{
+                  width: "auto",
+                  padding: "10px 18px",
+                  border: "none",
+                  borderRadius: "8px",
+                  background: "#dc5555",
+                  color: "#fff",
+                  cursor: "pointer",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "7px",
+                }}
+              >
+                <FaTrash />
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

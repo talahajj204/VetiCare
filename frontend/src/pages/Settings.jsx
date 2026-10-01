@@ -44,9 +44,7 @@ function Settings() {
   ]);
 
   const [newStatus, setNewStatus] = useState("");
-
-  const [showStatusModal, setShowStatusModal] =
-    useState(false);
+  const [showStatusModal, setShowStatusModal] = useState(false);
 
   // =========================================
   // SAVED MESSAGE
@@ -55,52 +53,35 @@ function Settings() {
   const [saved, setSaved] = useState(false);
 
   // =========================================
-  // LOAD SETTINGS
+  // LOAD SAVED SETTINGS
   // =========================================
 
   useEffect(() => {
-    const savedSettings =
-      localStorage.getItem("clinicSettings");
+    const savedSettings = localStorage.getItem("clinicSettings");
 
     if (!savedSettings) return;
 
     try {
       const settings = JSON.parse(savedSettings);
 
-      setClinicName(
-        settings.clinicName || "Vet Clinic"
-      );
-
+      setClinicName(settings.clinicName || "Vet Clinic");
       setEmail(settings.email || "");
       setPhone(settings.phone || "");
       setAddress(settings.address || "");
-
-      setOpeningTime(
-        settings.openingTime || ""
-      );
-
-      setClosingTime(
-        settings.closingTime || ""
-      );
-
+      setOpeningTime(settings.openingTime || "");
+      setClosingTime(settings.closingTime || "");
       setLogo(settings.logo || null);
 
-      if (
-        Array.isArray(settings.statuses) &&
-        settings.statuses.length > 0
-      ) {
+      if (Array.isArray(settings.statuses)) {
         setStatuses(settings.statuses);
       }
     } catch (error) {
-      console.error(
-        "Could not load settings:",
-        error
-      );
+      console.error("Could not load settings:", error);
     }
   }, []);
 
   // =========================================
-  // LOGO
+  // LOGO FILE
   // =========================================
 
   const handleLogoFile = (file) => {
@@ -122,19 +103,20 @@ function Settings() {
 
   const handleLogoChange = (e) => {
     const file = e.target.files?.[0];
-
     handleLogoFile(file);
   };
 
+  // =========================================
+  // DRAG & DROP
+  // =========================================
+
   const handleDragOver = (e) => {
     e.preventDefault();
-
     setIsDragging(true);
   };
 
   const handleDragLeave = (e) => {
     e.preventDefault();
-
     setIsDragging(false);
   };
 
@@ -147,6 +129,10 @@ function Settings() {
 
     handleLogoFile(file);
   };
+
+  // =========================================
+  // REMOVE LOGO
+  // =========================================
 
   const handleRemoveLogo = (e) => {
     e.stopPropagation();
@@ -169,8 +155,7 @@ function Settings() {
 
     const exists = statuses.some(
       (item) =>
-        item.toLowerCase() ===
-        status.toLowerCase()
+        item.toLowerCase() === status.toLowerCase()
     );
 
     if (exists) {
@@ -193,7 +178,6 @@ function Settings() {
   const handleStatusKeyDown = (e) => {
     if (e.key === "Enter") {
       e.preventDefault();
-
       handleAddStatus();
     }
   };
@@ -202,13 +186,10 @@ function Settings() {
   // DELETE STATUS
   // =========================================
 
-  const handleDeleteStatus = (
-    statusToDelete
-  ) => {
+  const handleDeleteStatus = (statusToDelete) => {
     setStatuses((previousStatuses) =>
       previousStatuses.filter(
-        (status) =>
-          status !== statusToDelete
+        (status) => status !== statusToDelete
       )
     );
   };
@@ -251,11 +232,7 @@ function Settings() {
       setSaved(false);
     }, 2500);
 
-    // Backend later
-    console.log(
-      "Settings saved:",
-      settings
-    );
+    console.log("Settings saved:", settings);
   };
 
   return (
@@ -270,19 +247,14 @@ function Settings() {
         ===================================== */}
 
         <div className="page-header">
-
           <div>
             <h1>Settings</h1>
-
-            <p>
-              Manage clinic information and settings
-            </p>
+            <p>Manage clinic information and settings</p>
           </div>
-
         </div>
 
         {/* =====================================
-            SETTINGS
+            SETTINGS FORM
         ===================================== */}
 
         <form
@@ -291,132 +263,32 @@ function Settings() {
         >
 
           {/* =================================
-              CLINIC LOGO
-          ================================= */}
-
-          <div className="settings-card">
-
-            <div className="settings-card-header">
-              <h2>Clinic Logo</h2>
-
-              <p>
-                Upload the logo that will represent
-                your clinic
-              </p>
-            </div>
-
-            <div
-              className={`logo-upload-box ${
-                isDragging ? "dragging" : ""
-              }`}
-              onDragOver={handleDragOver}
-              onDragLeave={handleDragLeave}
-              onDrop={handleDrop}
-              onClick={() =>
-                fileInputRef.current?.click()
-              }
-            >
-
-              {logo ? (
-
-                <div className="logo-preview">
-
-                  <img
-                    src={logo}
-                    alt="Clinic Logo"
-                  />
-
-                  <p>
-                    Click or drag a new logo
-                    to replace it
-                  </p>
-
-                </div>
-
-              ) : (
-
-                <div className="logo-upload-content">
-
-                  <FaCloudUploadAlt />
-
-                  <h3>
-                    Upload Clinic Logo
-                  </h3>
-
-                  <p>
-                    Drag & drop your logo here
-                  </p>
-
-                  <span>
-                    or click to browse
-                  </span>
-
-                </div>
-
-              )}
-
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                onChange={handleLogoChange}
-                hidden
-              />
-
-            </div>
-
-            {logo && (
-
-              <button
-                type="button"
-                className="remove-logo-button"
-                onClick={handleRemoveLogo}
-              >
-                <FaTrash />
-
-                Remove Logo
-              </button>
-
-            )}
-
-          </div>
-
-          {/* =================================
               CLINIC INFORMATION
           ================================= */}
 
           <div className="settings-card">
 
             <div className="settings-card-header">
-
               <h2>Clinic Information</h2>
 
               <p>
-                Update the main information
-                for your clinic
+                Update your clinic information and logo
               </p>
-
             </div>
 
             {/* CLINIC NAME */}
 
             <div className="form-field">
-
-              <label>
-                Clinic Name
-              </label>
+              <label>Clinic Name</label>
 
               <input
                 type="text"
                 placeholder="Enter clinic name"
                 value={clinicName}
                 onChange={(e) =>
-                  setClinicName(
-                    e.target.value
-                  )
+                  setClinicName(e.target.value)
                 }
               />
-
             </div>
 
             {/* EMAIL + PHONE */}
@@ -424,7 +296,6 @@ function Settings() {
             <div className="form-row">
 
               <div className="form-field">
-
                 <label>Email</label>
 
                 <input
@@ -432,39 +303,90 @@ function Settings() {
                   placeholder="Enter clinic email"
                   value={email}
                   onChange={(e) =>
-                    setEmail(
-                      e.target.value
-                    )
+                    setEmail(e.target.value)
                   }
                 />
-
               </div>
 
               <div className="form-field">
-
-                <label>
-                  Phone Number
-                </label>
+                <label>Phone Number</label>
 
                 <input
                   type="tel"
                   placeholder="Enter phone number"
                   value={phone}
                   onChange={(e) =>
-                    setPhone(
-                      e.target.value
-                    )
+                    setPhone(e.target.value)
                   }
                 />
-
               </div>
 
             </div>
 
+            {/* =================================
+                SMALL CLINIC LOGO
+            ================================= */}
+
+          {/* =================================
+    CLINIC LOGO
+================================= */}
+
+<div className="form-field">
+  <label>Clinic Logo</label>
+
+  <div className="clinic-logo-wrapper">
+
+    <div
+      className={`clinic-logo-upload ${
+        isDragging ? "dragging" : ""
+      }`}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+      onClick={() => fileInputRef.current?.click()}
+    >
+      {logo ? (
+        <img
+          src={logo}
+          alt="Clinic Logo"
+          className="clinic-logo-preview"
+        />
+      ) : (
+        <>
+          <FaCloudUploadAlt className="clinic-logo-upload-icon" />
+
+          <span>Upload Logo</span>
+
+          <small>PNG, JPG or JPEG</small>
+        </>
+      )}
+    </div>
+
+    {logo && (
+      <button
+        type="button"
+        className="clinic-logo-remove"
+        onClick={handleRemoveLogo}
+        title="Remove Logo"
+      >
+        <FaTrash />
+      </button>
+    )}
+
+    <input
+      ref={fileInputRef}
+      type="file"
+      accept="image/png, image/jpeg, image/jpg"
+      onChange={handleLogoChange}
+      hidden
+    />
+
+  </div>
+</div>
+
             {/* ADDRESS */}
 
             <div className="form-field">
-
               <label>Address</label>
 
               <input
@@ -472,52 +394,37 @@ function Settings() {
                 placeholder="Enter clinic address"
                 value={address}
                 onChange={(e) =>
-                  setAddress(
-                    e.target.value
-                  )
+                  setAddress(e.target.value)
                 }
               />
-
             </div>
 
-            {/* OPENING + CLOSING */}
+            {/* OPENING + CLOSING TIME */}
 
             <div className="form-row">
 
               <div className="form-field">
-
-                <label>
-                  Opening Time
-                </label>
+                <label>Opening Time</label>
 
                 <input
                   type="time"
                   value={openingTime}
                   onChange={(e) =>
-                    setOpeningTime(
-                      e.target.value
-                    )
+                    setOpeningTime(e.target.value)
                   }
                 />
-
               </div>
 
               <div className="form-field">
-
-                <label>
-                  Closing Time
-                </label>
+                <label>Closing Time</label>
 
                 <input
                   type="time"
                   value={closingTime}
                   onChange={(e) =>
-                    setClosingTime(
-                      e.target.value
-                    )
+                    setClosingTime(e.target.value)
                   }
                 />
-
               </div>
 
             </div>
@@ -531,17 +438,15 @@ function Settings() {
           <div className="settings-card">
 
             <div className="settings-card-header">
-
               <h2>System Options</h2>
 
               <p>
-                Customize options available
-                throughout the system
+                Customize options available throughout
+                the system
               </p>
-
             </div>
 
-            {/* STATUS BUTTON */}
+            {/* STATUS OPTIONS BUTTON */}
 
             <button
               type="button"
@@ -558,9 +463,7 @@ function Settings() {
                 </div>
 
                 <div>
-                  <strong>
-                    Status Options
-                  </strong>
+                  <strong>Status Options</strong>
 
                   <span>
                     Manage available statuses
@@ -584,15 +487,10 @@ function Settings() {
           <div className="settings-save-section">
 
             {saved && (
-
               <div className="settings-saved-message">
-
                 <FaCheckCircle />
-
                 Settings saved successfully
-
               </div>
-
             )}
 
             <button
@@ -616,9 +514,7 @@ function Settings() {
 
         <div
           className="modal-overlay"
-          onMouseDown={
-            handleCloseStatusModal
-          }
+          onMouseDown={handleCloseStatusModal}
         >
 
           <div
@@ -633,22 +529,18 @@ function Settings() {
             <div className="modal-header">
 
               <div>
-                <h2>
-                  Status Options
-                </h2>
+                <h2>Status Options</h2>
 
                 <p>
-                  Add or remove statuses
-                  available in the system
+                  Add or remove statuses available
+                  in the system
                 </p>
               </div>
 
               <button
                 type="button"
                 className="modal-close"
-                onClick={
-                  handleCloseStatusModal
-                }
+                onClick={handleCloseStatusModal}
               >
                 <FaTimes />
               </button>
@@ -664,24 +556,17 @@ function Settings() {
                 placeholder="Example: In Progress"
                 value={newStatus}
                 onChange={(e) =>
-                  setNewStatus(
-                    e.target.value
-                  )
+                  setNewStatus(e.target.value)
                 }
-                onKeyDown={
-                  handleStatusKeyDown
-                }
+                onKeyDown={handleStatusKeyDown}
               />
 
               <button
                 type="button"
                 className="add-status-button"
-                onClick={
-                  handleAddStatus
-                }
+                onClick={handleAddStatus}
               >
                 <FaPlus />
-
                 Add Status
               </button>
 
@@ -693,41 +578,37 @@ function Settings() {
 
               {statuses.length > 0 ? (
 
-                statuses.map(
-                  (status) => (
+                statuses.map((status) => (
 
-                    <div
-                      className="status-option-item"
-                      key={status}
-                    >
+                  <div
+                    className="status-option-item"
+                    key={status}
+                  >
 
-                      <div className="status-option-name">
+                    <div className="status-option-name">
 
-                        <span className="status-dot" />
+                      <span className="status-dot" />
 
-                        <span>
-                          {status}
-                        </span>
-
-                      </div>
-
-                      <button
-                        type="button"
-                        className="status-delete-button"
-                        onClick={() =>
-                          handleDeleteStatus(
-                            status
-                          )
-                        }
-                        title="Delete status"
-                      >
-                        <FaTrash />
-                      </button>
+                      <span>
+                        {status}
+                      </span>
 
                     </div>
 
-                  )
-                )
+                    <button
+                      type="button"
+                      className="status-delete-button"
+                      onClick={() =>
+                        handleDeleteStatus(status)
+                      }
+                      title="Delete status"
+                    >
+                      <FaTrash />
+                    </button>
+
+                  </div>
+
+                ))
 
               ) : (
 
@@ -746,9 +627,7 @@ function Settings() {
               <button
                 type="button"
                 className="save-button"
-                onClick={
-                  handleCloseStatusModal
-                }
+                onClick={handleCloseStatusModal}
               >
                 Done
               </button>

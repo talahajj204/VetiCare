@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Sidebar from "../components/Sidebar";
 
 import {
@@ -6,6 +6,8 @@ import {
   FaPen,
   FaTrash,
   FaFileExcel,
+  FaSearch,
+  FaTimes,
 } from "react-icons/fa";
 
 import * as XLSX from "xlsx";
@@ -43,10 +45,19 @@ function Inventory() {
   ]);
 
   // =========================
-  // SEARCH
+  // SEARCH + FILTERS
   // =========================
 
   const [search, setSearch] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("All");
+  const [statusFilter, setStatusFilter] = useState("All");
+
+  // =========================
+  // PAGINATION
+  // =========================
+
+  const [rowsPerPage, setRowsPerPage] = useState(5);
+  const [currentPage, setCurrentPage] = useState(1);
 
   // =========================
   // MODALS
@@ -55,8 +66,10 @@ function Inventory() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showViewModal, setShowViewModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   const [selectedItem, setSelectedItem] = useState(null);
+  const [itemToDelete, setItemToDelete] = useState(null);
 
   // =========================
   // NEW ITEM
@@ -71,20 +84,84 @@ function Inventory() {
   });
 
   // =========================
-  // SEARCH FILTER
+  // CATEGORIES
   // =========================
 
-  const filteredItems = items.filter((item) => {
+  const categories = [
+    "Medical Supplies",
+    "Vaccines",
+    "Medications",
+    "Equipment",
+    "Other",
+  ];
+
+  // =========================
+  // FILTERED ITEMS
+  // =========================
+
+  const filteredItems = useMemo(() => {
     const searchText = search.trim().toLowerCase();
 
-    return (
-      item.name.toLowerCase().includes(searchText) ||
-      item.category.toLowerCase().includes(searchText) ||
-      item.quantity.toString().includes(searchText) ||
-      item.expiryDate.toLowerCase().includes(searchText) ||
-      item.status.toLowerCase().includes(searchText)
-    );
-  });
+    return items.filter((item) => {
+      const matchesSearch =
+        !searchText ||
+        item.name.toLowerCase().includes(searchText) ||
+        item.category.toLowerCase().includes(searchText) ||
+        item.quantity.toString().includes(searchText) ||
+        item.expiryDate.toLowerCase().includes(searchText) ||
+        item.status.toLowerCase().includes(searchText);
+
+      const matchesCategory =
+        categoryFilter === "All" || item.category === categoryFilter;
+
+      const matchesStatus =
+        statusFilter === "All" || item.status === statusFilter;
+
+      return matchesSearch && matchesCategory && matchesStatus;
+    });
+  }, [items, search, categoryFilter, statusFilter]);
+
+  // =========================
+  // PAGINATION
+  // =========================
+
+  const totalPages = Math.max(
+    1,
+    Math.ceil(filteredItems.length / rowsPerPage)
+  );
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, categoryFilter, statusFilter, rowsPerPage]);
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
+
+  const startIndex = (currentPage - 1) * rowsPerPage;
+
+  const paginatedItems = filteredItems.slice(
+    startIndex,
+    startIndex + rowsPerPage
+  );
+
+  // =========================
+  // CLEAR FILTERS
+  // =========================
+
+  const clearFilters = () => {
+    setSearch("");
+    setCategoryFilter("All");
+    setStatusFilter("All");
+    setCurrentPage(1);
+  };
+
+  const hasActiveFilters =
+    search.trim() !== "" ||
+    categoryFilter !== "All" ||
+    statusFilter !== "All";
 
   // =========================
   // ADD INPUT CHANGE
@@ -93,10 +170,10 @@ function Inventory() {
   const handleNewItemChange = (e) => {
     const { name, value } = e.target;
 
-    setNewItem({
-      ...newItem,
+    setNewItem((previous) => ({
+      ...previous,
       [name]: value,
-    });
+    }));
   };
 
   // =========================
@@ -112,7 +189,7 @@ function Inventory() {
       quantity: Number(newItem.quantity),
     };
 
-    setItems([...items, item]);
+    setItems((previous) => [...previous, item]);
 
     setNewItem({
       name: "",
@@ -150,10 +227,10 @@ function Inventory() {
   const handleEditChange = (e) => {
     const { name, value } = e.target;
 
-    setSelectedItem({
-      ...selectedItem,
+    setSelectedItem((previous) => ({
+      ...previous,
       [name]: value,
-    });
+    }));
   };
 
   // =========================
@@ -168,8 +245,8 @@ function Inventory() {
       quantity: Number(selectedItem.quantity),
     };
 
-    setItems(
-      items.map((item) =>
+    setItems((previous) =>
+      previous.map((item) =>
         item.id === updatedItem.id ? updatedItem : item
       )
     );
@@ -182,14 +259,24 @@ function Inventory() {
   // DELETE
   // =========================
 
-  const handleDeleteItem = (id) => {
-    const confirmDelete = window.confirm(
-      "Are you sure you want to delete this inventory item?"
+  const handleDeleteItem = (item) => {
+    setItemToDelete(item);
+    setShowDeleteModal(true);
+  };
+
+  const closeDeleteModal = () => {
+    setShowDeleteModal(false);
+    setItemToDelete(null);
+  };
+
+  const confirmDeleteItem = () => {
+    if (!itemToDelete) return;
+
+    setItems((previous) =>
+      previous.filter((item) => item.id !== itemToDelete.id)
     );
 
-    if (confirmDelete) {
-      setItems(items.filter((item) => item.id !== id));
-    }
+    closeDeleteModal();
   };
 
   // =========================
@@ -227,7 +314,7 @@ function Inventory() {
   // =========================
 
   const exportToExcel = () => {
-    const excelData = items.map((item) => ({
+    const excelData = filteredItems.map((item) => ({
       "Item Name": item.name,
       Category: item.category,
       Quantity: item.quantity,
@@ -259,37 +346,87 @@ function Inventory() {
     );
   };
 
+  // =========================
+  // PAGINATION STYLES
+  // =========================
+
+  const paginationControlStyle = {
+    width: "30px",
+    minWidth: "30px",
+    height: "30px",
+    padding: "0",
+    border: "1px solid #d9e1e7",
+    borderRadius: "6px",
+    backgroundColor: "#ffffff",
+    color: "#667085",
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    fontSize: "16px",
+    fontWeight: "600",
+    lineHeight: "1",
+    cursor: "pointer",
+    boxShadow: "none",
+  };
+
+  const activePageStyle = {
+    width: "30px",
+    minWidth: "30px",
+    height: "30px",
+    padding: "0",
+    border: "1px solid #159f9f",
+    borderRadius: "6px",
+    backgroundColor: "#159f9f",
+    color: "#ffffff",
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    fontSize: "13px",
+    fontWeight: "600",
+    lineHeight: "1",
+    cursor: "pointer",
+    boxShadow: "none",
+  };
+
+  const normalPageStyle = {
+    width: "30px",
+    minWidth: "30px",
+    height: "30px",
+    padding: "0",
+    border: "1px solid #d9e1e7",
+    borderRadius: "6px",
+    backgroundColor: "#ffffff",
+    color: "#667085",
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    fontSize: "13px",
+    fontWeight: "600",
+    lineHeight: "1",
+    cursor: "pointer",
+    boxShadow: "none",
+  };
+
   return (
     <div className="dashboard-layout">
       <Sidebar />
 
-      <main className="dashboard-main">
+      <main className="dashboard-main inventory-page">
 
-        {/* HEADER */}
-        <div className="page-header">
-          <div>
+        {/* =========================
+            HEADER
+        ========================= */}
+
+        <div className="inventory-page-header">
+          <div className="inventory-title">
             <h1>Inventory</h1>
-            <p>Manage clinic inventory</p>
-          </div>
-        </div>
-
-        {/* SEARCH + EXPORT + ADD */}
-        <div className="inventory-toolbar">
-
-          <div className="search-container inventory-search">
-            <input
-              type="text"
-              placeholder="Search inventory..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
+            <p>Manage clinic inventory and stock levels</p>
           </div>
 
-          <div className="inventory-toolbar-actions">
-
+          <div className="inventory-header-actions">
             <button
               type="button"
-              className="export-button"
+              className="inventory-export-button"
               onClick={exportToExcel}
             >
               <FaFileExcel />
@@ -298,108 +435,270 @@ function Inventory() {
 
             <button
               type="button"
-              className="add-button"
+              className="inventory-add-button"
               onClick={() => setShowAddModal(true)}
             >
               + Add Item
             </button>
-
           </div>
         </div>
 
-        {/* TABLE */}
-        <div className="owners-table-container">
-          <table className="owners-table">
+        {/* =========================
+            SEARCH + FILTERS
+        ========================= */}
 
-            <thead>
-              <tr>
-                <th>Item Name</th>
-                <th>Category</th>
-                <th>Quantity</th>
-                <th>Expiry Date</th>
-                <th>Status</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
+        <div className="inventory-filter-row">
+          <div className="inventory-search-box">
+            <FaSearch className="inventory-search-icon" />
 
-            <tbody>
-              {filteredItems.length > 0 ? (
-                filteredItems.map((item) => (
-                  <tr key={item.id}>
+            <input
+              type="text"
+              placeholder="Search inventory..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
 
-                    <td>{item.name}</td>
+            {hasActiveFilters && (
+              <button
+                type="button"
+                className="inventory-clear-button"
+                onClick={clearFilters}
+                title="Clear filters"
+                aria-label="Clear filters"
+              >
+                <FaTimes />
+              </button>
+            )}
+          </div>
 
-                    <td>{item.category}</td>
+          <select
+            className="inventory-filter-select"
+            value={categoryFilter}
+            onChange={(e) =>
+              setCategoryFilter(e.target.value)
+            }
+          >
+            <option value="All">All Categories</option>
 
-                    <td>{item.quantity}</td>
+            {categories.map((category) => (
+              <option
+                key={category}
+                value={category}
+              >
+                {category}
+              </option>
+            ))}
+          </select>
 
-                    <td>
-                      {formatDate(item.expiryDate)}
-                    </td>
-
-                    <td>
-                      <span
-                        className={getStatusClass(item.status)}
-                      >
-                        {item.status}
-                      </span>
-                    </td>
-
-                    <td>
-                      <div className="table-actions">
-
-                        <button
-                          type="button"
-                          className="view-button icon-button"
-                          onClick={() => handleViewItem(item)}
-                          title="View"
-                          aria-label="View inventory item"
-                        >
-                          <FaEye />
-                        </button>
-
-                        <button
-                          type="button"
-                          className="edit-button icon-button"
-                          onClick={() => handleOpenEdit(item)}
-                          title="Edit"
-                          aria-label="Edit inventory item"
-                        >
-                          <FaPen />
-                        </button>
-
-                        <button
-                          type="button"
-                          className="delete-button icon-button"
-                          onClick={() =>
-                            handleDeleteItem(item.id)
-                          }
-                          title="Delete"
-                          aria-label="Delete inventory item"
-                        >
-                          <FaTrash />
-                        </button>
-
-                      </div>
-                    </td>
-
-                  </tr>
-                ))
-              ) : (
-                <tr>
-                  <td
-                    colSpan="6"
-                    className="no-results"
-                  >
-                    No inventory items found
-                  </td>
-                </tr>
-              )}
-            </tbody>
-
-          </table>
+          <select
+            className="inventory-filter-select"
+            value={statusFilter}
+            onChange={(e) =>
+              setStatusFilter(e.target.value)
+            }
+          >
+            <option value="All">All Status</option>
+            <option value="In Stock">In Stock</option>
+            <option value="Low Stock">Low Stock</option>
+            <option value="Out of Stock">Out of Stock</option>
+          </select>
         </div>
 
+        {/* =========================
+            TABLE
+        ========================= */}
+
+        <div className="owners-table-container inventory-table-container">
+          <div className="inventory-table-scroll">
+            <table className="owners-table inventory-table">
+              <thead>
+                <tr>
+                  <th>Item Name</th>
+                  <th>Category</th>
+                  <th>Quantity</th>
+                  <th>Expiry Date</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+
+              <tbody>
+                {paginatedItems.length > 0 ? (
+                  paginatedItems.map((item) => (
+                    <tr key={item.id}>
+                      <td>{item.name}</td>
+
+                      <td>{item.category}</td>
+
+                      <td>{item.quantity}</td>
+
+                      <td>
+                        {formatDate(item.expiryDate)}
+                      </td>
+
+                      <td>
+                        <span
+                          className={getStatusClass(item.status)}
+                        >
+                          {item.status}
+                        </span>
+                      </td>
+
+                      <td>
+                        <div className="table-actions">
+                          <button
+                            type="button"
+                            className="view-button icon-button"
+                            onClick={() =>
+                              handleViewItem(item)
+                            }
+                            title="View"
+                            aria-label="View inventory item"
+                          >
+                            <FaEye />
+                          </button>
+
+                          <button
+                            type="button"
+                            className="edit-button icon-button"
+                            onClick={() =>
+                              handleOpenEdit(item)
+                            }
+                            title="Edit"
+                            aria-label="Edit inventory item"
+                          >
+                            <FaPen />
+                          </button>
+
+                          <button
+                            type="button"
+                            className="delete-button icon-button"
+                            onClick={() =>
+                              handleDeleteItem(item)
+                            }
+                            title="Delete"
+                            aria-label="Delete inventory item"
+                          >
+                            <FaTrash />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td
+                      colSpan="6"
+                      className="no-results"
+                    >
+                      No inventory items found
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* =========================
+            PAGINATION
+        ========================= */}
+
+        <div className="inventory-pagination">
+          <div className="inventory-rows">
+            <span>Rows per page:</span>
+
+            <select
+              value={rowsPerPage}
+              onChange={(e) =>
+                setRowsPerPage(Number(e.target.value))
+              }
+            >
+              <option value={5}>5</option>
+              <option value={10}>10</option>
+              <option value={20}>20</option>
+              <option value={50}>50</option>
+            </select>
+          </div>
+
+          <div
+            className="inventory-page-controls"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "6px",
+            }}
+          >
+            {/* PREVIOUS */}
+            <button
+              type="button"
+              className="inventory-pagination-button"
+              disabled={currentPage === 1}
+              onClick={() =>
+                setCurrentPage((previous) =>
+                  Math.max(previous - 1, 1)
+                )
+              }
+              style={{
+                ...paginationControlStyle,
+                opacity: currentPage === 1 ? 0.45 : 1,
+                cursor:
+                  currentPage === 1
+                    ? "not-allowed"
+                    : "pointer",
+              }}
+              aria-label="Previous page"
+            >
+              &lt;
+            </button>
+
+            {/* PAGE NUMBERS */}
+            {Array.from(
+              { length: totalPages },
+              (_, index) => index + 1
+            ).map((page) => (
+              <button
+                type="button"
+                key={page}
+                className={`inventory-page-number ${
+                  currentPage === page ? "active" : ""
+                }`}
+                onClick={() => setCurrentPage(page)}
+                style={
+                  currentPage === page
+                    ? activePageStyle
+                    : normalPageStyle
+                }
+              >
+                {page}
+              </button>
+            ))}
+
+            {/* NEXT */}
+            <button
+              type="button"
+              className="inventory-pagination-button"
+              disabled={currentPage === totalPages}
+              onClick={() =>
+                setCurrentPage((previous) =>
+                  Math.min(previous + 1, totalPages)
+                )
+              }
+              style={{
+                ...paginationControlStyle,
+                opacity:
+                  currentPage === totalPages ? 0.45 : 1,
+                cursor:
+                  currentPage === totalPages
+                    ? "not-allowed"
+                    : "pointer",
+              }}
+              aria-label="Next page"
+            >
+              &gt;
+            </button>
+          </div>
+        </div>
       </main>
 
       {/* =========================
@@ -409,7 +708,6 @@ function Inventory() {
       {showAddModal && (
         <div className="modal-overlay">
           <div className="modal-container">
-
             <div className="modal-header">
               <div>
                 <h2>Add Inventory Item</h2>
@@ -419,16 +717,16 @@ function Inventory() {
               <button
                 type="button"
                 className="modal-close"
-                onClick={() => setShowAddModal(false)}
+                onClick={() =>
+                  setShowAddModal(false)
+                }
               >
                 ×
               </button>
             </div>
 
             <form onSubmit={handleAddItem}>
-
               <div className="form-row">
-
                 <div className="form-field">
                   <label>Item Name</label>
 
@@ -455,32 +753,19 @@ function Inventory() {
                       Select category
                     </option>
 
-                    <option value="Medical Supplies">
-                      Medical Supplies
-                    </option>
-
-                    <option value="Vaccines">
-                      Vaccines
-                    </option>
-
-                    <option value="Medications">
-                      Medications
-                    </option>
-
-                    <option value="Equipment">
-                      Equipment
-                    </option>
-
-                    <option value="Other">
-                      Other
-                    </option>
+                    {categories.map((category) => (
+                      <option
+                        key={category}
+                        value={category}
+                      >
+                        {category}
+                      </option>
+                    ))}
                   </select>
                 </div>
-
               </div>
 
               <div className="form-row">
-
                 <div className="form-field">
                   <label>Quantity</label>
 
@@ -505,7 +790,6 @@ function Inventory() {
                     onChange={handleNewItemChange}
                   />
                 </div>
-
               </div>
 
               <div className="form-field">
@@ -531,11 +815,12 @@ function Inventory() {
               </div>
 
               <div className="form-actions">
-
                 <button
                   type="button"
                   className="modal-cancel-button"
-                  onClick={() => setShowAddModal(false)}
+                  onClick={() =>
+                    setShowAddModal(false)
+                  }
                 >
                   Cancel
                 </button>
@@ -546,11 +831,8 @@ function Inventory() {
                 >
                   Add Item
                 </button>
-
               </div>
-
             </form>
-
           </div>
         </div>
       )}
@@ -562,7 +844,6 @@ function Inventory() {
       {showViewModal && selectedItem && (
         <div className="modal-overlay">
           <div className="modal-container">
-
             <div className="modal-header">
               <div>
                 <h2>Inventory Item Details</h2>
@@ -583,31 +864,23 @@ function Inventory() {
 
             <div className="detail-row">
               <span>Item Name</span>
-              <strong>
-                {selectedItem.name}
-              </strong>
+              <strong>{selectedItem.name}</strong>
             </div>
 
             <div className="detail-row">
               <span>Category</span>
-              <strong>
-                {selectedItem.category}
-              </strong>
+              <strong>{selectedItem.category}</strong>
             </div>
 
             <div className="detail-row">
               <span>Quantity</span>
-              <strong>
-                {selectedItem.quantity}
-              </strong>
+              <strong>{selectedItem.quantity}</strong>
             </div>
 
             <div className="detail-row">
               <span>Expiry Date</span>
               <strong>
-                {formatDate(
-                  selectedItem.expiryDate
-                )}
+                {formatDate(selectedItem.expiryDate)}
               </strong>
             </div>
 
@@ -626,7 +899,6 @@ function Inventory() {
             </div>
 
             <div className="form-actions">
-
               <button
                 type="button"
                 className="modal-cancel-button"
@@ -640,23 +912,16 @@ function Inventory() {
 
               <button
                 type="button"
-                className="edit-button"
+                className="edit-button inventory-modal-edit"
                 onClick={() => {
                   setShowViewModal(false);
                   setShowEditModal(true);
                 }}
               >
                 <FaPen />
-
-                <span
-                  style={{ marginLeft: "7px" }}
-                >
-                  Edit Item
-                </span>
+                <span>Edit Item</span>
               </button>
-
             </div>
-
           </div>
         </div>
       )}
@@ -668,7 +933,6 @@ function Inventory() {
       {showEditModal && selectedItem && (
         <div className="modal-overlay">
           <div className="modal-container">
-
             <div className="modal-header">
               <div>
                 <h2>Edit Inventory Item</h2>
@@ -688,9 +952,7 @@ function Inventory() {
             </div>
 
             <form onSubmit={handleUpdateItem}>
-
               <div className="form-row">
-
                 <div className="form-field">
                   <label>Item Name</label>
 
@@ -712,32 +974,19 @@ function Inventory() {
                     onChange={handleEditChange}
                     required
                   >
-                    <option value="Medical Supplies">
-                      Medical Supplies
-                    </option>
-
-                    <option value="Vaccines">
-                      Vaccines
-                    </option>
-
-                    <option value="Medications">
-                      Medications
-                    </option>
-
-                    <option value="Equipment">
-                      Equipment
-                    </option>
-
-                    <option value="Other">
-                      Other
-                    </option>
+                    {categories.map((category) => (
+                      <option
+                        key={category}
+                        value={category}
+                      >
+                        {category}
+                      </option>
+                    ))}
                   </select>
                 </div>
-
               </div>
 
               <div className="form-row">
-
                 <div className="form-field">
                   <label>Quantity</label>
 
@@ -761,7 +1010,6 @@ function Inventory() {
                     onChange={handleEditChange}
                   />
                 </div>
-
               </div>
 
               <div className="form-field">
@@ -787,7 +1035,6 @@ function Inventory() {
               </div>
 
               <div className="form-actions">
-
                 <button
                   type="button"
                   className="modal-cancel-button"
@@ -805,15 +1052,53 @@ function Inventory() {
                 >
                   Save Changes
                 </button>
-
               </div>
-
             </form>
-
           </div>
         </div>
       )}
 
+      {/* =========================
+          DELETE POPUP
+      ========================= */}
+
+      {showDeleteModal && itemToDelete && (
+        <div className="inventory-delete-overlay">
+          <div
+            className="inventory-delete-dialog"
+            role="dialog"
+            aria-modal="true"
+          >
+            <div className="inventory-delete-icon">
+              <FaTrash />
+            </div>
+
+            <h3>Delete Item</h3>
+
+            <p>
+              Are you sure you want to delete this?
+            </p>
+
+            <div className="inventory-delete-actions">
+              <button
+                type="button"
+                className="inventory-delete-cancel"
+                onClick={closeDeleteModal}
+              >
+                Cancel
+              </button>
+
+              <button
+                type="button"
+                className="inventory-delete-confirm"
+                onClick={confirmDeleteItem}
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

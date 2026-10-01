@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Sidebar from "../components/Sidebar";
 
 import {
@@ -6,6 +6,8 @@ import {
   FaPen,
   FaTrash,
   FaFileExcel,
+  FaSearch,
+  FaTimes,
 } from "react-icons/fa";
 
 import * as XLSX from "xlsx";
@@ -37,10 +39,19 @@ function Billing() {
   ]);
 
   // =========================
-  // SEARCH
+  // SEARCH + FILTERS
   // =========================
 
   const [search, setSearch] = useState("");
+  const [serviceFilter, setServiceFilter] = useState("All");
+  const [statusFilter, setStatusFilter] = useState("All");
+
+  // =========================
+  // PAGINATION
+  // =========================
+
+  const [rowsPerPage, setRowsPerPage] = useState(5);
+  const [currentPage, setCurrentPage] = useState(1);
 
   // =========================
   // MODALS
@@ -66,21 +77,85 @@ function Billing() {
   });
 
   // =========================
-  // SEARCH FILTER
+  // SERVICES FROM TABLE
   // =========================
 
-  const filteredInvoices = invoices.filter((invoice) => {
+  const services = useMemo(() => {
+    return [...new Set(invoices.map((invoice) => invoice.service))]
+      .filter(Boolean)
+      .sort();
+  }, [invoices]);
+
+  // =========================
+  // FILTERED INVOICES
+  // =========================
+
+  const filteredInvoices = useMemo(() => {
     const searchText = search.trim().toLowerCase();
 
-    return (
-      invoice.invoiceNumber.toLowerCase().includes(searchText) ||
-      invoice.ownerName.toLowerCase().includes(searchText) ||
-      invoice.date.toLowerCase().includes(searchText) ||
-      invoice.service.toLowerCase().includes(searchText) ||
-      invoice.amount.toString().includes(searchText) ||
-      invoice.status.toLowerCase().includes(searchText)
-    );
-  });
+    return invoices.filter((invoice) => {
+      const matchesSearch =
+        searchText === "" ||
+        invoice.invoiceNumber.toLowerCase().includes(searchText) ||
+        invoice.ownerName.toLowerCase().includes(searchText) ||
+        invoice.date.toLowerCase().includes(searchText) ||
+        invoice.service.toLowerCase().includes(searchText) ||
+        invoice.amount.toString().includes(searchText) ||
+        invoice.status.toLowerCase().includes(searchText);
+
+      const matchesService =
+        serviceFilter === "All" ||
+        invoice.service === serviceFilter;
+
+      const matchesStatus =
+        statusFilter === "All" ||
+        invoice.status === statusFilter;
+
+      return matchesSearch && matchesService && matchesStatus;
+    });
+  }, [invoices, search, serviceFilter, statusFilter]);
+
+  // =========================
+  // PAGINATION
+  // =========================
+
+  const totalPages = Math.max(
+    1,
+    Math.ceil(filteredInvoices.length / rowsPerPage)
+  );
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, serviceFilter, statusFilter, rowsPerPage]);
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
+
+  const startIndex = (currentPage - 1) * rowsPerPage;
+
+  const paginatedInvoices = filteredInvoices.slice(
+    startIndex,
+    startIndex + rowsPerPage
+  );
+
+  // =========================
+  // CLEAR FILTERS
+  // =========================
+
+  const clearFilters = () => {
+    setSearch("");
+    setServiceFilter("All");
+    setStatusFilter("All");
+    setCurrentPage(1);
+  };
+
+  const hasActiveFilters =
+    search.trim() !== "" ||
+    serviceFilter !== "All" ||
+    statusFilter !== "All";
 
   // =========================
   // NEW INVOICE CHANGE
@@ -89,10 +164,10 @@ function Billing() {
   const handleNewInvoiceChange = (e) => {
     const { name, value } = e.target;
 
-    setNewInvoice({
-      ...newInvoice,
+    setNewInvoice((previous) => ({
+      ...previous,
       [name]: value,
-    });
+    }));
   };
 
   // =========================
@@ -107,7 +182,7 @@ function Billing() {
       ...newInvoice,
     };
 
-    setInvoices([...invoices, invoice]);
+    setInvoices((previous) => [...previous, invoice]);
 
     setNewInvoice({
       invoiceNumber: "",
@@ -146,10 +221,10 @@ function Billing() {
   const handleEditChange = (e) => {
     const { name, value } = e.target;
 
-    setSelectedInvoice({
-      ...selectedInvoice,
+    setSelectedInvoice((previous) => ({
+      ...previous,
       [name]: value,
-    });
+    }));
   };
 
   // =========================
@@ -159,8 +234,8 @@ function Billing() {
   const handleUpdateInvoice = (e) => {
     e.preventDefault();
 
-    setInvoices(
-      invoices.map((invoice) =>
+    setInvoices((previous) =>
+      previous.map((invoice) =>
         invoice.id === selectedInvoice.id
           ? selectedInvoice
           : invoice
@@ -181,8 +256,8 @@ function Billing() {
     );
 
     if (confirmDelete) {
-      setInvoices(
-        invoices.filter((invoice) => invoice.id !== id)
+      setInvoices((previous) =>
+        previous.filter((invoice) => invoice.id !== id)
       );
     }
   };
@@ -220,7 +295,7 @@ function Billing() {
   // =========================
 
   const exportToExcel = () => {
-    const excelData = invoices.map((invoice) => ({
+    const excelData = filteredInvoices.map((invoice) => ({
       "Invoice #": invoice.invoiceNumber,
       "Owner Name": invoice.ownerName,
       Date: formatDate(invoice.date),
@@ -231,7 +306,6 @@ function Billing() {
 
     const worksheet = XLSX.utils.json_to_sheet(excelData);
 
-    // Column widths
     worksheet["!cols"] = [
       { wch: 15 },
       { wch: 25 },
@@ -259,39 +333,24 @@ function Billing() {
     <div className="dashboard-layout">
       <Sidebar />
 
-      <main className="dashboard-main">
+      <main className="dashboard-main billing-page">
 
         {/* =========================
             HEADER
         ========================= */}
 
-        <div className="page-header">
-          <div>
+        <div className="page-header billing-page-header">
+
+          <div className="billing-title">
             <h1>Billing</h1>
             <p>Manage invoices and payments</p>
           </div>
-        </div>
 
-        {/* =========================
-            SEARCH + EXPORT + ADD
-        ========================= */}
-
-        <div className="inventory-toolbar">
-
-          <div className="search-container inventory-search">
-            <input
-              type="text"
-              placeholder="Search invoices..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-          </div>
-
-          <div className="inventory-toolbar-actions">
+          <div className="billing-header-actions">
 
             <button
               type="button"
-              className="export-button"
+              className="billing-export-button"
               onClick={exportToExcel}
             >
               <FaFileExcel />
@@ -300,129 +359,293 @@ function Billing() {
 
             <button
               type="button"
-              className="add-button"
+              className="billing-add-button"
               onClick={() => setShowAddModal(true)}
             >
               + Add Invoice
             </button>
 
           </div>
+
+        </div>
+
+        {/* =========================
+            SEARCH + FILTERS
+        ========================= */}
+
+        <div className="billing-filter-row">
+
+          <div className="billing-search-box">
+
+            <FaSearch className="billing-search-icon" />
+
+            <input
+              type="text"
+              placeholder="Search invoices..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+
+            {hasActiveFilters && (
+              <button
+                type="button"
+                className="billing-clear-button"
+                onClick={clearFilters}
+                title="Clear filters"
+                aria-label="Clear filters"
+              >
+                <FaTimes />
+              </button>
+            )}
+
+          </div>
+
+          <select
+            className="billing-filter-select"
+            value={serviceFilter}
+            onChange={(e) =>
+              setServiceFilter(e.target.value)
+            }
+          >
+            <option value="All">All Services</option>
+
+            {services.map((service) => (
+              <option key={service} value={service}>
+                {service}
+              </option>
+            ))}
+          </select>
+
+          <select
+            className="billing-filter-select"
+            value={statusFilter}
+            onChange={(e) =>
+              setStatusFilter(e.target.value)
+            }
+          >
+            <option value="All">All Status</option>
+            <option value="Paid">Paid</option>
+            <option value="Unpaid">Unpaid</option>
+            <option value="Cancelled">Cancelled</option>
+          </select>
+
         </div>
 
         {/* =========================
             TABLE
         ========================= */}
 
-        <div className="owners-table-container">
-          <table className="owners-table">
+        <div className="owners-table-container billing-table-container">
 
-            <thead>
-              <tr>
-                <th>Invoice #</th>
-                <th>Owner Name</th>
-                <th>Date</th>
-                <th>Service</th>
-                <th>Amount</th>
-                <th>Status</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
+          <div className="billing-table-scroll">
 
-            <tbody>
-              {filteredInvoices.length > 0 ? (
-                filteredInvoices.map((invoice) => (
-                  <tr key={invoice.id}>
+            <table className="owners-table billing-table">
 
-                    <td>{invoice.invoiceNumber}</td>
-
-                    <td>{invoice.ownerName}</td>
-
-                    <td>{formatDate(invoice.date)}</td>
-
-                    <td>{invoice.service}</td>
-
-                    <td>
-                      ${Number(invoice.amount || 0).toFixed(2)}
-                    </td>
-
-                    <td>
-                      <span
-                        className={getStatusClass(invoice.status)}
-                      >
-                        {invoice.status}
-                      </span>
-                    </td>
-
-                    <td>
-                      <div className="table-actions">
-
-                        <button
-                          type="button"
-                          className="view-button icon-button"
-                          onClick={() =>
-                            handleViewInvoice(invoice)
-                          }
-                          title="View"
-                          aria-label="View invoice"
-                        >
-                          <FaEye />
-                        </button>
-
-                        <button
-                          type="button"
-                          className="edit-button icon-button"
-                          onClick={() =>
-                            handleOpenEdit(invoice)
-                          }
-                          title="Edit"
-                          aria-label="Edit invoice"
-                        >
-                          <FaPen />
-                        </button>
-
-                        <button
-                          type="button"
-                          className="delete-button icon-button"
-                          onClick={() =>
-                            handleDeleteInvoice(invoice.id)
-                          }
-                          title="Delete"
-                          aria-label="Delete invoice"
-                        >
-                          <FaTrash />
-                        </button>
-
-                      </div>
-                    </td>
-
-                  </tr>
-                ))
-              ) : (
+              <thead>
                 <tr>
-                  <td
-                    colSpan="7"
-                    className="no-results"
-                  >
-                    No invoices found
-                  </td>
+                  <th>Invoice #</th>
+                  <th>Owner Name</th>
+                  <th>Date</th>
+                  <th>Service</th>
+                  <th>Amount</th>
+                  <th>Status</th>
+                  <th>Actions</th>
                 </tr>
-              )}
-            </tbody>
+              </thead>
 
-          </table>
+              <tbody>
+
+                {paginatedInvoices.length > 0 ? (
+                  paginatedInvoices.map((invoice) => (
+
+                    <tr key={invoice.id}>
+
+                      <td>{invoice.invoiceNumber}</td>
+
+                      <td>{invoice.ownerName}</td>
+
+                      <td>
+                        {formatDate(invoice.date)}
+                      </td>
+
+                      <td>{invoice.service}</td>
+
+                      <td>
+                        ${Number(
+                          invoice.amount || 0
+                        ).toFixed(2)}
+                      </td>
+
+                      <td>
+                        <span
+                          className={getStatusClass(
+                            invoice.status
+                          )}
+                        >
+                          {invoice.status}
+                        </span>
+                      </td>
+
+                      <td>
+
+                        <div className="table-actions">
+
+                          <button
+                            type="button"
+                            className="view-button icon-button"
+                            onClick={() =>
+                              handleViewInvoice(invoice)
+                            }
+                            title="View"
+                            aria-label="View invoice"
+                          >
+                            <FaEye />
+                          </button>
+
+                          <button
+                            type="button"
+                            className="edit-button icon-button"
+                            onClick={() =>
+                              handleOpenEdit(invoice)
+                            }
+                            title="Edit"
+                            aria-label="Edit invoice"
+                          >
+                            <FaPen />
+                          </button>
+
+                          <button
+                            type="button"
+                            className="delete-button icon-button"
+                            onClick={() =>
+                              handleDeleteInvoice(invoice.id)
+                            }
+                            title="Delete"
+                            aria-label="Delete invoice"
+                          >
+                            <FaTrash />
+                          </button>
+
+                        </div>
+
+                      </td>
+
+                    </tr>
+
+                  ))
+                ) : (
+
+                  <tr>
+                    <td
+                      colSpan="7"
+                      className="no-results"
+                    >
+                      No invoices found
+                    </td>
+                  </tr>
+
+                )}
+
+              </tbody>
+
+            </table>
+
+          </div>
+
+        </div>
+
+        {/* =========================
+            PAGINATION
+        ========================= */}
+
+        <div className="billing-pagination">
+
+          <div className="billing-rows">
+
+            <span>Rows per page:</span>
+
+            <select
+              value={rowsPerPage}
+              onChange={(e) =>
+                setRowsPerPage(Number(e.target.value))
+              }
+            >
+              <option value={5}>5</option>
+              <option value={10}>10</option>
+              <option value={20}>20</option>
+              <option value={50}>50</option>
+            </select>
+
+          </div>
+
+          <div className="billing-page-controls">
+
+            <button
+              type="button"
+              className="billing-pagination-button"
+              disabled={currentPage === 1}
+              onClick={() =>
+                setCurrentPage((previous) =>
+                  Math.max(previous - 1, 1)
+                )
+              }
+            >
+              Previous
+            </button>
+
+            {Array.from(
+              { length: totalPages },
+              (_, index) => index + 1
+            ).map((page) => (
+
+              <button
+                type="button"
+                key={page}
+                className={`billing-page-number ${
+                  currentPage === page ? "active" : ""
+                }`}
+                onClick={() =>
+                  setCurrentPage(page)
+                }
+              >
+                {page}
+              </button>
+
+            ))}
+
+            <button
+              type="button"
+              className="billing-pagination-button"
+              disabled={currentPage === totalPages}
+              onClick={() =>
+                setCurrentPage((previous) =>
+                  Math.min(
+                    previous + 1,
+                    totalPages
+                  )
+                )
+              }
+            >
+              Next
+            </button>
+
+          </div>
+
         </div>
 
       </main>
 
-      {/* =========================================
+      {/* =========================
           ADD INVOICE MODAL
-      ========================================= */}
+      ========================= */}
 
       {showAddModal && (
         <div className="modal-overlay">
+
           <div className="modal-container">
 
             <div className="modal-header">
+
               <div>
                 <h2>Add Invoice</h2>
                 <p>Enter invoice information</p>
@@ -431,10 +654,13 @@ function Billing() {
               <button
                 type="button"
                 className="modal-close"
-                onClick={() => setShowAddModal(false)}
+                onClick={() =>
+                  setShowAddModal(false)
+                }
               >
                 ×
               </button>
+
             </div>
 
             <form onSubmit={handleAddInvoice}>
@@ -442,6 +668,7 @@ function Billing() {
               <div className="form-row">
 
                 <div className="form-field">
+
                   <label>Invoice Number</label>
 
                   <input
@@ -452,9 +679,11 @@ function Billing() {
                     onChange={handleNewInvoiceChange}
                     required
                   />
+
                 </div>
 
                 <div className="form-field">
+
                   <label>Owner Name</label>
 
                   <input
@@ -465,6 +694,7 @@ function Billing() {
                     onChange={handleNewInvoiceChange}
                     required
                   />
+
                 </div>
 
               </div>
@@ -472,6 +702,7 @@ function Billing() {
               <div className="form-row">
 
                 <div className="form-field">
+
                   <label>Date</label>
 
                   <input
@@ -481,9 +712,11 @@ function Billing() {
                     onChange={handleNewInvoiceChange}
                     required
                   />
+
                 </div>
 
                 <div className="form-field">
+
                   <label>Service</label>
 
                   <input
@@ -494,6 +727,7 @@ function Billing() {
                     onChange={handleNewInvoiceChange}
                     required
                   />
+
                 </div>
 
               </div>
@@ -501,6 +735,7 @@ function Billing() {
               <div className="form-row">
 
                 <div className="form-field">
+
                   <label>Amount ($)</label>
 
                   <input
@@ -513,9 +748,11 @@ function Billing() {
                     onChange={handleNewInvoiceChange}
                     required
                   />
+
                 </div>
 
                 <div className="form-field">
+
                   <label>Status</label>
 
                   <select
@@ -535,6 +772,7 @@ function Billing() {
                       Cancelled
                     </option>
                   </select>
+
                 </div>
 
               </div>
@@ -544,7 +782,9 @@ function Billing() {
                 <button
                   type="button"
                   className="modal-cancel-button"
-                  onClick={() => setShowAddModal(false)}
+                  onClick={() =>
+                    setShowAddModal(false)
+                  }
                 >
                   Cancel
                 </button>
@@ -561,18 +801,22 @@ function Billing() {
             </form>
 
           </div>
+
         </div>
       )}
 
-      {/* =========================================
+      {/* =========================
           VIEW INVOICE MODAL
-      ========================================= */}
+      ========================= */}
 
       {showViewModal && selectedInvoice && (
+
         <div className="modal-overlay">
+
           <div className="modal-container">
 
             <div className="modal-header">
+
               <div>
                 <h2>Invoice Details</h2>
                 <p>View invoice information</p>
@@ -588,6 +832,7 @@ function Billing() {
               >
                 ×
               </button>
+
             </div>
 
             <div className="detail-row">
@@ -628,6 +873,7 @@ function Billing() {
             </div>
 
             <div className="detail-row">
+
               <span>Status</span>
 
               <strong>
@@ -639,6 +885,7 @@ function Billing() {
                   {selectedInvoice.status}
                 </span>
               </strong>
+
             </div>
 
             <div className="form-actions">
@@ -656,34 +903,35 @@ function Billing() {
 
               <button
                 type="button"
-                className="edit-button"
+                className="edit-button billing-modal-edit"
                 onClick={() => {
                   setShowViewModal(false);
                   setShowEditModal(true);
                 }}
               >
                 <FaPen />
-
-                <span style={{ marginLeft: "7px" }}>
-                  Edit Invoice
-                </span>
+                <span>Edit Invoice</span>
               </button>
 
             </div>
 
           </div>
+
         </div>
       )}
 
-      {/* =========================================
+      {/* =========================
           EDIT INVOICE MODAL
-      ========================================= */}
+      ========================= */}
 
       {showEditModal && selectedInvoice && (
+
         <div className="modal-overlay">
+
           <div className="modal-container">
 
             <div className="modal-header">
+
               <div>
                 <h2>Edit Invoice</h2>
                 <p>Update invoice information</p>
@@ -699,6 +947,7 @@ function Billing() {
               >
                 ×
               </button>
+
             </div>
 
             <form onSubmit={handleUpdateInvoice}>
@@ -706,27 +955,35 @@ function Billing() {
               <div className="form-row">
 
                 <div className="form-field">
+
                   <label>Invoice Number</label>
 
                   <input
                     type="text"
                     name="invoiceNumber"
-                    value={selectedInvoice.invoiceNumber}
+                    value={
+                      selectedInvoice.invoiceNumber
+                    }
                     onChange={handleEditChange}
                     required
                   />
+
                 </div>
 
                 <div className="form-field">
+
                   <label>Owner Name</label>
 
                   <input
                     type="text"
                     name="ownerName"
-                    value={selectedInvoice.ownerName}
+                    value={
+                      selectedInvoice.ownerName
+                    }
                     onChange={handleEditChange}
                     required
                   />
+
                 </div>
 
               </div>
@@ -734,6 +991,7 @@ function Billing() {
               <div className="form-row">
 
                 <div className="form-field">
+
                   <label>Date</label>
 
                   <input
@@ -743,9 +1001,11 @@ function Billing() {
                     onChange={handleEditChange}
                     required
                   />
+
                 </div>
 
                 <div className="form-field">
+
                   <label>Service</label>
 
                   <input
@@ -755,6 +1015,7 @@ function Billing() {
                     onChange={handleEditChange}
                     required
                   />
+
                 </div>
 
               </div>
@@ -762,6 +1023,7 @@ function Billing() {
               <div className="form-row">
 
                 <div className="form-field">
+
                   <label>Amount ($)</label>
 
                   <input
@@ -773,9 +1035,11 @@ function Billing() {
                     onChange={handleEditChange}
                     required
                   />
+
                 </div>
 
                 <div className="form-field">
+
                   <label>Status</label>
 
                   <select
@@ -795,6 +1059,7 @@ function Billing() {
                       Cancelled
                     </option>
                   </select>
+
                 </div>
 
               </div>
@@ -824,6 +1089,7 @@ function Billing() {
             </form>
 
           </div>
+
         </div>
       )}
 
