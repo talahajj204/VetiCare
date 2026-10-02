@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
 
 import {
@@ -12,6 +13,9 @@ import {
 } from "react-icons/fa";
 
 function Vaccinations() {
+  const navigate = useNavigate();
+  const location = useLocation();
+
   // =====================================================
   // DATA
   // =====================================================
@@ -71,20 +75,48 @@ function Vaccinations() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   const [selectedVaccination, setSelectedVaccination] = useState(null);
+
   const [vaccinationToDelete, setVaccinationToDelete] = useState(null);
 
   // =====================================================
-  // NEW VACCINATION
+  // EMPTY VACCINATION
   // =====================================================
 
-  const [newVaccination, setNewVaccination] = useState({
+  const emptyVaccination = {
     pet: "",
     vaccine: "",
     dateGiven: "",
     nextDueDate: "",
     status: "Completed",
     notes: "",
-  });
+  };
+
+  const [newVaccination, setNewVaccination] = useState(emptyVaccination);
+
+  // =====================================================
+  // MEDICAL RECORD -> VACCINATION FLOW
+  // =====================================================
+
+  useEffect(() => {
+    if (!location.state?.openAddVaccination) return;
+
+    setNewVaccination({
+      pet: location.state?.pet || location.state?.medicalRecord?.pet || "",
+
+      vaccine: "",
+
+      dateGiven:
+        location.state?.date || location.state?.medicalRecord?.date || "",
+
+      nextDueDate: "",
+
+      status: "Completed",
+
+      notes: "",
+    });
+
+    setShowAddModal(true);
+  }, [location.state]);
 
   // =====================================================
   // FILTER
@@ -100,7 +132,7 @@ function Vaccinations() {
         vaccination.dateGiven.toLowerCase().includes(searchText) ||
         vaccination.nextDueDate.toLowerCase().includes(searchText) ||
         vaccination.status.toLowerCase().includes(searchText) ||
-        vaccination.notes.toLowerCase().includes(searchText);
+        (vaccination.notes || "").toLowerCase().includes(searchText);
 
       const matchesStatus =
         statusFilter === "all" ||
@@ -155,10 +187,7 @@ function Vaccinations() {
           Completed: 3,
         };
 
-        return (
-          (statusOrder[a.status] || 99) -
-          (statusOrder[b.status] || 99)
-        );
+        return (statusOrder[a.status] || 99) - (statusOrder[b.status] || 99);
       }
 
       return a.id - b.id;
@@ -166,7 +195,7 @@ function Vaccinations() {
   }, [filteredVaccinations, sortBy]);
 
   // =====================================================
-  // PAGINATION CALCULATIONS
+  // PAGINATION
   // =====================================================
 
   const totalPages = Math.max(
@@ -174,13 +203,13 @@ function Vaccinations() {
     Math.ceil(sortedVaccinations.length / rowsPerPage)
   );
 
-  const startIndex = (currentPage - 1) * rowsPerPage;
+  const safeCurrentPage = Math.min(currentPage, totalPages);
+
+  const startIndex = (safeCurrentPage - 1) * rowsPerPage;
+
   const endIndex = startIndex + rowsPerPage;
 
-  const currentVaccinations = sortedVaccinations.slice(
-    startIndex,
-    endIndex
-  );
+  const currentVaccinations = sortedVaccinations.slice(startIndex, endIndex);
 
   useEffect(() => {
     setCurrentPage(1);
@@ -217,12 +246,10 @@ function Vaccinations() {
   };
 
   // =====================================================
-  // ADD
+  // CREATE VACCINATION
   // =====================================================
 
-  const handleAddVaccination = (e) => {
-    e.preventDefault();
-
+  const createVaccination = () => {
     const vaccination = {
       id: Date.now(),
       ...newVaccination,
@@ -230,16 +257,56 @@ function Vaccinations() {
 
     setVaccinations((prev) => [...prev, vaccination]);
 
-    setNewVaccination({
-      pet: "",
-      vaccine: "",
-      dateGiven: "",
-      nextDueDate: "",
-      status: "Completed",
-      notes: "",
-    });
-
+    setNewVaccination(emptyVaccination);
     setShowAddModal(false);
+    setCurrentPage(1);
+
+    return vaccination;
+  };
+
+  // =====================================================
+  // ADD VACCINATION ONLY
+  // =====================================================
+
+  const handleAddVaccination = (e) => {
+    e.preventDefault();
+
+    createVaccination();
+  };
+
+  // =====================================================
+  // SAVE VACCINATION + CREATE INVOICE
+  // NEXT STEP -> BILLING
+  // =====================================================
+
+  const handleSaveAndCreateInvoice = () => {
+    if (
+      !newVaccination.pet ||
+      !newVaccination.vaccine ||
+      !newVaccination.dateGiven ||
+      !newVaccination.nextDueDate
+    ) {
+      alert("Please complete the required vaccination fields.");
+
+      return;
+    }
+
+    const savedVaccination = createVaccination();
+
+    navigate("/billing", {
+      state: {
+        openAddInvoice: true,
+        fromVisitFlow: true,
+
+        pet: savedVaccination.pet,
+
+        vaccination: savedVaccination,
+
+        medicalRecord: location.state?.medicalRecord || null,
+
+        appointment: location.state?.appointment || null,
+      },
+    });
   };
 
   // =====================================================
@@ -256,7 +323,10 @@ function Vaccinations() {
   // =====================================================
 
   const handleOpenEdit = (vaccination) => {
-    setSelectedVaccination({ ...vaccination });
+    setSelectedVaccination({
+      ...vaccination,
+    });
+
     setShowEditModal(true);
   };
 
@@ -285,7 +355,7 @@ function Vaccinations() {
   };
 
   // =====================================================
-  // DELETE POPUP
+  // DELETE
   // =====================================================
 
   const handleDeleteVaccination = (vaccination) => {
@@ -297,9 +367,7 @@ function Vaccinations() {
     if (!vaccinationToDelete) return;
 
     setVaccinations((prev) =>
-      prev.filter(
-        (vaccination) => vaccination.id !== vaccinationToDelete.id
-      )
+      prev.filter((vaccination) => vaccination.id !== vaccinationToDelete.id)
     );
 
     setVaccinationToDelete(null);
@@ -327,8 +395,7 @@ function Vaccinations() {
       "Notes",
     ];
 
-    const escapeCSV = (value) =>
-      `"${String(value ?? "").replace(/"/g, '""')}"`;
+    const escapeCSV = (value) => `"${String(value ?? "").replace(/"/g, '""')}"`;
 
     const rows = dataToExport.map((vaccination) => [
       vaccination.pet,
@@ -351,6 +418,7 @@ function Vaccinations() {
     const url = URL.createObjectURL(blob);
 
     const link = document.createElement("a");
+
     link.href = url;
     link.setAttribute("download", "vaccinations.csv");
 
@@ -362,18 +430,19 @@ function Vaccinations() {
   };
 
   // =====================================================
-  // DATE FORMAT
+  // DATE
   // =====================================================
 
   const formatDate = (date) => {
     if (!date) return "";
 
     const [year, month, day] = date.split("-");
+
     return `${day}/${month}/${year}`;
   };
 
   // =====================================================
-  // STATUS CLASS
+  // STATUS
   // =====================================================
 
   const getStatusClass = (status) => {
@@ -390,36 +459,44 @@ function Vaccinations() {
 
   // =====================================================
   // PAGINATION STYLE
-  // STANDARD STYLE: < 1 >
   // =====================================================
 
   const paginationButtonStyle = {
     width: "34px",
     minWidth: "34px",
     maxWidth: "34px",
+
     height: "34px",
     minHeight: "34px",
     maxHeight: "34px",
+
     padding: "0",
     margin: "0",
+
     display: "inline-flex",
     alignItems: "center",
     justifyContent: "center",
+
     flex: "0 0 34px",
     boxSizing: "border-box",
+
     border: "1px solid #c9dddd",
     borderRadius: "7px",
+
     backgroundColor: "#ffffff",
     color: "#455757",
+
     fontSize: "14px",
     fontWeight: "700",
     lineHeight: "1",
+
     boxShadow: "none",
     cursor: "pointer",
   };
 
   const paginationActiveStyle = {
     ...paginationButtonStyle,
+
     backgroundColor: "#54b7b5",
     borderColor: "#54b7b5",
     color: "#ffffff",
@@ -427,15 +504,119 @@ function Vaccinations() {
 
   const paginationDisabledStyle = {
     ...paginationButtonStyle,
+
     backgroundColor: "#edf3f2",
     borderColor: "#d7e5e3",
     color: "#9aadaa",
+
     cursor: "not-allowed",
     opacity: 1,
   };
 
   return (
     <div className="dashboard-layout">
+      {/* =====================================================
+          WORKFLOW BUTTON CSS
+      ===================================================== */}
+
+      <style>{`
+        .vaccination-workflow-actions {
+          display: flex !important;
+          align-items: center !important;
+          justify-content: flex-end !important;
+          gap: 8px !important;
+          flex-wrap: wrap !important;
+          margin-top: 18px !important;
+        }
+
+        .modal-container
+          .vaccination-workflow-actions
+          .vaccination-workflow-button {
+
+          width: auto !important;
+          min-width: 0 !important;
+          max-width: none !important;
+
+          height: 34px !important;
+          min-height: 34px !important;
+          max-height: 34px !important;
+
+          padding: 0 12px !important;
+          margin: 0 !important;
+
+          flex: 0 0 auto !important;
+
+          display: inline-flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+
+          border-radius: 7px !important;
+
+          font-family: inherit !important;
+          font-size: 12px !important;
+          font-weight: 600 !important;
+          line-height: 1 !important;
+
+          white-space: nowrap !important;
+          box-sizing: border-box !important;
+
+          cursor: pointer !important;
+          box-shadow: none !important;
+        }
+
+        .modal-container
+          .vaccination-workflow-actions
+          .vaccination-workflow-secondary {
+
+          background: #ffffff !important;
+          color: #52605f !important;
+
+          border: 1px solid #d5e5e3 !important;
+        }
+
+        .modal-container
+          .vaccination-workflow-actions
+          .vaccination-workflow-secondary:hover {
+
+          background: #f7fbfa !important;
+          border-color: #bdd8d5 !important;
+        }
+
+        .modal-container
+          .vaccination-workflow-actions
+          .vaccination-workflow-primary {
+
+          background: #55b7b3 !important;
+          color: #ffffff !important;
+
+          border: 1px solid #55b7b3 !important;
+        }
+
+        .modal-container
+          .vaccination-workflow-actions
+          .vaccination-workflow-primary:hover {
+
+          background: #319c97 !important;
+          border-color: #319c97 !important;
+        }
+
+        .modal-container
+          form
+          .vaccination-workflow-actions
+          button {
+
+          width: auto !important;
+          min-width: 0 !important;
+
+          height: 34px !important;
+
+          padding-left: 12px !important;
+          padding-right: 12px !important;
+
+          flex: 0 0 auto !important;
+        }
+      `}</style>
+
       <Sidebar />
 
       <main className="dashboard-main vaccinations-page">
@@ -466,9 +647,7 @@ function Vaccinations() {
                 onChange={(e) => setSearch(e.target.value)}
               />
 
-              {(search ||
-                statusFilter !== "all" ||
-                sortBy !== "default") && (
+              {(search || statusFilter !== "all" || sortBy !== "default") && (
                 <button
                   type="button"
                   className="vaccinations-clear-button"
@@ -481,7 +660,7 @@ function Vaccinations() {
               )}
             </div>
 
-            {/* STATUS FILTER */}
+            {/* STATUS */}
 
             <select
               className="vaccinations-filter-select"
@@ -489,8 +668,11 @@ function Vaccinations() {
               onChange={(e) => setStatusFilter(e.target.value)}
             >
               <option value="all">All Status</option>
+
               <option value="Completed">Completed</option>
+
               <option value="Due">Due</option>
+
               <option value="Overdue">Overdue</option>
             </select>
 
@@ -504,26 +686,22 @@ function Vaccinations() {
                 onChange={(e) => setSortBy(e.target.value)}
               >
                 <option value="default">Sort By</option>
+
                 <option value="pet-asc">Pet A-Z</option>
+
                 <option value="pet-desc">Pet Z-A</option>
+
                 <option value="vaccine-asc">Vaccine A-Z</option>
+
                 <option value="vaccine-desc">Vaccine Z-A</option>
 
-                <option value="date-newest">
-                  Date Given: Newest
-                </option>
+                <option value="date-newest">Date Given: Newest</option>
 
-                <option value="date-oldest">
-                  Date Given: Oldest
-                </option>
+                <option value="date-oldest">Date Given: Oldest</option>
 
-                <option value="due-soonest">
-                  Next Due: Soonest
-                </option>
+                <option value="due-soonest">Next Due: Soonest</option>
 
-                <option value="due-latest">
-                  Next Due: Latest
-                </option>
+                <option value="due-latest">Next Due: Latest</option>
 
                 <option value="status">Status</option>
               </select>
@@ -545,7 +723,11 @@ function Vaccinations() {
             <button
               type="button"
               className="add-button"
-              onClick={() => setShowAddModal(true)}
+              onClick={() => {
+                setNewVaccination(emptyVaccination);
+
+                setShowAddModal(true);
+              }}
             >
               + Add Vaccination
             </button>
@@ -582,11 +764,7 @@ function Vaccinations() {
                     <td>{formatDate(vaccination.nextDueDate)}</td>
 
                     <td>
-                      <span
-                        className={getStatusClass(
-                          vaccination.status
-                        )}
-                      >
+                      <span className={getStatusClass(vaccination.status)}>
                         {vaccination.status}
                       </span>
                     </td>
@@ -596,11 +774,8 @@ function Vaccinations() {
                         <button
                           type="button"
                           className="view-button icon-button"
-                          onClick={() =>
-                            handleViewVaccination(vaccination)
-                          }
+                          onClick={() => handleViewVaccination(vaccination)}
                           title="View"
-                          aria-label="View vaccination"
                         >
                           <FaEye />
                         </button>
@@ -608,11 +783,8 @@ function Vaccinations() {
                         <button
                           type="button"
                           className="edit-button icon-button"
-                          onClick={() =>
-                            handleOpenEdit(vaccination)
-                          }
+                          onClick={() => handleOpenEdit(vaccination)}
                           title="Edit"
-                          aria-label="Edit vaccination"
                         >
                           <FaPen />
                         </button>
@@ -620,11 +792,8 @@ function Vaccinations() {
                         <button
                           type="button"
                           className="delete-button icon-button"
-                          onClick={() =>
-                            handleDeleteVaccination(vaccination)
-                          }
+                          onClick={() => handleDeleteVaccination(vaccination)}
                           title="Delete"
-                          aria-label="Delete vaccination"
                         >
                           <FaTrash />
                         </button>
@@ -645,7 +814,6 @@ function Vaccinations() {
 
         {/* =================================================
             PAGINATION
-            STANDARD: < 1 >
         ================================================= */}
 
         <div className="vaccinations-pagination">
@@ -654,9 +822,7 @@ function Vaccinations() {
 
             <select
               value={rowsPerPage}
-              onChange={(e) =>
-                setRowsPerPage(Number(e.target.value))
-              }
+              onChange={(e) => setRowsPerPage(Number(e.target.value))}
             >
               <option value={5}>5</option>
               <option value={10}>10</option>
@@ -674,19 +840,14 @@ function Vaccinations() {
               gap: "6px",
             }}
           >
-            {/* PREVIOUS < */}
+            {/* PREVIOUS */}
 
             <button
               type="button"
-              disabled={currentPage === 1}
-              onClick={() =>
-                setCurrentPage((page) =>
-                  Math.max(page - 1, 1)
-                )
-              }
-              aria-label="Previous page"
+              disabled={safeCurrentPage === 1}
+              onClick={() => setCurrentPage((page) => Math.max(page - 1, 1))}
               style={
-                currentPage === 1
+                safeCurrentPage === 1
                   ? paginationDisabledStyle
                   : paginationButtonStyle
               }
@@ -694,51 +855,26 @@ function Vaccinations() {
               &lt;
             </button>
 
-            {/* PAGE NUMBERS */}
-
-            {Array.from(
-              { length: totalPages },
-              (_, index) => index + 1
-            ).map((page) => {
-              const isActive = currentPage === page;
-
-              return (
-                <button
-                  type="button"
-                  key={page}
-                  className={
-                    isActive
-                      ? "vaccinations-page-active"
-                      : ""
-                  }
-                  onClick={() => setCurrentPage(page)}
-                  aria-current={
-                    isActive ? "page" : undefined
-                  }
-                  style={
-                    isActive
-                      ? paginationActiveStyle
-                      : paginationButtonStyle
-                  }
-                >
-                  {page}
-                </button>
-              );
-            })}
-
-            {/* NEXT > */}
+            {/* ACTIVE PAGE */}
 
             <button
               type="button"
-              disabled={currentPage === totalPages}
+              style={paginationActiveStyle}
+              aria-current="page"
+            >
+              {safeCurrentPage}
+            </button>
+
+            {/* NEXT */}
+
+            <button
+              type="button"
+              disabled={safeCurrentPage === totalPages}
               onClick={() =>
-                setCurrentPage((page) =>
-                  Math.min(page + 1, totalPages)
-                )
+                setCurrentPage((page) => Math.min(page + 1, totalPages))
               }
-              aria-label="Next page"
               style={
-                currentPage === totalPages
+                safeCurrentPage === totalPages
                   ? paginationDisabledStyle
                   : paginationButtonStyle
               }
@@ -765,7 +901,10 @@ function Vaccinations() {
               <button
                 type="button"
                 className="modal-close"
-                onClick={() => setShowAddModal(false)}
+                onClick={() => {
+                  setShowAddModal(false);
+                  setNewVaccination(emptyVaccination);
+                }}
               >
                 ×
               </button>
@@ -835,7 +974,9 @@ function Vaccinations() {
                   onChange={handleNewVaccinationChange}
                 >
                   <option value="Completed">Completed</option>
+
                   <option value="Due">Due</option>
+
                   <option value="Overdue">Overdue</option>
                 </select>
               </div>
@@ -852,20 +993,45 @@ function Vaccinations() {
                 />
               </div>
 
-              <div className="form-actions">
+              {/* ============================================
+                  WORKFLOW BUTTONS
+              ============================================ */}
+
+              <div className="vaccination-workflow-actions">
                 <button
                   type="button"
-                  className="modal-cancel-button"
-                  onClick={() => setShowAddModal(false)}
+                  className="
+                    vaccination-workflow-button
+                    vaccination-workflow-secondary
+                  "
+                  onClick={() => {
+                    setShowAddModal(false);
+
+                    setNewVaccination(emptyVaccination);
+                  }}
                 >
                   Cancel
                 </button>
 
                 <button
                   type="submit"
-                  className="save-button"
+                  className="
+                    vaccination-workflow-button
+                    vaccination-workflow-primary
+                  "
                 >
                   Add Vaccination
+                </button>
+
+                <button
+                  type="button"
+                  className="
+                    vaccination-workflow-button
+                    vaccination-workflow-primary
+                  "
+                  onClick={handleSaveAndCreateInvoice}
+                >
+                  Save & Create Invoice
                 </button>
               </div>
             </form>
@@ -883,6 +1049,7 @@ function Vaccinations() {
             <div className="modal-header">
               <div>
                 <h2>Vaccination Details</h2>
+
                 <p>View pet vaccination information</p>
               </div>
 
@@ -900,44 +1067,47 @@ function Vaccinations() {
 
             <div className="detail-row">
               <span>Pet Name</span>
+
               <strong>{selectedVaccination.pet}</strong>
             </div>
 
             <div className="detail-row">
               <span>Vaccine Name</span>
+
               <strong>{selectedVaccination.vaccine}</strong>
             </div>
 
             <div className="detail-row">
               <span>Date Given</span>
-              <strong>
-                {formatDate(selectedVaccination.dateGiven)}
-              </strong>
+
+              <strong>{formatDate(selectedVaccination.dateGiven)}</strong>
             </div>
 
             <div className="detail-row">
               <span>Next Due Date</span>
-              <strong>
-                {formatDate(selectedVaccination.nextDueDate)}
-              </strong>
+
+              <strong>{formatDate(selectedVaccination.nextDueDate)}</strong>
             </div>
 
             <div className="detail-row">
               <span>Status</span>
+
               <strong>{selectedVaccination.status}</strong>
             </div>
 
             <div className="detail-row">
               <span>Notes</span>
-              <strong>
-                {selectedVaccination.notes || "—"}
-              </strong>
+
+              <strong>{selectedVaccination.notes || "—"}</strong>
             </div>
 
-            <div className="form-actions">
+            <div className="vaccination-workflow-actions">
               <button
                 type="button"
-                className="modal-cancel-button"
+                className="
+                    vaccination-workflow-button
+                    vaccination-workflow-secondary
+                  "
                 onClick={() => {
                   setShowViewModal(false);
                   setSelectedVaccination(null);
@@ -948,7 +1118,10 @@ function Vaccinations() {
 
               <button
                 type="button"
-                className="edit-button"
+                className="
+                    vaccination-workflow-button
+                    vaccination-workflow-primary
+                  "
                 onClick={() => {
                   setShowViewModal(false);
                   setShowEditModal(true);
@@ -956,7 +1129,11 @@ function Vaccinations() {
               >
                 <FaPen />
 
-                <span style={{ marginLeft: "7px" }}>
+                <span
+                  style={{
+                    marginLeft: "7px",
+                  }}
+                >
                   Edit Vaccination
                 </span>
               </button>
@@ -975,6 +1152,7 @@ function Vaccinations() {
             <div className="modal-header">
               <div>
                 <h2>Edit Vaccination</h2>
+
                 <p>Update vaccination information</p>
               </div>
 
@@ -1052,7 +1230,9 @@ function Vaccinations() {
                   onChange={handleEditChange}
                 >
                   <option value="Completed">Completed</option>
+
                   <option value="Due">Due</option>
+
                   <option value="Overdue">Overdue</option>
                 </select>
               </div>
@@ -1063,17 +1243,21 @@ function Vaccinations() {
                 <textarea
                   name="notes"
                   rows="3"
-                  value={selectedVaccination.notes}
+                  value={selectedVaccination.notes || ""}
                   onChange={handleEditChange}
                 />
               </div>
 
-              <div className="form-actions">
+              <div className="vaccination-workflow-actions">
                 <button
                   type="button"
-                  className="modal-cancel-button"
+                  className="
+                      vaccination-workflow-button
+                      vaccination-workflow-secondary
+                    "
                   onClick={() => {
                     setShowEditModal(false);
+
                     setSelectedVaccination(null);
                   }}
                 >
@@ -1082,7 +1266,10 @@ function Vaccinations() {
 
                 <button
                   type="submit"
-                  className="save-button"
+                  className="
+                      vaccination-workflow-button
+                      vaccination-workflow-primary
+                    "
                 >
                   Save Changes
                 </button>

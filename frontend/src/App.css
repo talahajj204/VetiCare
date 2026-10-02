@@ -17874,3 +17874,199 @@ button:nth-child(2) {
   color: #ffffff !important;
   opacity: 1 !important;
 }
+/* =========================================================
+   APPOINTMENTS MODAL BUTTONS - FINAL
+   Cancel / Add Appointment / Save & Start Visit
+   ========================================================= */
+
+   .appointment-modal-actions {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-end !important;
+    gap: 8px !important;
+    flex-wrap: wrap !important;
+    margin-top: 20px !important;
+  }
+  
+  .appointment-modal-actions .appointment-modal-btn {
+    width: auto !important;
+    min-width: 0 !important;
+    max-width: none !important;
+  
+    height: 34px !important;
+    min-height: 34px !important;
+    max-height: 34px !important;
+  
+    padding: 0 12px !important;
+    margin: 0 !important;
+  
+    flex: 0 0 auto !important;
+  
+    border-radius: 7px !important;
+  
+    font-size: 12px !important;
+    font-weight: 600 !important;
+    line-height: 1 !important;
+  
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  
+    white-space: nowrap !important;
+    box-sizing: border-box !important;
+  
+    cursor: pointer !important;
+    box-shadow: none !important;
+  
+    font-family: inherit !important;
+  }
+  
+  /* CANCEL / CLOSE */
+  
+  .appointment-modal-actions .appointment-modal-btn-cancel {
+    width: auto !important;
+    min-width: 0 !important;
+  
+    background: #ffffff !important;
+    color: #52605f !important;
+  
+    border: 1px solid #d5e5e3 !important;
+  }
+  
+  .appointment-modal-actions .appointment-modal-btn-cancel:hover {
+    background: #f7fbfa !important;
+    border-color: #bdd8d5 !important;
+  }
+  
+  /* ADD APPOINTMENT / SAVE & START VISIT / START VISIT / SAVE CHANGES */
+  
+  .appointment-modal-actions .appointment-modal-btn-primary {
+    width: auto !important;
+    min-width: 0 !important;
+  
+    background: #55b7b3 !important;
+    color: #ffffff !important;
+  
+    border: 1px solid #55b7b3 !important;
+  }
+  
+  .appointment-modal-actions .appointment-modal-btn-primary:hover {
+    background: #319c97 !important;
+    border-color: #319c97 !important;
+  }
+  
+  /* REMOVE GLOBAL BUTTON WIDTHS INSIDE APPOINTMENT ACTIONS */
+  
+  .modal-container .appointment-modal-actions button {
+    width: auto !important;
+    min-width: 0 !important;
+    max-width: none !important;
+  
+    height: 34px !important;
+    min-height: 34px !important;
+  
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+  
+    flex-grow: 0 !important;
+    flex-shrink: 0 !important;
+  }
+  
+  /* specifically keep the workflow buttons small */
+  
+  .modal-container
+    .appointment-modal-actions
+    .appointment-modal-btn {
+    padding-left: 12px !important;
+    padding-right: 12px !important;
+  }
+  
+  /* Mobile */
+  
+  @media (max-width: 640px) {
+    .appointment-modal-actions {
+      justify-content: flex-end !important;
+    }
+  
+    .appointment-modal-actions .appointment-modal-btn {
+      width: auto !important;
+      flex: 0 0 auto !important;
+    }
+  }
+  .pos-main {
+    position: fixed;
+    top: 0;
+    left: 74px;
+    right: 0;
+    bottom: 0;
+  
+    min-width: 0;
+    overflow: hidden;
+    background: #f8fafb;
+  }
+  
+  .pos-main * {
+    box-sizing: border-box;
+  }
+  
+  .pos-workspace {
+    display: grid;
+  
+    /* products + fixed cart */
+    grid-template-columns: minmax(0, 1fr) 335px;
+  
+    width: 100%;
+    height: calc(100vh - 64px);
+  
+    min-width: 0;
+    overflow: hidden;
+  }
+  
+  .pos-products-area {
+    width: 100%;
+    min-width: 0;
+  
+    overflow-y: auto;
+    overflow-x: hidden;
+  
+    padding: 16px 16px 24px;
+  }
+  
+  .pos-toolbar {
+    width: 100%;
+  
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 200px;
+  
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+  
+  .pos-products-grid {
+    width: 100%;
+    min-width: 0;
+  
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  
+    gap: 10px;
+  }
+  
+  .pos-product-card {
+    width: 100%;
+    min-width: 0;
+  
+    overflow: hidden;
+  
+    border: 1px solid #e1e8e7;
+    border-radius: 9px;
+  
+    background: #ffffff;
+  
+    cursor: pointer;
+  
+    transition:
+      border-color 0.15s ease,
+      box-shadow 0.15s ease,
+      transform 0.15s ease;
+  }

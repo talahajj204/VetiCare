@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
 
 import {
@@ -12,6 +13,8 @@ import {
 } from "react-icons/fa";
 
 function Owners() {
+  const navigate = useNavigate();
+
   // =========================
   // DATA
   // =========================
@@ -24,8 +27,32 @@ function Owners() {
       email: "talaelhajj4@gmail.com",
       phone: "03 123 456",
       address: "Beirut",
+      emergencyContact: "70 111 222",
+      notes: "Prefers morning appointments.",
       status: "active",
+      pets: [
+        {
+          id: 1,
+          name: "Bella",
+          species: "Dog",
+          breed: "Golden Retriever",
+          age: "4 years",
+        },
+      ],
+      history: [
+        {
+          id: 1,
+          date: "25/09/2026",
+          description: "Bella - Medical record added",
+        },
+        {
+          id: 2,
+          date: "20/09/2026",
+          description: "Bella - Routine appointment",
+        },
+      ],
     },
+
     {
       id: 2,
       firstName: "Fatima",
@@ -33,8 +60,27 @@ function Owners() {
       email: "fatima@gmail.com",
       phone: "70 456 789",
       address: "Dahye",
+      emergencyContact: "71 222 333",
+      notes: "",
       status: "active",
+      pets: [
+        {
+          id: 2,
+          name: "Luna",
+          species: "Cat",
+          breed: "Persian",
+          age: "3 years",
+        },
+      ],
+      history: [
+        {
+          id: 1,
+          date: "20/09/2026",
+          description: "Luna - Routine checkup",
+        },
+      ],
     },
+
     {
       id: 3,
       firstName: "Karen",
@@ -42,7 +88,11 @@ function Owners() {
       email: "karen@email.com",
       phone: "71 555 222",
       address: "Tripoli",
+      emergencyContact: "03 444 555",
+      notes: "",
       status: "inactive",
+      pets: [],
+      history: [],
     },
   ]);
 
@@ -66,12 +116,11 @@ function Owners() {
   // =========================
 
   const [showAddModal, setShowAddModal] = useState(false);
-  const [showViewModal, setShowViewModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedOwner, setSelectedOwner] = useState(null);
 
   // =========================
-  // DELETE POPUP
+  // DELETE
   // =========================
 
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -81,14 +130,18 @@ function Owners() {
   // NEW OWNER
   // =========================
 
-  const [newOwner, setNewOwner] = useState({
+  const emptyOwner = {
     firstName: "",
     lastName: "",
     email: "",
     phone: "",
     address: "",
+    emergencyContact: "",
+    notes: "",
     status: "active",
-  });
+  };
+
+  const [newOwner, setNewOwner] = useState(emptyOwner);
 
   // =========================
   // SEARCH + FILTER
@@ -142,7 +195,7 @@ function Owners() {
   });
 
   // =========================
-  // PAGINATION CALCULATIONS
+  // PAGINATION
   // =========================
 
   const totalPages = Math.max(
@@ -182,6 +235,8 @@ function Owners() {
       "Email",
       "Phone",
       "Address",
+      "Emergency Contact",
+      "Notes",
       "Status",
     ];
 
@@ -191,6 +246,8 @@ function Owners() {
       owner.email,
       owner.phone,
       owner.address,
+      owner.emergencyContact,
+      owner.notes,
       owner.status,
     ]);
 
@@ -235,34 +292,49 @@ function Owners() {
   const handleAddOwner = (e) => {
     e.preventDefault();
 
+    const action = e.nativeEvent.submitter?.value;
+
     const owner = {
       id: Date.now(),
       ...newOwner,
       status: "active",
+      pets: [],
+      history: [],
     };
 
-    setOwners([...owners, owner]);
+    setOwners((previousOwners) => [...previousOwners, owner]);
 
-    setNewOwner({
-      firstName: "",
-      lastName: "",
-      email: "",
-      phone: "",
-      address: "",
-      status: "active",
-    });
-
+    setNewOwner(emptyOwner);
     setShowAddModal(false);
+
+    if (action === "save-and-add-pet") {
+      navigate("/pets", {
+        state: {
+          openAddPet: true,
+          ownerId: owner.id,
+          owner,
+        },
+      });
+    }
   };
 
   // =========================
-  // VIEW / EDIT
+  // VIEW OWNER
+  // IMPORTANT:
+  // OWNER PAGE - NOT MODAL
   // =========================
 
   const handleViewOwner = (owner) => {
-    setSelectedOwner(owner);
-    setShowViewModal(true);
+    navigate(`/owners/${owner.id}`, {
+      state: {
+        owner,
+      },
+    });
   };
+
+  // =========================
+  // EDIT
+  // =========================
 
   const handleOpenEdit = (owner) => {
     setSelectedOwner({ ...owner });
@@ -598,9 +670,12 @@ function Owners() {
                             ? "owner-status-active"
                             : "owner-status-inactive"
                         }`}
-                        onClick={() => handleToggleStatus(owner.id)}
+                        onClick={() =>
+                          handleToggleStatus(owner.id)
+                        }
                       >
                         <span className="status-dot"></span>
+
                         {owner.status === "active"
                           ? "Active"
                           : "Inactive"}
@@ -613,7 +688,7 @@ function Owners() {
                           type="button"
                           className="view-button icon-button"
                           onClick={() => handleViewOwner(owner)}
-                          title="View"
+                          title="View Owner Profile"
                         >
                           <FaEye />
                         </button>
@@ -652,9 +727,7 @@ function Owners() {
           </table>
         </div>
 
-        {/* =========================
-            PAGINATION
-        ========================= */}
+        {/* PAGINATION */}
 
         <div
           style={{
@@ -666,8 +739,6 @@ function Owners() {
             gap: "20px",
           }}
         >
-          {/* LEFT */}
-
           <div
             style={{
               display: "flex",
@@ -709,8 +780,6 @@ function Owners() {
             </select>
           </div>
 
-          {/* RIGHT - SMALL PAGINATION */}
-
           <div
             style={{
               display: "flex",
@@ -720,13 +789,13 @@ function Owners() {
               whiteSpace: "nowrap",
             }}
           >
-            {/* PREVIOUS < */}
-
             <button
               type="button"
               disabled={safeCurrentPage === 1}
               onClick={() =>
-                setCurrentPage((page) => Math.max(page - 1, 1))
+                setCurrentPage((page) =>
+                  Math.max(page - 1, 1)
+                )
               }
               style={{
                 width: "34px",
@@ -737,7 +806,9 @@ function Owners() {
                 border: "1px solid #d5e5e3",
                 borderRadius: "7px",
                 background:
-                  safeCurrentPage === 1 ? "#edf3f2" : "#fff",
+                  safeCurrentPage === 1
+                    ? "#edf3f2"
+                    : "#fff",
                 color:
                   safeCurrentPage === 1
                     ? "#9aa8a7"
@@ -756,8 +827,6 @@ function Owners() {
             >
               &lt;
             </button>
-
-            {/* PAGE NUMBERS */}
 
             {Array.from(
               { length: totalPages },
@@ -778,14 +847,18 @@ function Owners() {
                       ? "1px solid #419c99"
                       : "1px solid #d5e5e3",
                   borderRadius: "7px",
+
+                  // KEEP SAME COLORED 1
                   background:
                     page === safeCurrentPage
                       ? "#419c99"
                       : "#fff",
+
                   color:
                     page === safeCurrentPage
                       ? "#fff"
                       : "#52605f",
+
                   cursor: "pointer",
                   fontSize: "13px",
                   fontWeight: "600",
@@ -797,8 +870,6 @@ function Owners() {
                 {page}
               </button>
             ))}
-
-            {/* NEXT > */}
 
             <button
               type="button"
@@ -933,6 +1004,34 @@ function Owners() {
                 />
               </div>
 
+              {/* NEW REQUIRED FIELD */}
+
+              <div className="form-field">
+                <label>Emergency Contact</label>
+
+                <input
+                  type="text"
+                  name="emergencyContact"
+                  placeholder="Enter emergency contact"
+                  value={newOwner.emergencyContact}
+                  onChange={handleNewOwnerChange}
+                />
+              </div>
+
+              {/* NEW REQUIRED FIELD */}
+
+              <div className="form-field">
+                <label>Notes</label>
+
+                <textarea
+                  name="notes"
+                  placeholder="Enter owner notes..."
+                  value={newOwner.notes}
+                  onChange={handleNewOwnerChange}
+                  rows="3"
+                />
+              </div>
+
               <div className="form-actions">
                 <button
                   type="button"
@@ -942,107 +1041,28 @@ function Owners() {
                   Cancel
                 </button>
 
-                <button type="submit" className="save-button">
+                <button
+                  type="submit"
+                  className="save-button"
+                  value="save-owner"
+                >
                   Add Owner
+                </button>
+
+                <button
+                  type="submit"
+                  className="save-button"
+                  value="save-and-add-pet"
+                  style={{
+                    width: "auto",
+                    padding: "10px 18px",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  Save & Add Pet
                 </button>
               </div>
             </form>
-          </div>
-        </div>
-      )}
-
-      {/* =========================
-          VIEW OWNER MODAL
-      ========================= */}
-
-      {showViewModal && selectedOwner && (
-        <div className="modal-overlay">
-          <div className="modal-container">
-            <div className="modal-header">
-              <div>
-                <h2>Owner Details</h2>
-                <p>View owner information</p>
-              </div>
-
-              <button
-                type="button"
-                className="modal-close"
-                onClick={() => {
-                  setShowViewModal(false);
-                  setSelectedOwner(null);
-                }}
-              >
-                ×
-              </button>
-            </div>
-
-            <div className="detail-row">
-              <span>First Name</span>
-              <strong>{selectedOwner.firstName}</strong>
-            </div>
-
-            <div className="detail-row">
-              <span>Last Name</span>
-              <strong>{selectedOwner.lastName}</strong>
-            </div>
-
-            <div className="detail-row">
-              <span>Email</span>
-              <strong>{selectedOwner.email}</strong>
-            </div>
-
-            <div className="detail-row">
-              <span>Phone</span>
-              <strong>{selectedOwner.phone}</strong>
-            </div>
-
-            <div className="detail-row">
-              <span>Address</span>
-              <strong>{selectedOwner.address || "—"}</strong>
-            </div>
-
-            <div className="detail-row">
-              <span>Status</span>
-
-              <strong
-                className={
-                  selectedOwner.status === "active"
-                    ? "status-text-active"
-                    : "status-text-inactive"
-                }
-              >
-                {selectedOwner.status === "active"
-                  ? "Active"
-                  : "Inactive"}
-              </strong>
-            </div>
-
-            <div className="form-actions">
-              <button
-                type="button"
-                className="modal-cancel-button"
-                onClick={() => {
-                  setShowViewModal(false);
-                  setSelectedOwner(null);
-                }}
-              >
-                Close
-              </button>
-
-              <button
-                type="button"
-                className="edit-button"
-                onClick={() => {
-                  setShowViewModal(false);
-                  setShowEditModal(true);
-                }}
-              >
-                <FaPen />
-                <span style={{ marginLeft: "7px" }}>
-                  Edit Owner
-                </span>
-              </button>
-            </div>
           </div>
         </div>
       )}
@@ -1131,8 +1151,32 @@ function Owners() {
                 <input
                   type="text"
                   name="address"
-                  value={selectedOwner.address}
+                  value={selectedOwner.address || ""}
                   onChange={handleEditChange}
+                />
+              </div>
+
+              <div className="form-field">
+                <label>Emergency Contact</label>
+
+                <input
+                  type="text"
+                  name="emergencyContact"
+                  value={selectedOwner.emergencyContact || ""}
+                  onChange={handleEditChange}
+                  placeholder="Enter emergency contact"
+                />
+              </div>
+
+              <div className="form-field">
+                <label>Notes</label>
+
+                <textarea
+                  name="notes"
+                  value={selectedOwner.notes || ""}
+                  onChange={handleEditChange}
+                  placeholder="Enter owner notes..."
+                  rows="3"
                 />
               </div>
 
@@ -1161,7 +1205,10 @@ function Owners() {
                   Cancel
                 </button>
 
-                <button type="submit" className="save-button">
+                <button
+                  type="submit"
+                  className="save-button"
+                >
                   Save Changes
                 </button>
               </div>
@@ -1218,8 +1265,9 @@ function Owners() {
                   color: "#718181",
                 }}
               >
-                {ownerToDelete.firstName} {ownerToDelete.lastName}{" "}
-                will be permanently deleted.
+                {ownerToDelete.firstName}{" "}
+                {ownerToDelete.lastName} will be permanently
+                deleted.
               </p>
             </div>
 

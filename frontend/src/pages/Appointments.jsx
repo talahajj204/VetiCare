@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
 
 import {
@@ -16,6 +17,8 @@ import {
 } from "react-icons/fa6";
 
 function Appointments() {
+  const navigate = useNavigate();
+
   /* =====================================================
      DATA
   ===================================================== */
@@ -24,6 +27,8 @@ function Appointments() {
     {
       id: 1,
       pet: "Bella",
+      owner: "Omar Hassan",
+      type: "Consultation",
       date: "2026-09-29",
       time: "10:00",
       veterinarian: "Dr. Ahmad",
@@ -33,6 +38,8 @@ function Appointments() {
     {
       id: 2,
       pet: "Luna",
+      owner: "Maya Khalil",
+      type: "Vaccination",
       date: "2026-09-29",
       time: "12:30",
       veterinarian: "Dr. Sarah",
@@ -60,8 +67,7 @@ function Appointments() {
   const [showViewModal, setShowViewModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
 
-  const [selectedAppointment, setSelectedAppointment] =
-    useState(null);
+  const [selectedAppointment, setSelectedAppointment] = useState(null);
 
   /* =====================================================
      NEW APPOINTMENT
@@ -69,6 +75,8 @@ function Appointments() {
 
   const [newAppointment, setNewAppointment] = useState({
     pet: "",
+    owner: "",
+    type: "Consultation",
     date: "",
     time: "",
     veterinarian: "",
@@ -80,9 +88,7 @@ function Appointments() {
      CALENDAR
   ===================================================== */
 
-  const [currentDate, setCurrentDate] = useState(
-    new Date(2026, 8, 1)
-  );
+  const [currentDate, setCurrentDate] = useState(new Date(2026, 8, 1));
 
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
@@ -93,12 +99,7 @@ function Appointments() {
   });
 
   const firstDay = new Date(year, month, 1).getDay();
-
-  const daysInMonth = new Date(
-    year,
-    month + 1,
-    0
-  ).getDate();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
 
   /* =====================================================
      FILTER + SORT
@@ -110,23 +111,19 @@ function Appointments() {
 
       const matchesSearch =
         appointment.pet.toLowerCase().includes(value) ||
-        appointment.veterinarian
-          .toLowerCase()
-          .includes(value) ||
+        (appointment.owner || "").toLowerCase().includes(value) ||
+        (appointment.type || "").toLowerCase().includes(value) ||
+        appointment.veterinarian.toLowerCase().includes(value) ||
         appointment.reason.toLowerCase().includes(value) ||
         appointment.status.toLowerCase().includes(value) ||
         appointment.date.includes(value) ||
         appointment.time.includes(value);
 
       const matchesStatus =
-        statusFilter === "All" ||
-        appointment.status === statusFilter;
+        statusFilter === "All" || appointment.status === statusFilter;
 
-      const matchesFromDate =
-        !fromDate || appointment.date >= fromDate;
-
-      const matchesToDate =
-        !toDate || appointment.date <= toDate;
+      const matchesFromDate = !fromDate || appointment.date >= fromDate;
+      const matchesToDate = !toDate || appointment.date <= toDate;
 
       return (
         matchesSearch &&
@@ -201,6 +198,8 @@ function Appointments() {
   const handleExport = () => {
     const headers = [
       "Pet",
+      "Owner",
+      "Type",
       "Date",
       "Time",
       "Veterinarian",
@@ -210,6 +209,8 @@ function Appointments() {
 
     const rows = filteredAppointments.map((appointment) => [
       appointment.pet,
+      appointment.owner || "",
+      appointment.type || "",
       appointment.date,
       appointment.time,
       appointment.veterinarian,
@@ -222,9 +223,7 @@ function Appointments() {
 
     const csvContent = [
       headers.map(escapeCSV).join(","),
-      ...rows.map((row) =>
-        row.map(escapeCSV).join(",")
-      ),
+      ...rows.map((row) => row.map(escapeCSV).join(",")),
     ].join("\n");
 
     const blob = new Blob(["\uFEFF" + csvContent], {
@@ -286,12 +285,14 @@ function Appointments() {
   };
 
   /* =====================================================
-     ADD
+     ADD APPOINTMENT
   ===================================================== */
 
   const openAddModal = (date = "") => {
     setNewAppointment({
       pet: "",
+      owner: "",
+      type: "Consultation",
       date,
       time: "",
       veterinarian: "",
@@ -311,18 +312,13 @@ function Appointments() {
     }));
   };
 
-  const handleAddAppointment = (e) => {
-    e.preventDefault();
-
+  const createAppointment = () => {
     const appointment = {
       id: Date.now(),
       ...newAppointment,
     };
 
-    setAppointments((previous) => [
-      ...previous,
-      appointment,
-    ]);
+    setAppointments((previous) => [...previous, appointment]);
 
     if (appointment.date) {
       const [appointmentYear, appointmentMonth] =
@@ -341,11 +337,68 @@ function Appointments() {
 
     setNewAppointment({
       pet: "",
+      owner: "",
+      type: "Consultation",
       date: "",
       time: "",
       veterinarian: "",
       reason: "",
       status: "Pending",
+    });
+
+    return appointment;
+  };
+
+  const handleAddAppointment = (e) => {
+    e.preventDefault();
+    createAppointment();
+  };
+
+  /* =====================================================
+     MAIN VISIT FLOW
+  ===================================================== */
+
+  const handleSaveAndStartVisit = () => {
+    const appointment = createAppointment();
+
+    navigate("/medical-records", {
+      state: {
+        openAddMedicalRecord: true,
+        fromVisitFlow: true,
+
+        appointment,
+
+        pet: appointment.pet,
+        owner: appointment.owner,
+        veterinarian: appointment.veterinarian,
+
+        appointmentType: appointment.type,
+        appointmentDate: appointment.date,
+        appointmentTime: appointment.time,
+        reason: appointment.reason,
+      },
+    });
+  };
+
+  const handleStartVisit = (appointment) => {
+    setShowViewModal(false);
+
+    navigate("/medical-records", {
+      state: {
+        openAddMedicalRecord: true,
+        fromVisitFlow: true,
+
+        appointment,
+
+        pet: appointment.pet,
+        owner: appointment.owner,
+        veterinarian: appointment.veterinarian,
+
+        appointmentType: appointment.type,
+        appointmentDate: appointment.date,
+        appointmentTime: appointment.time,
+        reason: appointment.reason,
+      },
     });
   };
 
@@ -396,9 +449,7 @@ function Appointments() {
     if (!confirmDelete) return;
 
     setAppointments((previous) =>
-      previous.filter(
-        (appointment) => appointment.id !== id
-      )
+      previous.filter((appointment) => appointment.id !== id)
     );
 
     setShowViewModal(false);
@@ -413,8 +464,8 @@ function Appointments() {
   const formatDate = (date) => {
     if (!date) return "";
 
-    const [y, m, d] = date.split("-");
-    return `${d}/${m}/${y}`;
+    const [, m, d] = date.split("-");
+    return `${d}/${m}/${date.split("-")[0]}`;
   };
 
   const formatTime = (time) => {
@@ -431,7 +482,7 @@ function Appointments() {
   };
 
   /* =====================================================
-     STYLES USED ONLY FOR NEW TOP AREA
+     HEADER STYLES
   ===================================================== */
 
   const headerStyle = {
@@ -491,25 +542,103 @@ function Appointments() {
     boxSizing: "border-box",
   };
 
-  /* =====================================================
-     RETURN
-  ===================================================== */
-
   return (
     <div className="dashboard-layout">
+      <style>{`
+        .workflow-actions {
+          display: flex !important;
+          align-items: center !important;
+          justify-content: flex-end !important;
+          gap: 8px !important;
+          flex-wrap: wrap !important;
+          margin-top: 20px !important;
+        }
+
+        .modal-container .workflow-actions .workflow-button {
+          width: auto !important;
+          min-width: 0 !important;
+          max-width: none !important;
+
+          height: 34px !important;
+          min-height: 34px !important;
+          max-height: 34px !important;
+
+          padding: 0 12px !important;
+          margin: 0 !important;
+
+          flex: 0 0 auto !important;
+
+          border-radius: 7px !important;
+
+          font-size: 12px !important;
+          font-weight: 600 !important;
+          line-height: 1 !important;
+
+          display: inline-flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+
+          white-space: nowrap !important;
+          box-sizing: border-box !important;
+
+          cursor: pointer !important;
+          box-shadow: none !important;
+
+          font-family: inherit !important;
+        }
+
+        .modal-container
+          .workflow-actions
+          .workflow-button-secondary {
+          background: #ffffff !important;
+          color: #52605f !important;
+          border: 1px solid #d5e5e3 !important;
+        }
+
+        .modal-container
+          .workflow-actions
+          .workflow-button-secondary:hover {
+          background: #f7fbfa !important;
+          border-color: #bdd8d5 !important;
+        }
+
+        .modal-container
+          .workflow-actions
+          .workflow-button-primary {
+          background: #55b7b3 !important;
+          color: #ffffff !important;
+          border: 1px solid #55b7b3 !important;
+        }
+
+        .modal-container
+          .workflow-actions
+          .workflow-button-primary:hover {
+          background: #319c97 !important;
+          border-color: #319c97 !important;
+        }
+
+        @media (max-width: 640px) {
+          .workflow-actions {
+            justify-content: flex-end !important;
+          }
+
+          .modal-container
+            .workflow-actions
+            .workflow-button {
+            width: auto !important;
+            flex: 0 0 auto !important;
+          }
+        }
+      `}</style>
+
       <Sidebar />
 
       <main className="dashboard-main">
-
-        {/* =================================================
-            HEADER
-        ================================================= */}
+        {/* HEADER */}
 
         <div style={headerStyle}>
           <div>
-            <h1 style={{ margin: "0 0 5px" }}>
-              Appointments
-            </h1>
+            <h1 style={{ margin: "0 0 5px" }}>Appointments</h1>
 
             <p
               style={{
@@ -522,8 +651,6 @@ function Appointments() {
           </div>
 
           <div style={headerActionsStyle}>
-
-            {/* EXPORT FIRST */}
             <button
               type="button"
               onClick={handleExport}
@@ -533,7 +660,6 @@ function Appointments() {
               Export
             </button>
 
-            {/* ADD SECOND */}
             <button
               type="button"
               onClick={() => openAddModal()}
@@ -545,9 +671,7 @@ function Appointments() {
           </div>
         </div>
 
-        {/* =================================================
-            FILTERS
-        ================================================= */}
+        {/* FILTERS */}
 
         <div
           style={{
@@ -559,8 +683,6 @@ function Appointments() {
             marginBottom: "20px",
           }}
         >
-
-          {/* SEARCH */}
           <div
             style={{
               position: "relative",
@@ -599,7 +721,6 @@ function Appointments() {
               }}
             />
 
-            {/* X INSIDE SEARCH */}
             {filtersActive && (
               <button
                 type="button"
@@ -634,12 +755,9 @@ function Appointments() {
             )}
           </div>
 
-          {/* STATUS */}
           <select
             value={statusFilter}
-            onChange={(e) =>
-              setStatusFilter(e.target.value)
-            }
+            onChange={(e) => setStatusFilter(e.target.value)}
             style={{
               width: "165px",
               minWidth: "165px",
@@ -656,10 +774,10 @@ function Appointments() {
             <option value="All">All Statuses</option>
             <option value="Confirmed">Confirmed</option>
             <option value="Pending">Pending</option>
+            <option value="Completed">Completed</option>
             <option value="Cancelled">Cancelled</option>
           </select>
 
-          {/* FROM */}
           <input
             type="date"
             value={fromDate}
@@ -678,7 +796,6 @@ function Appointments() {
             }}
           />
 
-          {/* TO */}
           <input
             type="date"
             value={toDate}
@@ -698,9 +815,7 @@ function Appointments() {
           />
         </div>
 
-        {/* =================================================
-            SORT + VIEW
-        ================================================= */}
+        {/* SORT + VIEW */}
 
         <div className="appointments-toolbar">
           <div />
@@ -709,25 +824,12 @@ function Appointments() {
             <div className="appointment-sort">
               <select
                 value={sortBy}
-                onChange={(e) =>
-                  setSortBy(e.target.value)
-                }
+                onChange={(e) => setSortBy(e.target.value)}
               >
-                <option value="newest">
-                  Sort by Newest
-                </option>
-
-                <option value="oldest">
-                  Sort by Oldest
-                </option>
-
-                <option value="pet">
-                  Sort by Pet Name
-                </option>
-
-                <option value="time">
-                  Sort by Time
-                </option>
+                <option value="newest">Sort by Newest</option>
+                <option value="oldest">Sort by Oldest</option>
+                <option value="pet">Sort by Pet Name</option>
+                <option value="time">Sort by Time</option>
               </select>
             </div>
 
@@ -735,9 +837,7 @@ function Appointments() {
               <button
                 type="button"
                 title="List View"
-                className={
-                  viewMode === "list" ? "active" : ""
-                }
+                className={viewMode === "list" ? "active" : ""}
                 onClick={() => setViewMode("list")}
               >
                 <FaList />
@@ -746,12 +846,8 @@ function Appointments() {
               <button
                 type="button"
                 title="Calendar View"
-                className={
-                  viewMode === "calendar" ? "active" : ""
-                }
-                onClick={() =>
-                  setViewMode("calendar")
-                }
+                className={viewMode === "calendar" ? "active" : ""}
+                onClick={() => setViewMode("calendar")}
               >
                 <FaTableCellsLarge />
               </button>
@@ -759,15 +855,12 @@ function Appointments() {
           </div>
         </div>
 
-        {/* =================================================
-            SUMMARY CARDS
-        ================================================= */}
+        {/* SUMMARY */}
 
         <div
           style={{
             display: "grid",
-            gridTemplateColumns:
-              "repeat(3, minmax(180px, 1fr))",
+            gridTemplateColumns: "repeat(3, minmax(180px, 1fr))",
             gap: "16px",
             marginBottom: "20px",
           }}
@@ -790,9 +883,7 @@ function Appointments() {
               Total This View
             </p>
 
-            <h2 style={{ margin: 0 }}>
-              {totalThisView}
-            </h2>
+            <h2 style={{ margin: 0 }}>{totalThisView}</h2>
           </div>
 
           <div
@@ -851,12 +942,9 @@ function Appointments() {
             </h2>
           </div>
         </div>
+                {/* CALENDAR */}
 
-        {/* =================================================
-            CALENDAR
-        ================================================= */}
-
-        {viewMode === "calendar" && (
+                {viewMode === "calendar" && (
           <div className="compact-calendar">
             <div className="compact-calendar-header">
               <div>
@@ -864,9 +952,7 @@ function Appointments() {
 
                 <p>
                   {filteredAppointments.length} appointment
-                  {filteredAppointments.length !== 1
-                    ? "s"
-                    : ""}
+                  {filteredAppointments.length !== 1 ? "s" : ""}
                 </p>
               </div>
 
@@ -942,9 +1028,7 @@ function Appointments() {
                         className="compact-day-add"
                         title="Add appointment"
                         onClick={() =>
-                          openAddModal(
-                            getDateString(day)
-                          )
+                          openAddModal(getDateString(day))
                         }
                       >
                         <FaPlus />
@@ -1012,9 +1096,7 @@ function Appointments() {
           </div>
         )}
 
-        {/* =================================================
-            LIST VIEW
-        ================================================= */}
+        {/* LIST VIEW */}
 
         {viewMode === "list" && (
           <div className="owners-table-container appointment-list-table">
@@ -1022,6 +1104,8 @@ function Appointments() {
               <thead>
                 <tr>
                   <th>Pet</th>
+                  <th>Owner</th>
+                  <th>Type</th>
                   <th>Date</th>
                   <th>Time</th>
                   <th>Veterinarian</th>
@@ -1035,7 +1119,7 @@ function Appointments() {
                 {filteredAppointments.length === 0 ? (
                   <tr>
                     <td
-                      colSpan="7"
+                      colSpan="9"
                       style={{
                         textAlign: "center",
                         padding: "30px",
@@ -1055,6 +1139,14 @@ function Appointments() {
                         </td>
 
                         <td>
+                          {appointment.owner || "—"}
+                        </td>
+
+                        <td>
+                          {appointment.type || "—"}
+                        </td>
+
+                        <td>
                           {formatDate(
                             appointment.date
                           )}
@@ -1070,7 +1162,9 @@ function Appointments() {
                           {appointment.veterinarian}
                         </td>
 
-                        <td>{appointment.reason}</td>
+                        <td>
+                          {appointment.reason}
+                        </td>
 
                         <td>
                           <span
@@ -1129,9 +1223,9 @@ function Appointments() {
         )}
       </main>
 
-      {/* =================================================
-          ADD MODAL
-      ================================================= */}
+      {/* =====================================================
+          ADD APPOINTMENT MODAL
+      ===================================================== */}
 
       {showAddModal && (
         <div className="modal-overlay">
@@ -1154,6 +1248,8 @@ function Appointments() {
             </div>
 
             <form onSubmit={handleAddAppointment}>
+              {/* PET + OWNER */}
+
               <div className="form-row">
                 <div className="form-field">
                   <label>Pet Name</label>
@@ -1165,10 +1261,30 @@ function Appointments() {
                     onChange={
                       handleNewAppointmentChange
                     }
+                    placeholder="Enter pet name"
                     required
                   />
                 </div>
 
+                <div className="form-field">
+                  <label>Owner</label>
+
+                  <input
+                    type="text"
+                    name="owner"
+                    value={newAppointment.owner}
+                    onChange={
+                      handleNewAppointmentChange
+                    }
+                    placeholder="Enter owner name"
+                    required
+                  />
+                </div>
+              </div>
+
+              {/* VETERINARIAN + APPOINTMENT TYPE */}
+
+              <div className="form-row">
                 <div className="form-field">
                   <label>Veterinarian</label>
 
@@ -1181,10 +1297,54 @@ function Appointments() {
                     onChange={
                       handleNewAppointmentChange
                     }
+                    placeholder="Enter veterinarian"
                     required
                   />
                 </div>
+
+                <div className="form-field">
+                  <label>Appointment Type</label>
+
+                  <select
+                    name="type"
+                    value={newAppointment.type}
+                    onChange={
+                      handleNewAppointmentChange
+                    }
+                    required
+                  >
+                    <option value="Consultation">
+                      Consultation
+                    </option>
+
+                    <option value="Vaccination">
+                      Vaccination
+                    </option>
+
+                    <option value="Surgery">
+                      Surgery
+                    </option>
+
+                    <option value="Follow-up">
+                      Follow-up
+                    </option>
+
+                    <option value="Dental">
+                      Dental
+                    </option>
+
+                    <option value="Emergency">
+                      Emergency
+                    </option>
+
+                    <option value="Other">
+                      Other
+                    </option>
+                  </select>
+                </div>
               </div>
+
+              {/* DATE + TIME */}
 
               <div className="form-row">
                 <div className="form-field">
@@ -1216,6 +1376,8 @@ function Appointments() {
                 </div>
               </div>
 
+              {/* REASON */}
+
               <div className="form-field">
                 <label>Reason</label>
 
@@ -1226,9 +1388,12 @@ function Appointments() {
                   onChange={
                     handleNewAppointmentChange
                   }
+                  placeholder="Enter reason for appointment"
                   required
                 />
               </div>
+
+              {/* STATUS */}
 
               <div className="form-field">
                 <label>Status</label>
@@ -1258,10 +1423,12 @@ function Appointments() {
                 </select>
               </div>
 
-              <div className="form-actions">
+              {/* SMALL WORKFLOW BUTTONS */}
+
+              <div className="workflow-actions">
                 <button
                   type="button"
-                  className="modal-cancel-button"
+                  className="workflow-button workflow-button-secondary"
                   onClick={() =>
                     setShowAddModal(false)
                   }
@@ -1271,9 +1438,19 @@ function Appointments() {
 
                 <button
                   type="submit"
-                  className="save-button"
+                  className="workflow-button workflow-button-primary"
                 >
                   Add Appointment
+                </button>
+
+                <button
+                  type="button"
+                  className="workflow-button workflow-button-primary"
+                  onClick={
+                    handleSaveAndStartVisit
+                  }
+                >
+                  Save & Start Visit
                 </button>
               </div>
             </form>
@@ -1281,9 +1458,9 @@ function Appointments() {
         </div>
       )}
 
-      {/* =================================================
-          VIEW MODAL
-      ================================================= */}
+      {/* =====================================================
+          VIEW / OPEN APPOINTMENT MODAL
+      ===================================================== */}
 
       {showViewModal &&
         selectedAppointment && (
@@ -1294,6 +1471,7 @@ function Appointments() {
                   <h2>
                     {selectedAppointment.pet}
                   </h2>
+
                   <p>Appointment details</p>
                 </div>
 
@@ -1302,12 +1480,16 @@ function Appointments() {
                   className="modal-close"
                   onClick={() => {
                     setShowViewModal(false);
-                    setSelectedAppointment(null);
+                    setSelectedAppointment(
+                      null
+                    );
                   }}
                 >
                   ×
                 </button>
               </div>
+
+              {/* STATUS */}
 
               <div className="appointment-view-status">
                 <span
@@ -1317,14 +1499,41 @@ function Appointments() {
                 </span>
               </div>
 
+              {/* OWNER */}
+
+              <div className="detail-row">
+                <span>Owner</span>
+
+                <strong>
+                  {selectedAppointment.owner ||
+                    "—"}
+                </strong>
+              </div>
+
+              {/* APPOINTMENT TYPE */}
+
+              <div className="detail-row">
+                <span>Appointment Type</span>
+
+                <strong>
+                  {selectedAppointment.type ||
+                    "—"}
+                </strong>
+              </div>
+
+              {/* DATE */}
+
               <div className="detail-row">
                 <span>Date</span>
+
                 <strong>
                   {formatDate(
                     selectedAppointment.date
                   )}
                 </strong>
               </div>
+
+              {/* TIME */}
 
               <div className="detail-row">
                 <span>
@@ -1338,6 +1547,8 @@ function Appointments() {
                 </strong>
               </div>
 
+              {/* VETERINARIAN */}
+
               <div className="detail-row">
                 <span>
                   <FaUserDoctor /> Veterinarian
@@ -1350,14 +1561,19 @@ function Appointments() {
                 </strong>
               </div>
 
+              {/* REASON */}
+
               <div className="detail-row">
                 <span>Reason</span>
+
                 <strong>
                   {selectedAppointment.reason}
                 </strong>
               </div>
 
-              <div className="form-actions">
+              {/* OPEN APPOINTMENT ACTIONS */}
+
+              <div className="workflow-actions">
                 <button
                   type="button"
                   className="delete-button"
@@ -1368,23 +1584,11 @@ function Appointments() {
                   }
                 >
                   <FaTrash />
-                  <span>Delete</span>
                 </button>
 
                 <button
                   type="button"
-                  className="modal-cancel-button"
-                  onClick={() => {
-                    setShowViewModal(false);
-                    setSelectedAppointment(null);
-                  }}
-                >
-                  Close
-                </button>
-
-                <button
-                  type="button"
-                  className="edit-button"
+                  className="workflow-button workflow-button-secondary"
                   onClick={() =>
                     handleOpenEdit(
                       selectedAppointment
@@ -1392,16 +1596,30 @@ function Appointments() {
                   }
                 >
                   <FaPen />
-                  <span>Edit</span>
+                  Edit
+                </button>
+
+                {/* NEW REQUIRED BUTTON */}
+
+                <button
+                  type="button"
+                  className="workflow-button workflow-button-primary"
+                  onClick={() =>
+                    handleStartVisit(
+                      selectedAppointment
+                    )
+                  }
+                >
+                  Start Visit
                 </button>
               </div>
             </div>
           </div>
         )}
 
-      {/* =================================================
-          EDIT MODAL
-      ================================================= */}
+      {/* =====================================================
+          EDIT APPOINTMENT MODAL
+      ===================================================== */}
 
       {showEditModal &&
         selectedAppointment && (
@@ -1420,7 +1638,9 @@ function Appointments() {
                   className="modal-close"
                   onClick={() => {
                     setShowEditModal(false);
-                    setSelectedAppointment(null);
+                    setSelectedAppointment(
+                      null
+                    );
                   }}
                 >
                   ×
@@ -1432,6 +1652,8 @@ function Appointments() {
                   handleUpdateAppointment
                 }
               >
+                {/* PET + OWNER */}
+
                 <div className="form-row">
                   <div className="form-field">
                     <label>Pet Name</label>
@@ -1442,11 +1664,34 @@ function Appointments() {
                       value={
                         selectedAppointment.pet
                       }
-                      onChange={handleEditChange}
+                      onChange={
+                        handleEditChange
+                      }
                       required
                     />
                   </div>
 
+                  <div className="form-field">
+                    <label>Owner</label>
+
+                    <input
+                      type="text"
+                      name="owner"
+                      value={
+                        selectedAppointment.owner ||
+                        ""
+                      }
+                      onChange={
+                        handleEditChange
+                      }
+                      required
+                    />
+                  </div>
+                </div>
+
+                {/* VETERINARIAN + TYPE */}
+
+                <div className="form-row">
                   <div className="form-field">
                     <label>Veterinarian</label>
 
@@ -1456,11 +1701,61 @@ function Appointments() {
                       value={
                         selectedAppointment.veterinarian
                       }
-                      onChange={handleEditChange}
+                      onChange={
+                        handleEditChange
+                      }
                       required
                     />
                   </div>
+
+                  <div className="form-field">
+                    <label>
+                      Appointment Type
+                    </label>
+
+                    <select
+                      name="type"
+                      value={
+                        selectedAppointment.type ||
+                        "Consultation"
+                      }
+                      onChange={
+                        handleEditChange
+                      }
+                      required
+                    >
+                      <option value="Consultation">
+                        Consultation
+                      </option>
+
+                      <option value="Vaccination">
+                        Vaccination
+                      </option>
+
+                      <option value="Surgery">
+                        Surgery
+                      </option>
+
+                      <option value="Follow-up">
+                        Follow-up
+                      </option>
+
+                      <option value="Dental">
+                        Dental
+                      </option>
+
+                      <option value="Emergency">
+                        Emergency
+                      </option>
+
+                      <option value="Other">
+                        Other
+                      </option>
+                    </select>
+                  </div>
                 </div>
+
+                {/* DATE + TIME */}
 
                 <div className="form-row">
                   <div className="form-field">
@@ -1472,7 +1767,9 @@ function Appointments() {
                       value={
                         selectedAppointment.date
                       }
-                      onChange={handleEditChange}
+                      onChange={
+                        handleEditChange
+                      }
                       required
                     />
                   </div>
@@ -1486,11 +1783,15 @@ function Appointments() {
                       value={
                         selectedAppointment.time
                       }
-                      onChange={handleEditChange}
+                      onChange={
+                        handleEditChange
+                      }
                       required
                     />
                   </div>
                 </div>
+
+                {/* REASON */}
 
                 <div className="form-field">
                   <label>Reason</label>
@@ -1501,10 +1802,14 @@ function Appointments() {
                     value={
                       selectedAppointment.reason
                     }
-                    onChange={handleEditChange}
+                    onChange={
+                      handleEditChange
+                    }
                     required
                   />
                 </div>
+
+                {/* STATUS */}
 
                 <div className="form-field">
                   <label>Status</label>
@@ -1514,7 +1819,9 @@ function Appointments() {
                     value={
                       selectedAppointment.status
                     }
-                    onChange={handleEditChange}
+                    onChange={
+                      handleEditChange
+                    }
                   >
                     <option value="Pending">
                       Pending
@@ -1534,13 +1841,15 @@ function Appointments() {
                   </select>
                 </div>
 
-                <div className="form-actions">
+                <div className="workflow-actions">
                   <button
                     type="button"
-                    className="modal-cancel-button"
+                    className="workflow-button workflow-button-secondary"
                     onClick={() => {
                       setShowEditModal(false);
-                      setSelectedAppointment(null);
+                      setSelectedAppointment(
+                        null
+                      );
                     }}
                   >
                     Cancel
@@ -1548,7 +1857,7 @@ function Appointments() {
 
                   <button
                     type="submit"
-                    className="save-button"
+                    className="workflow-button workflow-button-primary"
                   >
                     Save Changes
                   </button>

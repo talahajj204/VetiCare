@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
 
 import {
@@ -8,11 +9,14 @@ import {
   FaFileExcel,
   FaSearch,
   FaTimes,
+  FaPrescription,
 } from "react-icons/fa";
 
 import * as XLSX from "xlsx";
 
 function Medications() {
+  const navigate = useNavigate();
+
   // =====================================================
   // DATA
   // =====================================================
@@ -20,27 +24,42 @@ function Medications() {
   const [medications, setMedications] = useState([
     {
       id: 1,
-      name: "Amoxicillin",
+      pet: "Bella",
+      owner: "Tala El Hajj",
+      medication: "Amoxicillin",
       dosage: "250 mg",
-      form: "Capsule",
-      quantity: "40",
-      status: "In Stock",
+      frequency: "Twice daily",
+      route: "Oral",
+      startDate: "2026-09-25",
+      endDate: "2026-10-05",
+      instructions: "Give after food.",
+      status: "Active",
     },
     {
       id: 2,
-      name: "Meloxicam",
+      pet: "Luna",
+      owner: "Fatima Abbas",
+      medication: "Meloxicam",
       dosage: "1.5 mg",
-      form: "Liquid",
-      quantity: "8",
-      status: "Low Stock",
+      frequency: "Once daily",
+      route: "Oral",
+      startDate: "2026-08-10",
+      endDate: "2026-08-17",
+      instructions: "Give with food.",
+      status: "Past",
     },
     {
       id: 3,
-      name: "Cefalexin",
+      pet: "Bella",
+      owner: "Tala El Hajj",
+      medication: "Cefalexin",
       dosage: "500 mg",
-      form: "Tablet",
-      quantity: "0",
-      status: "Out of Stock",
+      frequency: "Every 12 hours",
+      route: "Oral",
+      startDate: "2026-10-01",
+      endDate: "2026-10-10",
+      instructions: "Complete the full course.",
+      status: "Active",
     },
   ]);
 
@@ -50,7 +69,7 @@ function Medications() {
 
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
-  const [formFilter, setFormFilter] = useState("All");
+  const [routeFilter, setRouteFilter] = useState("All");
 
   // =====================================================
   // PAGINATION
@@ -68,20 +87,36 @@ function Medications() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
-  const [selectedMedication, setSelectedMedication] = useState(null);
-  const [medicationToDelete, setMedicationToDelete] = useState(null);
+  const [selectedMedication, setSelectedMedication] =
+    useState(null);
+
+  const [medicationToDelete, setMedicationToDelete] =
+    useState(null);
+
+  // =====================================================
+  // EMPTY MEDICATION
+  // =====================================================
+
+  const getEmptyMedication = () => ({
+    pet: "",
+    owner: "",
+    medication: "",
+    dosage: "",
+    frequency: "",
+    route: "Oral",
+    startDate: "",
+    endDate: "",
+    instructions: "",
+    status: "Active",
+  });
 
   // =====================================================
   // NEW MEDICATION
   // =====================================================
 
-  const [newMedication, setNewMedication] = useState({
-    name: "",
-    dosage: "",
-    form: "",
-    quantity: "",
-    status: "In Stock",
-  });
+  const [newMedication, setNewMedication] = useState(
+    getEmptyMedication()
+  );
 
   // =====================================================
   // FILTER MEDICATIONS
@@ -90,29 +125,36 @@ function Medications() {
   const filteredMedications = useMemo(() => {
     const searchText = search.trim().toLowerCase();
 
-    return medications.filter((medication) => {
+    return medications.filter((item) => {
       const matchesSearch =
         !searchText ||
-        medication.name.toLowerCase().includes(searchText) ||
-        medication.dosage.toLowerCase().includes(searchText) ||
-        medication.form.toLowerCase().includes(searchText) ||
-        medication.quantity.toString().includes(searchText) ||
-        medication.status.toLowerCase().includes(searchText);
+        (item.pet || "").toLowerCase().includes(searchText) ||
+        (item.owner || "").toLowerCase().includes(searchText) ||
+        (item.medication || "")
+          .toLowerCase()
+          .includes(searchText) ||
+        (item.dosage || "").toLowerCase().includes(searchText) ||
+        (item.frequency || "")
+          .toLowerCase()
+          .includes(searchText) ||
+        (item.route || "").toLowerCase().includes(searchText) ||
+        (item.instructions || "")
+          .toLowerCase()
+          .includes(searchText) ||
+        (item.status || "").toLowerCase().includes(searchText);
 
       const matchesStatus =
-        statusFilter === "All" ||
-        medication.status === statusFilter;
+        statusFilter === "All" || item.status === statusFilter;
 
-      const matchesForm =
-        formFilter === "All" ||
-        medication.form === formFilter;
+      const matchesRoute =
+        routeFilter === "All" || item.route === routeFilter;
 
-      return matchesSearch && matchesStatus && matchesForm;
+      return matchesSearch && matchesStatus && matchesRoute;
     });
-  }, [medications, search, statusFilter, formFilter]);
+  }, [medications, search, statusFilter, routeFilter]);
 
   // =====================================================
-  // PAGINATION CALCULATIONS
+  // PAGINATION
   // =====================================================
 
   const totalPages = Math.max(
@@ -122,7 +164,7 @@ function Medications() {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [search, statusFilter, formFilter, rowsPerPage]);
+  }, [search, statusFilter, routeFilter, rowsPerPage]);
 
   useEffect(() => {
     if (currentPage > totalPages) {
@@ -138,23 +180,23 @@ function Medications() {
   );
 
   // =====================================================
-  // CLEAR FILTERS
+  // FILTERS
   // =====================================================
 
   const clearFilters = () => {
     setSearch("");
     setStatusFilter("All");
-    setFormFilter("All");
+    setRouteFilter("All");
     setCurrentPage(1);
   };
 
   const hasFilters =
     search !== "" ||
     statusFilter !== "All" ||
-    formFilter !== "All";
+    routeFilter !== "All";
 
   // =====================================================
-  // NEW MEDICATION CHANGE
+  // ADD MEDICATION
   // =====================================================
 
   const handleNewMedicationChange = (e) => {
@@ -165,10 +207,6 @@ function Medications() {
       [name]: value,
     }));
   };
-
-  // =====================================================
-  // ADD MEDICATION
-  // =====================================================
 
   const handleAddMedication = (e) => {
     e.preventDefault();
@@ -183,14 +221,7 @@ function Medications() {
       medication,
     ]);
 
-    setNewMedication({
-      name: "",
-      dosage: "",
-      form: "",
-      quantity: "",
-      status: "In Stock",
-    });
-
+    setNewMedication(getEmptyMedication());
     setShowAddModal(false);
   };
 
@@ -225,10 +256,10 @@ function Medications() {
     e.preventDefault();
 
     setMedications((previous) =>
-      previous.map((medication) =>
-        medication.id === selectedMedication.id
+      previous.map((item) =>
+        item.id === selectedMedication.id
           ? selectedMedication
-          : medication
+          : item
       )
     );
 
@@ -237,7 +268,7 @@ function Medications() {
   };
 
   // =====================================================
-  // DELETE POPUP
+  // DELETE
   // =====================================================
 
   const handleOpenDelete = (medication) => {
@@ -255,8 +286,7 @@ function Medications() {
 
     setMedications((previous) =>
       previous.filter(
-        (medication) =>
-          medication.id !== medicationToDelete.id
+        (item) => item.id !== medicationToDelete.id
       )
     );
 
@@ -265,45 +295,97 @@ function Medications() {
   };
 
   // =====================================================
-  // STATUS CLASS
+  // CREATE PRESCRIPTION
+  // =====================================================
+
+  const handleCreatePrescription = (medication) => {
+    if (medication.status !== "Active") return;
+
+    navigate("/prescriptions", {
+      state: {
+        openAddPrescription: true,
+
+        medicationId: medication.id,
+
+        pet: medication.pet,
+        petName: medication.pet,
+
+        owner: medication.owner,
+        ownerName: medication.owner,
+
+        medication: medication.medication,
+        medicationName: medication.medication,
+
+        dosage: medication.dosage,
+        frequency: medication.frequency,
+        route: medication.route,
+        startDate: medication.startDate,
+        endDate: medication.endDate,
+        instructions: medication.instructions,
+
+        medicationData: medication,
+      },
+    });
+  };
+
+  // =====================================================
+  // STATUS
   // =====================================================
 
   const getStatusClass = (status) => {
-    if (status === "In Stock") {
+    if (status === "Active") {
       return "status confirmed";
-    }
-
-    if (status === "Low Stock") {
-      return "status pending";
     }
 
     return "status cancelled";
   };
 
   // =====================================================
-  // EXPORT TO EXCEL
+  // FORMAT DATE
+  // =====================================================
+
+  const formatDate = (date) => {
+    if (!date) return "—";
+
+    const parts = date.split("-");
+
+    if (parts.length !== 3) return date;
+
+    return `${parts[2]}/${parts[1]}/${parts[0]}`;
+  };
+
+  // =====================================================
+  // EXPORT
   // =====================================================
 
   const exportToExcel = () => {
-    const excelData = filteredMedications.map(
-      (medication) => ({
-        "Medication Name": medication.name,
-        Dosage: medication.dosage,
-        Form: medication.form,
-        Quantity: Number(medication.quantity || 0),
-        Status: medication.status,
-      })
-    );
+    const excelData = filteredMedications.map((item) => ({
+      Pet: item.pet,
+      Owner: item.owner,
+      Medication: item.medication,
+      Dosage: item.dosage,
+      Frequency: item.frequency,
+      Route: item.route,
+      "Start Date": item.startDate,
+      "End Date": item.endDate,
+      Instructions: item.instructions,
+      Status: item.status,
+    }));
 
     const worksheet =
       XLSX.utils.json_to_sheet(excelData);
 
     worksheet["!cols"] = [
-      { wch: 25 },
-      { wch: 15 },
-      { wch: 15 },
-      { wch: 12 },
       { wch: 18 },
+      { wch: 22 },
+      { wch: 24 },
+      { wch: 15 },
+      { wch: 20 },
+      { wch: 15 },
+      { wch: 15 },
+      { wch: 15 },
+      { wch: 35 },
+      { wch: 12 },
     ];
 
     const workbook = XLSX.utils.book_new();
@@ -311,18 +393,17 @@ function Medications() {
     XLSX.utils.book_append_sheet(
       workbook,
       worksheet,
-      "Medications"
+      "Pet Medications"
     );
 
     XLSX.writeFile(
       workbook,
-      "vet-clinic-medications.xlsx"
+      "vet-clinic-pet-medications.xlsx"
     );
   };
 
   // =====================================================
   // PAGINATION STYLES
-  // SAME STYLE AS REMINDERS: < 1 >
   // =====================================================
 
   const paginationButtonStyle = {
@@ -366,17 +447,282 @@ function Medications() {
     opacity: 1,
   };
 
+  // =====================================================
+  // SMALL BUTTON STYLES
+  // =====================================================
+
+  const prescriptionButtonStyle = {
+    width: "auto",
+    minWidth: "0",
+    height: "32px",
+    padding: "0 10px",
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: "5px",
+    border: "1px solid #54b7b5",
+    borderRadius: "6px",
+    backgroundColor: "#54b7b5",
+    color: "#ffffff",
+    fontSize: "11px",
+    fontWeight: "600",
+    lineHeight: "1",
+    whiteSpace: "nowrap",
+    cursor: "pointer",
+  };
+
+  // =====================================================
+  // FORM CONTENT
+  // =====================================================
+
+  const renderMedicationFields = (
+    data,
+    onChange,
+    isEdit = false
+  ) => (
+    <>
+      <div className="form-row">
+        <div className="form-field">
+          <label>Pet</label>
+
+          <input
+            type="text"
+            name="pet"
+            placeholder="Enter pet name"
+            value={data.pet || ""}
+            onChange={onChange}
+            required
+          />
+        </div>
+
+        <div className="form-field">
+          <label>Owner</label>
+
+          <input
+            type="text"
+            name="owner"
+            placeholder="Enter owner name"
+            value={data.owner || ""}
+            onChange={onChange}
+          />
+        </div>
+      </div>
+
+      <div className="form-row">
+        <div className="form-field">
+          <label>Medication</label>
+
+          <input
+            type="text"
+            name="medication"
+            placeholder="Enter medication name"
+            value={data.medication || ""}
+            onChange={onChange}
+            required
+          />
+        </div>
+
+        <div className="form-field">
+          <label>Dosage</label>
+
+          <input
+            type="text"
+            name="dosage"
+            placeholder="Example: 250 mg"
+            value={data.dosage || ""}
+            onChange={onChange}
+            required
+          />
+        </div>
+      </div>
+
+      <div className="form-row">
+        <div className="form-field">
+          <label>Frequency</label>
+
+          <input
+            type="text"
+            name="frequency"
+            placeholder="Example: Twice daily"
+            value={data.frequency || ""}
+            onChange={onChange}
+            required
+          />
+        </div>
+
+        <div className="form-field">
+          <label>Route</label>
+
+          <select
+            name="route"
+            value={data.route || "Oral"}
+            onChange={onChange}
+            required
+          >
+            <option value="Oral">Oral</option>
+            <option value="Injection">Injection</option>
+            <option value="Topical">Topical</option>
+            <option value="Ophthalmic">Ophthalmic</option>
+            <option value="Otic">Otic</option>
+            <option value="Inhalation">Inhalation</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+      </div>
+
+      <div className="form-row">
+        <div className="form-field">
+          <label>Start Date</label>
+
+          <input
+            type="date"
+            name="startDate"
+            value={data.startDate || ""}
+            onChange={onChange}
+            required
+          />
+        </div>
+
+        <div className="form-field">
+          <label>End Date</label>
+
+          <input
+            type="date"
+            name="endDate"
+            value={data.endDate || ""}
+            onChange={onChange}
+          />
+        </div>
+      </div>
+
+      <div className="form-field">
+        <label>Instructions</label>
+
+        <textarea
+          name="instructions"
+          placeholder="Enter medication instructions"
+          value={data.instructions || ""}
+          onChange={onChange}
+          rows="3"
+        />
+      </div>
+
+      <div className="form-field">
+        <label>Status</label>
+
+        <select
+          name="status"
+          value={data.status || "Active"}
+          onChange={onChange}
+          required
+        >
+          <option value="Active">Active</option>
+          <option value="Past">Past</option>
+        </select>
+      </div>
+    </>
+  );
+
+  // =====================================================
+  // RETURN
+  // =====================================================
+
   return (
     <div className="dashboard-layout">
       <Sidebar />
 
       <main className="dashboard-main medications-page">
+        <style>{`
+          .medications-main-table {
+            min-width: 1180px;
+          }
+
+          .medications-main-table th,
+          .medications-main-table td {
+            white-space: nowrap;
+          }
+
+          .medication-instructions-cell {
+            max-width: 220px;
+            min-width: 180px;
+            white-space: normal !important;
+            line-height: 1.4;
+          }
+
+          .medications-actions-cell {
+            min-width: 225px;
+          }
+
+          .medication-prescription-button:hover {
+            background: #359f9b !important;
+            border-color: #359f9b !important;
+          }
+
+          .medication-status-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 62px;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 700;
+          }
+
+          .medication-status-active {
+            color: #238d78;
+            background: #e1f5ef;
+          }
+
+          .medication-status-past {
+            color: #788685;
+            background: #edf1f1;
+          }
+
+          .medication-detail-status {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 5px 11px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 700;
+          }
+
+          .medications-modal-prescription {
+            width: auto !important;
+            min-width: 0 !important;
+            height: 38px !important;
+            padding: 0 14px !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            gap: 6px !important;
+            border: 1px solid #54b7b5 !important;
+            border-radius: 7px !important;
+            background: #54b7b5 !important;
+            color: #ffffff !important;
+            font-size: 12px !important;
+            font-weight: 600 !important;
+            white-space: nowrap !important;
+            cursor: pointer !important;
+          }
+
+          .medications-modal-prescription:hover {
+            background: #359f9b !important;
+            border-color: #359f9b !important;
+          }
+        `}</style>
+
         {/* HEADER */}
 
         <div className="page-header">
           <div>
             <h1>Medications</h1>
-            <p>Manage clinic medications</p>
+            <p>
+              Manage medications currently or previously taken
+              by pets
+            </p>
           </div>
         </div>
 
@@ -385,14 +731,12 @@ function Medications() {
         ================================================= */}
 
         <div className="medications-filter-row">
-          {/* SEARCH */}
-
           <div className="medications-search-box">
             <FaSearch className="medications-search-icon" />
 
             <input
               type="text"
-              placeholder="Search medications..."
+              placeholder="Search pet or medication..."
               value={search}
               onChange={(e) =>
                 setSearch(e.target.value)
@@ -412,8 +756,6 @@ function Medications() {
             )}
           </div>
 
-          {/* STATUS */}
-
           <select
             className="medications-filter-select"
             value={statusFilter}
@@ -422,30 +764,25 @@ function Medications() {
             }
           >
             <option value="All">All Status</option>
-            <option value="In Stock">In Stock</option>
-            <option value="Low Stock">Low Stock</option>
-            <option value="Out of Stock">
-              Out of Stock
-            </option>
+            <option value="Active">Active</option>
+            <option value="Past">Past</option>
           </select>
-
-          {/* FORM */}
 
           <select
             className="medications-filter-select"
-            value={formFilter}
+            value={routeFilter}
             onChange={(e) =>
-              setFormFilter(e.target.value)
+              setRouteFilter(e.target.value)
             }
           >
-            <option value="All">All Forms</option>
-            <option value="Capsule">Capsule</option>
-            <option value="Tablet">Tablet</option>
-            <option value="Liquid">Liquid</option>
-            <option value="Injection">
-              Injection
-            </option>
-            <option value="Cream">Cream</option>
+            <option value="All">All Routes</option>
+            <option value="Oral">Oral</option>
+            <option value="Injection">Injection</option>
+            <option value="Topical">Topical</option>
+            <option value="Ophthalmic">Ophthalmic</option>
+            <option value="Otic">Otic</option>
+            <option value="Inhalation">Inhalation</option>
+            <option value="Other">Other</option>
           </select>
         </div>
 
@@ -466,7 +803,10 @@ function Medications() {
           <button
             type="button"
             className="medications-add-button"
-            onClick={() => setShowAddModal(true)}
+            onClick={() => {
+              setNewMedication(getEmptyMedication());
+              setShowAddModal(true);
+            }}
           >
             + Add Medication
           </button>
@@ -478,13 +818,17 @@ function Medications() {
 
         <div className="owners-table-container medications-table-container">
           <div className="medications-table-scroll">
-            <table className="owners-table medications-table">
+            <table className="owners-table medications-table medications-main-table">
               <thead>
                 <tr>
-                  <th>Medication Name</th>
+                  <th>Pet</th>
+                  <th>Medication</th>
                   <th>Dosage</th>
-                  <th>Form</th>
-                  <th>Quantity</th>
+                  <th>Frequency</th>
+                  <th>Route</th>
+                  <th>Start Date</th>
+                  <th>End Date</th>
+                  <th>Instructions</th>
                   <th>Status</th>
                   <th>Actions</th>
                 </tr>
@@ -492,76 +836,116 @@ function Medications() {
 
               <tbody>
                 {paginatedMedications.length > 0 ? (
-                  paginatedMedications.map(
-                    (medication) => (
-                      <tr key={medication.id}>
-                        <td>{medication.name}</td>
-                        <td>{medication.dosage}</td>
-                        <td>{medication.form}</td>
-                        <td>{medication.quantity}</td>
+                  paginatedMedications.map((item) => (
+                    <tr key={item.id}>
+                      <td>
+                        <strong>{item.pet}</strong>
 
-                        <td>
-                          <span
-                            className={getStatusClass(
-                              medication.status
-                            )}
+                        {item.owner && (
+                          <div
+                            style={{
+                              fontSize: "11px",
+                              color: "#849291",
+                              marginTop: "3px",
+                            }}
                           >
-                            {medication.status}
-                          </span>
-                        </td>
-
-                        <td>
-                          <div className="table-actions">
-                            <button
-                              type="button"
-                              className="view-button icon-button"
-                              onClick={() =>
-                                handleViewMedication(
-                                  medication
-                                )
-                              }
-                              title="View"
-                              aria-label="View medication"
-                            >
-                              <FaEye />
-                            </button>
-
-                            <button
-                              type="button"
-                              className="edit-button icon-button"
-                              onClick={() =>
-                                handleOpenEdit(
-                                  medication
-                                )
-                              }
-                              title="Edit"
-                              aria-label="Edit medication"
-                            >
-                              <FaPen />
-                            </button>
-
-                            <button
-                              type="button"
-                              className="delete-button icon-button"
-                              onClick={() =>
-                                handleOpenDelete(
-                                  medication
-                                )
-                              }
-                              title="Delete"
-                              aria-label="Delete medication"
-                            >
-                              <FaTrash />
-                            </button>
+                            {item.owner}
                           </div>
-                        </td>
-                      </tr>
-                    )
-                  )
+                        )}
+                      </td>
+
+                      <td>{item.medication}</td>
+
+                      <td>{item.dosage}</td>
+
+                      <td>{item.frequency}</td>
+
+                      <td>{item.route}</td>
+
+                      <td>{formatDate(item.startDate)}</td>
+
+                      <td>
+                        {item.endDate
+                          ? formatDate(item.endDate)
+                          : "—"}
+                      </td>
+
+                      <td className="medication-instructions-cell">
+                        {item.instructions || "—"}
+                      </td>
+
+                      <td>
+                        <span
+                          className={`medication-status-badge ${
+                            item.status === "Active"
+                              ? "medication-status-active"
+                              : "medication-status-past"
+                          }`}
+                        >
+                          {item.status}
+                        </span>
+                      </td>
+
+                      <td className="medications-actions-cell">
+                        <div className="table-actions">
+                          <button
+                            type="button"
+                            className="view-button icon-button"
+                            onClick={() =>
+                              handleViewMedication(item)
+                            }
+                            title="View"
+                            aria-label="View medication"
+                          >
+                            <FaEye />
+                          </button>
+
+                          <button
+                            type="button"
+                            className="edit-button icon-button"
+                            onClick={() =>
+                              handleOpenEdit(item)
+                            }
+                            title="Edit"
+                            aria-label="Edit medication"
+                          >
+                            <FaPen />
+                          </button>
+
+                          <button
+                            type="button"
+                            className="delete-button icon-button"
+                            onClick={() =>
+                              handleOpenDelete(item)
+                            }
+                            title="Delete"
+                            aria-label="Delete medication"
+                          >
+                            <FaTrash />
+                          </button>
+
+                          {item.status === "Active" && (
+                            <button
+                              type="button"
+                              className="medication-prescription-button"
+                              style={prescriptionButtonStyle}
+                              onClick={() =>
+                                handleCreatePrescription(item)
+                              }
+                              title="Create Prescription"
+                            >
+                              <FaPrescription />
+                              <span>Create Prescription</span>
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))
                 ) : (
                   <tr>
                     <td
-                      colSpan="6"
+                      colSpan="10"
                       className="no-results"
                     >
                       No medications found
@@ -605,8 +989,6 @@ function Medications() {
               gap: "6px",
             }}
           >
-            {/* < */}
-
             <button
               type="button"
               disabled={currentPage === 1}
@@ -625,28 +1007,24 @@ function Medications() {
               &lt;
             </button>
 
-            {/* PAGE NUMBERS */}
-
             {Array.from(
               { length: totalPages },
               (_, index) => index + 1
             ).map((page) => {
-              const isActive = currentPage === page;
+              const isActive =
+                currentPage === page;
 
               return (
                 <button
                   type="button"
                   key={page}
-                  className={
-                    isActive
-                      ? "medications-page-active"
-                      : ""
-                  }
                   onClick={() =>
                     setCurrentPage(page)
                   }
                   aria-current={
-                    isActive ? "page" : undefined
+                    isActive
+                      ? "page"
+                      : undefined
                   }
                   style={
                     isActive
@@ -659,11 +1037,11 @@ function Medications() {
               );
             })}
 
-            {/* > */}
-
             <button
               type="button"
-              disabled={currentPage === totalPages}
+              disabled={
+                currentPage === totalPages
+              }
               onClick={() =>
                 setCurrentPage((page) =>
                   Math.min(
@@ -702,7 +1080,9 @@ function Medications() {
             <div className="modal-header">
               <div>
                 <h2>Add Medication</h2>
-                <p>Enter medication information</p>
+                <p>
+                  Add a medication that a pet is taking
+                </p>
               </div>
 
               <button
@@ -717,116 +1097,10 @@ function Medications() {
             </div>
 
             <form onSubmit={handleAddMedication}>
-              <div className="form-row">
-                <div className="form-field">
-                  <label>Medication Name</label>
-
-                  <input
-                    type="text"
-                    name="name"
-                    placeholder="Enter medication name"
-                    value={newMedication.name}
-                    onChange={
-                      handleNewMedicationChange
-                    }
-                    required
-                  />
-                </div>
-
-                <div className="form-field">
-                  <label>Dosage</label>
-
-                  <input
-                    type="text"
-                    name="dosage"
-                    placeholder="Example: 250 mg"
-                    value={newMedication.dosage}
-                    onChange={
-                      handleNewMedicationChange
-                    }
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="form-row">
-                <div className="form-field">
-                  <label>Form</label>
-
-                  <select
-                    name="form"
-                    value={newMedication.form}
-                    onChange={
-                      handleNewMedicationChange
-                    }
-                    required
-                  >
-                    <option value="">
-                      Select form
-                    </option>
-
-                    <option value="Capsule">
-                      Capsule
-                    </option>
-
-                    <option value="Tablet">
-                      Tablet
-                    </option>
-
-                    <option value="Liquid">
-                      Liquid
-                    </option>
-
-                    <option value="Injection">
-                      Injection
-                    </option>
-
-                    <option value="Cream">
-                      Cream
-                    </option>
-                  </select>
-                </div>
-
-                <div className="form-field">
-                  <label>Quantity</label>
-
-                  <input
-                    type="number"
-                    name="quantity"
-                    min="0"
-                    placeholder="Enter quantity"
-                    value={newMedication.quantity}
-                    onChange={
-                      handleNewMedicationChange
-                    }
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="form-field">
-                <label>Status</label>
-
-                <select
-                  name="status"
-                  value={newMedication.status}
-                  onChange={
-                    handleNewMedicationChange
-                  }
-                >
-                  <option value="In Stock">
-                    In Stock
-                  </option>
-
-                  <option value="Low Stock">
-                    Low Stock
-                  </option>
-
-                  <option value="Out of Stock">
-                    Out of Stock
-                  </option>
-                </select>
-              </div>
+              {renderMedicationFields(
+                newMedication,
+                handleNewMedicationChange
+              )}
 
               <div className="form-actions">
                 <button
@@ -869,7 +1143,10 @@ function Medications() {
             <div className="modal-header">
               <div>
                 <h2>Medication Details</h2>
-                <p>View medication information</p>
+
+                <p>
+                  View pet medication information
+                </p>
               </div>
 
               <button
@@ -885,9 +1162,23 @@ function Medications() {
             </div>
 
             <div className="detail-row">
-              <span>Medication Name</span>
+              <span>Pet</span>
               <strong>
-                {selectedMedication.name}
+                {selectedMedication.pet}
+              </strong>
+            </div>
+
+            <div className="detail-row">
+              <span>Owner</span>
+              <strong>
+                {selectedMedication.owner || "—"}
+              </strong>
+            </div>
+
+            <div className="detail-row">
+              <span>Medication</span>
+              <strong>
+                {selectedMedication.medication}
               </strong>
             </div>
 
@@ -899,16 +1190,44 @@ function Medications() {
             </div>
 
             <div className="detail-row">
-              <span>Form</span>
+              <span>Frequency</span>
               <strong>
-                {selectedMedication.form}
+                {selectedMedication.frequency}
               </strong>
             </div>
 
             <div className="detail-row">
-              <span>Quantity</span>
+              <span>Route</span>
               <strong>
-                {selectedMedication.quantity}
+                {selectedMedication.route}
+              </strong>
+            </div>
+
+            <div className="detail-row">
+              <span>Start Date</span>
+              <strong>
+                {formatDate(
+                  selectedMedication.startDate
+                )}
+              </strong>
+            </div>
+
+            <div className="detail-row">
+              <span>End Date</span>
+              <strong>
+                {selectedMedication.endDate
+                  ? formatDate(
+                      selectedMedication.endDate
+                    )
+                  : "—"}
+              </strong>
+            </div>
+
+            <div className="detail-row">
+              <span>Instructions</span>
+              <strong>
+                {selectedMedication.instructions ||
+                  "—"}
               </strong>
             </div>
 
@@ -917,9 +1236,12 @@ function Medications() {
 
               <strong>
                 <span
-                  className={getStatusClass(
-                    selectedMedication.status
-                  )}
+                  className={`medication-detail-status ${
+                    selectedMedication.status ===
+                    "Active"
+                      ? "medication-status-active"
+                      : "medication-status-past"
+                  }`}
                 >
                   {selectedMedication.status}
                 </span>
@@ -949,6 +1271,22 @@ function Medications() {
                 <FaPen />
                 <span>Edit Medication</span>
               </button>
+
+              {selectedMedication.status ===
+                "Active" && (
+                <button
+                  type="button"
+                  className="medications-modal-prescription"
+                  onClick={() =>
+                    handleCreatePrescription(
+                      selectedMedication
+                    )
+                  }
+                >
+                  <FaPrescription />
+                  <span>Create Prescription</span>
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -972,8 +1310,9 @@ function Medications() {
             <div className="modal-header">
               <div>
                 <h2>Edit Medication</h2>
+
                 <p>
-                  Update medication information
+                  Update pet medication information
                 </p>
               </div>
 
@@ -992,111 +1331,11 @@ function Medications() {
             <form
               onSubmit={handleUpdateMedication}
             >
-              <div className="form-row">
-                <div className="form-field">
-                  <label>
-                    Medication Name
-                  </label>
-
-                  <input
-                    type="text"
-                    name="name"
-                    value={
-                      selectedMedication.name
-                    }
-                    onChange={handleEditChange}
-                    required
-                  />
-                </div>
-
-                <div className="form-field">
-                  <label>Dosage</label>
-
-                  <input
-                    type="text"
-                    name="dosage"
-                    value={
-                      selectedMedication.dosage
-                    }
-                    onChange={handleEditChange}
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="form-row">
-                <div className="form-field">
-                  <label>Form</label>
-
-                  <select
-                    name="form"
-                    value={
-                      selectedMedication.form
-                    }
-                    onChange={handleEditChange}
-                    required
-                  >
-                    <option value="Capsule">
-                      Capsule
-                    </option>
-
-                    <option value="Tablet">
-                      Tablet
-                    </option>
-
-                    <option value="Liquid">
-                      Liquid
-                    </option>
-
-                    <option value="Injection">
-                      Injection
-                    </option>
-
-                    <option value="Cream">
-                      Cream
-                    </option>
-                  </select>
-                </div>
-
-                <div className="form-field">
-                  <label>Quantity</label>
-
-                  <input
-                    type="number"
-                    name="quantity"
-                    min="0"
-                    value={
-                      selectedMedication.quantity
-                    }
-                    onChange={handleEditChange}
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="form-field">
-                <label>Status</label>
-
-                <select
-                  name="status"
-                  value={
-                    selectedMedication.status
-                  }
-                  onChange={handleEditChange}
-                >
-                  <option value="In Stock">
-                    In Stock
-                  </option>
-
-                  <option value="Low Stock">
-                    Low Stock
-                  </option>
-
-                  <option value="Out of Stock">
-                    Out of Stock
-                  </option>
-                </select>
-              </div>
+              {renderMedicationFields(
+                selectedMedication,
+                handleEditChange,
+                true
+              )}
 
               <div className="form-actions">
                 <button
@@ -1126,46 +1365,61 @@ function Medications() {
           DELETE POPUP
       ===================================================== */}
 
-      {showDeleteModal && medicationToDelete && (
-        <div
-          className="medications-delete-overlay"
-          onMouseDown={(e) => {
-            if (e.target === e.currentTarget) {
-              handleCancelDelete();
-            }
-          }}
-        >
-          <div className="medications-delete-dialog">
-            <div className="medications-delete-icon">
-              <FaTrash />
-            </div>
+      {showDeleteModal &&
+        medicationToDelete && (
+          <div
+            className="medications-delete-overlay"
+            onMouseDown={(e) => {
+              if (
+                e.target === e.currentTarget
+              ) {
+                handleCancelDelete();
+              }
+            }}
+          >
+            <div className="medications-delete-dialog">
+              <div className="medications-delete-icon">
+                <FaTrash />
+              </div>
 
-            <h3>Delete Medication</h3>
+              <h3>Delete Medication</h3>
 
-            <p>
-              Are you sure you want to delete this?
-            </p>
+              <p>
+                Are you sure you want to delete{" "}
+                <strong>
+                  {medicationToDelete.medication}
+                </strong>{" "}
+                for{" "}
+                <strong>
+                  {medicationToDelete.pet}
+                </strong>
+                ?
+              </p>
 
-            <div className="medications-delete-actions">
-              <button
-                type="button"
-                className="medications-delete-cancel"
-                onClick={handleCancelDelete}
-              >
-                Cancel
-              </button>
+              <div className="medications-delete-actions">
+                <button
+                  type="button"
+                  className="medications-delete-cancel"
+                  onClick={
+                    handleCancelDelete
+                  }
+                >
+                  Cancel
+                </button>
 
-              <button
-                type="button"
-                className="medications-delete-confirm"
-                onClick={handleConfirmDelete}
-              >
-                Delete
-              </button>
+                <button
+                  type="button"
+                  className="medications-delete-confirm"
+                  onClick={
+                    handleConfirmDelete
+                  }
+                >
+                  Delete
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
     </div>
   );
 }
