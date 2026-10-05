@@ -1,9 +1,12 @@
 import { useMemo, useState } from "react";
+
 import Sidebar from "../components/Sidebar";
+
 import {
   FaFileExcel,
   FaCalendarAlt,
   FaSortAmountDown,
+  FaPrint,
 } from "react-icons/fa";
 
 function Reports() {
@@ -654,6 +657,7 @@ function Reports() {
       alert(
         "Please select a valid From and To date."
       );
+
       return;
     }
 
@@ -696,11 +700,14 @@ function Reports() {
     );
 
     const url = URL.createObjectURL(blob);
+
     const link =
       document.createElement("a");
 
     link.href = url;
-    link.download = `clinic-report-${startDate}-to-${endDate}.csv`;
+
+    link.download =
+      `clinic-report-${startDate}-to-${endDate}.csv`;
 
     document.body.appendChild(link);
     link.click();
@@ -710,23 +717,312 @@ function Reports() {
   };
 
   // =========================================================
+  // PRINT ONE SUMMARY REPORT
+  // =========================================================
+
+  const handlePrintReport = (report) => {
+    if (!validRange) {
+      alert(
+        "Please select a valid From and To date."
+      );
+      return;
+    }
+
+    let detailsHtml = "";
+
+    if (report.category === "Appointments") {
+      detailsHtml = `
+        <table>
+          <thead>
+            <tr>
+              <th>Pet</th>
+              <th>Owner</th>
+              <th>Date</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            ${filteredAppointments
+              .map(
+                (item) => `
+                  <tr>
+                    <td>${item.pet}</td>
+                    <td>${item.owner}</td>
+                    <td>${formatDisplayDate(
+                      item.date
+                    )}</td>
+                    <td>${item.status}</td>
+                  </tr>
+                `
+              )
+              .join("")}
+          </tbody>
+        </table>
+      `;
+    }
+
+    if (report.category === "Vaccinations") {
+      detailsHtml = `
+        <table>
+          <thead>
+            <tr>
+              <th>Pet</th>
+              <th>Vaccine</th>
+              <th>Date</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            ${filteredVaccinations
+              .map(
+                (item) => `
+                  <tr>
+                    <td>${item.pet}</td>
+                    <td>${item.vaccine}</td>
+                    <td>${formatDisplayDate(
+                      item.date
+                    )}</td>
+                    <td>${item.status}</td>
+                  </tr>
+                `
+              )
+              .join("")}
+          </tbody>
+        </table>
+      `;
+    }
+
+    if (report.category === "Invoices") {
+      detailsHtml = `
+        <table>
+          <thead>
+            <tr>
+              <th>Invoice</th>
+              <th>Date</th>
+              <th>Amount</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            ${filteredInvoices
+              .map(
+                (item) => `
+                  <tr>
+                    <td>${item.invoiceNumber}</td>
+                    <td>${formatDisplayDate(
+                      item.date
+                    )}</td>
+                    <td>$${Number(
+                      item.amount
+                    ).toFixed(2)}</td>
+                    <td>${item.status}</td>
+                  </tr>
+                `
+              )
+              .join("")}
+          </tbody>
+        </table>
+      `;
+    }
+
+    if (report.category === "Revenue") {
+      const paidInvoices =
+        filteredInvoices.filter(
+          (invoice) =>
+            invoice.status === "Paid"
+        );
+
+      detailsHtml = `
+        <table>
+          <thead>
+            <tr>
+              <th>Invoice</th>
+              <th>Date</th>
+              <th>Amount</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            ${paidInvoices
+              .map(
+                (item) => `
+                  <tr>
+                    <td>${item.invoiceNumber}</td>
+                    <td>${formatDisplayDate(
+                      item.date
+                    )}</td>
+                    <td>$${Number(
+                      item.amount
+                    ).toFixed(2)}</td>
+                    <td>${item.status}</td>
+                  </tr>
+                `
+              )
+              .join("")}
+          </tbody>
+        </table>
+      `;
+    }
+
+    const printWindow = window.open(
+      "",
+      "_blank",
+      "width=1000,height=800"
+    );
+
+    if (!printWindow) {
+      alert(
+        "Please allow pop-ups to print the report."
+      );
+
+      return;
+    }
+
+    const totalValue = report.money
+      ? `$${Number(report.total).toFixed(2)}`
+      : report.total;
+
+    printWindow.document.write(`
+      <!DOCTYPE html>
+
+      <html>
+        <head>
+          <title>${report.category} Report</title>
+
+          <style>
+            body {
+              font-family: Arial, sans-serif;
+              padding: 35px;
+              color: #263238;
+            }
+
+            h1 {
+              color: #55b7b2;
+              margin-bottom: 5px;
+            }
+
+            h2 {
+              margin-top: 0;
+            }
+
+            .range {
+              color: #687b7e;
+              margin-bottom: 30px;
+            }
+
+            .summary {
+              padding: 18px;
+              margin-bottom: 25px;
+
+              background: #f3fbfa;
+              border: 1px solid #d3eae8;
+            }
+
+            .total {
+              font-size: 24px;
+              font-weight: bold;
+              color: #55b7b2;
+            }
+
+            table {
+              width: 100%;
+              border-collapse: collapse;
+            }
+
+            th,
+            td {
+              padding: 11px;
+              text-align: left;
+              border: 1px solid #dce7e6;
+            }
+
+            th {
+              background: #55b7b2;
+              color: white;
+            }
+
+            @media print {
+              @page {
+                margin: 15mm;
+              }
+            }
+          </style>
+        </head>
+
+        <body>
+
+          <h1>Vet Clinic</h1>
+
+          <h2>
+            ${report.category} Report
+          </h2>
+
+          <div class="range">
+            ${formatDisplayDate(startDate)}
+            —
+            ${formatDisplayDate(endDate)}
+          </div>
+
+          <div class="summary">
+            <strong>
+              ${report.category}
+            </strong>
+
+            <br /><br />
+
+            Total:
+
+            <span class="total">
+              ${totalValue}
+            </span>
+
+            <br /><br />
+
+            ${report.description}
+          </div>
+
+          ${detailsHtml}
+
+        </body>
+      </html>
+    `);
+
+    printWindow.document.close();
+    printWindow.focus();
+
+    setTimeout(() => {
+      printWindow.print();
+      printWindow.close();
+    }, 300);
+  };
+
+  // =========================================================
   // RETURN
   // =========================================================
 
   return (
     <div className="dashboard-layout">
+
       <Sidebar />
 
       <main className="dashboard-main reports-page">
+
         {/* HEADER */}
 
         <div className="reports-main-header">
+
           <div className="reports-title-area">
+
             <h1>Reports</h1>
 
             <p className="reports-selected-range">
               {selectedRangeText}
             </p>
+
           </div>
 
           <button
@@ -735,29 +1031,38 @@ function Reports() {
             onClick={handleExport}
           >
             <FaFileExcel />
+
             <span>Export</span>
           </button>
+
         </div>
 
         {/* DATE BOX */}
 
         <div className="reports-date-box">
+
           <div className="reports-date-box-left">
+
             <div className="reports-date-icon-box">
               <FaCalendarAlt />
             </div>
 
             <div className="reports-date-field">
+
               <label>From</label>
 
               <input
                 type="date"
                 value={startDate}
                 onChange={(e) => {
-                  setStartDate(e.target.value);
+                  setStartDate(
+                    e.target.value
+                  );
+
                   setCurrentPage(1);
                 }}
               />
+
             </div>
 
             <span className="reports-date-separator">
@@ -765,22 +1070,32 @@ function Reports() {
             </span>
 
             <div className="reports-date-field">
+
               <label>To</label>
 
               <input
                 type="date"
                 value={endDate}
                 onChange={(e) => {
-                  setEndDate(e.target.value);
+                  setEndDate(
+                    e.target.value
+                  );
+
                   setCurrentPage(1);
                 }}
               />
+
             </div>
+
           </div>
 
+          {/* ONLY THESE 4 BUTTONS GET NEW CSS */}
+
           <div className="reports-quick-buttons">
+
             <button
               type="button"
+              className="reports-quick-date-button"
               onClick={setTodayRange}
             >
               Today
@@ -788,6 +1103,7 @@ function Reports() {
 
             <button
               type="button"
+              className="reports-quick-date-button"
               onClick={setLast7Days}
             >
               Last 7 days
@@ -795,6 +1111,7 @@ function Reports() {
 
             <button
               type="button"
+              className="reports-quick-date-button"
               onClick={setThisMonth}
             >
               This month
@@ -802,11 +1119,14 @@ function Reports() {
 
             <button
               type="button"
+              className="reports-quick-date-button"
               onClick={setThisYear}
             >
               This year
             </button>
+
           </div>
+
         </div>
 
         {!validRange && (
@@ -818,6 +1138,7 @@ function Reports() {
         {/* SUMMARY CARDS */}
 
         <div className="reports-summary-grid">
+
           <div className="reports-summary-card">
             <span className="reports-card-label">
               Appointments
@@ -873,15 +1194,19 @@ function Reports() {
               Paid invoices
             </span>
           </div>
+
         </div>
 
         {/* CHARTS */}
 
         <div className="reports-charts-grid">
+
           {/* REVENUE */}
 
           <div className="reports-chart-card">
+
             <div className="reports-chart-header">
+
               <div>
                 <h2>Revenue</h2>
                 <p>{selectedRangeText}</p>
@@ -890,20 +1215,24 @@ function Reports() {
               <strong>
                 ${revenueTotal.toFixed(2)}
               </strong>
+
             </div>
 
             {revenueByDate.length === 0 ? (
+
               <div className="reports-no-data">
                 No data for these dates
               </div>
+
             ) : (
+
               <div className="reports-revenue-chart">
+
                 {revenueByDate.map((item) => {
+
                   const height = Math.max(
                     10,
-                    (item.total /
-                      maxRevenue) *
-                      100
+                    (item.total / maxRevenue) * 100
                   );
 
                   return (
@@ -911,20 +1240,20 @@ function Reports() {
                       className="reports-revenue-column"
                       key={item.date}
                     >
+
                       <div className="reports-bar-value">
-                        $
-                        {item.total.toFixed(
-                          0
-                        )}
+                        ${item.total.toFixed(0)}
                       </div>
 
                       <div className="reports-bar-track">
+
                         <div
                           className="reports-revenue-bar"
                           style={{
                             height: `${height}%`,
                           }}
                         />
+
                       </div>
 
                       <span>
@@ -932,18 +1261,24 @@ function Reports() {
                           item.date
                         )}
                       </span>
+
                     </div>
                   );
                 })}
+
               </div>
             )}
+
           </div>
 
           {/* APPOINTMENTS BY STATUS */}
 
           <div className="reports-chart-card">
+
             <div className="reports-chart-header">
+
               <div>
+
                 <h2>
                   Appointments by Status
                 </h2>
@@ -951,22 +1286,28 @@ function Reports() {
                 <p>
                   {selectedRangeText}
                 </p>
+
               </div>
 
               <strong>
                 {appointmentTotal}
               </strong>
+
             </div>
 
-            {appointmentStatusData.length ===
-            0 ? (
+            {appointmentStatusData.length === 0 ? (
+
               <div className="reports-no-data">
                 No data for these dates
               </div>
+
             ) : (
+
               <div className="reports-status-chart">
+
                 {appointmentStatusData.map(
                   (item) => {
+
                     const width =
                       (item.total /
                         maxStatusTotal) *
@@ -977,7 +1318,9 @@ function Reports() {
                         className="reports-status-row"
                         key={item.status}
                       >
+
                         <div className="reports-status-top">
+
                           <span>
                             {item.status}
                           </span>
@@ -985,51 +1328,64 @@ function Reports() {
                           <strong>
                             {item.total}
                           </strong>
+
                         </div>
 
                         <div className="reports-status-track">
+
                           <div
                             className="reports-status-bar"
                             style={{
                               width: `${width}%`,
                             }}
                           />
+
                         </div>
+
                       </div>
                     );
                   }
                 )}
+
               </div>
             )}
+
           </div>
+
         </div>
 
-        {/* =====================================================
-            SUMMARY TABLE
-        ===================================================== */}
+        {/* SUMMARY TABLE */}
 
         <div className="reports-summary-section">
+
           <div className="reports-summary-header">
+
             <div>
+
               <h2>Summary</h2>
 
               <p>
                 {selectedRangeText}
               </p>
+
             </div>
 
             <div className="reports-sort-box">
+
               <FaSortAmountDown />
 
               <select
                 value={sortBy}
                 onChange={(e) => {
+
                   setSortBy(
                     e.target.value
                   );
+
                   setCurrentPage(1);
                 }}
               >
+
                 <option value="default">
                   Sort By
                 </option>
@@ -1049,39 +1405,54 @@ function Reports() {
                 <option value="total-low">
                   Total: Low to High
                 </option>
+
               </select>
+
             </div>
+
           </div>
 
           <div className="owners-table-container reports-table-container">
+
             <table className="owners-table reports-table">
+
               <thead>
+
                 <tr>
                   <th>Category</th>
                   <th>Total</th>
                   <th>Description</th>
+
+                  {/* NEW */}
+                  <th>Print</th>
                 </tr>
+
               </thead>
 
               <tbody>
+
                 {everythingIsZero ? (
+
                   <tr>
+
                     <td
-                      colSpan="3"
+                      colSpan="4"
                       className="reports-nothing"
                     >
-                      Nothing to show for
-                      these dates
+                      Nothing to show for these dates
                     </td>
+
                   </tr>
+
                 ) : (
+
                   paginatedSummaryData.map(
                     (report) => (
+
                       <tr key={report.id}>
+
                         <td>
-                          {
-                            report.category
-                          }
+                          {report.category}
                         </td>
 
                         <td>
@@ -1093,26 +1464,49 @@ function Reports() {
                         </td>
 
                         <td>
-                          {
-                            report.description
-                          }
+                          {report.description}
                         </td>
+
+                        {/* NEW PRINT - NO NEW TABLE CSS */}
+
+                        <td>
+
+                          <button
+                            type="button"
+                            onClick={() =>
+                              handlePrintReport(
+                                report
+                              )
+                            }
+                          >
+                            <FaPrint /> Print
+                          </button>
+
+                        </td>
+
                       </tr>
+
                     )
                   )
+
                 )}
+
               </tbody>
+
             </table>
+
           </div>
+
         </div>
 
-        {/* =====================================================
-            PAGINATION - LAST THING ON PAGE
-        ===================================================== */}
+        {/* PAGINATION */}
 
         {!everythingIsZero && (
+
           <div className="reports-pagination">
+
             <div className="reports-pagination-left">
+
               <span className="reports-rows-label">
                 Rows per page
               </span>
@@ -1124,6 +1518,7 @@ function Reports() {
                   handleItemsPerPageChange
                 }
               >
+
                 <option value={5}>
                   5
                 </option>
@@ -1139,10 +1534,13 @@ function Reports() {
                 <option value={50}>
                   50
                 </option>
+
               </select>
+
             </div>
 
             <div className="reports-pagination-right">
+
               <button
                 type="button"
                 className="reports-page-navigation"
@@ -1157,27 +1555,28 @@ function Reports() {
               </button>
 
               <div className="reports-page-numbers">
+
                 {pageNumbers.map(
                   (page) => (
+
                     <button
                       type="button"
                       key={page}
                       className={`reports-page-number ${
-                        safeCurrentPage ===
-                        page
+                        safeCurrentPage === page
                           ? "active"
                           : ""
                       }`}
                       onClick={() =>
-                        setCurrentPage(
-                          page
-                        )
+                        setCurrentPage(page)
                       }
                     >
                       {page}
                     </button>
+
                   )
                 )}
+
               </div>
 
               <button
@@ -1193,9 +1592,13 @@ function Reports() {
               >
                 Next
               </button>
+
             </div>
+
           </div>
+
         )}
+
       </main>
     </div>
   );

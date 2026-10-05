@@ -4,7 +4,7 @@ import {
   useLocation,
 } from "react-router-dom";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import {
   FaChartLine,
@@ -30,6 +30,10 @@ import {
   FaRightFromBracket,
   FaBars,
   FaXmark,
+  FaChevronDown,
+  FaChevronRight,
+  FaArrowTrendUp,
+  FaArrowTrendDown,
 } from "react-icons/fa6";
 
 function Sidebar() {
@@ -38,39 +42,132 @@ function Sidebar() {
 
   const [menuOpen, setMenuOpen] = useState(false);
 
-  // ==========================================
-  // COLLAPSE SIDEBAR AUTOMATICALLY ON POS ONLY
-  // ==========================================
+  const sidebarRef = useRef(null);
+
+  const SIDEBAR_SCROLL_KEY = "vetClinicSidebarScroll";
 
   const isPOSPage = location.pathname === "/pos";
 
-  // ==========================================
+  const isFinancialPage =
+    location.pathname === "/financial";
+
+  const [financialOpen, setFinancialOpen] =
+    useState(isFinancialPage);
+
+  const financialTab =
+    new URLSearchParams(location.search).get("tab") ||
+    "revenue";
+
+  // =========================================================
+  // KEEP FINANCIAL OPEN WHEN USER IS INSIDE FINANCIAL
+  // =========================================================
+
+  useEffect(() => {
+    if (isFinancialPage) {
+      setFinancialOpen(true);
+    }
+  }, [isFinancialPage]);
+
+  // =========================================================
+  // RESTORE SIDEBAR SCROLL
+  // =========================================================
+
+  useEffect(() => {
+    const sidebar = sidebarRef.current;
+
+    if (!sidebar) return;
+
+    const savedScrollPosition = Number(
+      sessionStorage.getItem(SIDEBAR_SCROLL_KEY) || 0
+    );
+
+    const frame = requestAnimationFrame(() => {
+      sidebar.scrollTop = savedScrollPosition;
+    });
+
+    return () => {
+      cancelAnimationFrame(frame);
+    };
+  }, [location.pathname, location.search]);
+
+  // =========================================================
+  // SAVE SIDEBAR SCROLL
+  // =========================================================
+
+  const saveSidebarScroll = () => {
+    const sidebar = sidebarRef.current;
+
+    if (!sidebar) return;
+
+    sessionStorage.setItem(
+      SIDEBAR_SCROLL_KEY,
+      String(sidebar.scrollTop)
+    );
+  };
+
+  const handleSidebarScroll = () => {
+    saveSidebarScroll();
+  };
+
+  // =========================================================
+  // NORMAL NAVIGATION
+  // =========================================================
+
+  const handleNavigation = () => {
+    saveSidebarScroll();
+    setMenuOpen(false);
+  };
+
+  // =========================================================
+  // FINANCIAL PARENT
+  // =========================================================
+
+  const handleFinancialParent = () => {
+    saveSidebarScroll();
+
+    setFinancialOpen((previous) => !previous);
+  };
+
+  // =========================================================
+  // FINANCIAL CHILD
+  // =========================================================
+
+  const handleFinancialNavigation = (tab) => {
+    saveSidebarScroll();
+
+    navigate(`/financial?tab=${tab}`);
+
+    setFinancialOpen(true);
+    setMenuOpen(false);
+  };
+
+  // =========================================================
   // LOGOUT
-  // ==========================================
+  // =========================================================
 
   const handleLogout = () => {
+    sessionStorage.removeItem(SIDEBAR_SCROLL_KEY);
+
     setMenuOpen(false);
+
     navigate("/");
   };
 
-  // ==========================================
-  // CLOSE MOBILE MENU
-  // ==========================================
+  // =========================================================
+  // MOBILE CLOSE
+  // =========================================================
 
   const closeMenu = () => {
+    saveSidebarScroll();
     setMenuOpen(false);
   };
 
   return (
     <>
-      {/* ======================================
-          POS COLLAPSED SIDEBAR CSS
-      ====================================== */}
-
       <style>{`
-        /* =====================================
-           POS SIDEBAR ONLY
-        ===================================== */
+        /* =====================================================
+           POS COLLAPSED SIDEBAR
+        ===================================================== */
 
         .sidebar.sidebar-pos-collapsed {
           width: 72px !important;
@@ -83,17 +180,14 @@ function Sidebar() {
           overflow-x: hidden;
         }
 
-        /* LOGO */
-
-        .sidebar.sidebar-pos-collapsed
-        .sidebar-logo {
+        .sidebar.sidebar-pos-collapsed .sidebar-logo {
           justify-content: center !important;
+
           padding-left: 0 !important;
           padding-right: 0 !important;
         }
 
-        .sidebar.sidebar-pos-collapsed
-        .sidebar-brand {
+        .sidebar.sidebar-pos-collapsed .sidebar-brand {
           width: 100%;
 
           display: flex;
@@ -101,28 +195,21 @@ function Sidebar() {
           justify-content: center;
         }
 
-        .sidebar.sidebar-pos-collapsed
-        .sidebar-logo-icon {
+        .sidebar.sidebar-pos-collapsed .sidebar-logo-icon {
           margin: 0 !important;
           font-size: 25px;
         }
 
-        .sidebar.sidebar-pos-collapsed
-        .sidebar-logo-text {
+        .sidebar.sidebar-pos-collapsed .sidebar-logo-text {
           display: none !important;
         }
 
-        /* =====================================
-           NAVIGATION
-        ===================================== */
-
-        .sidebar.sidebar-pos-collapsed
-        .sidebar-nav {
+        .sidebar.sidebar-pos-collapsed .sidebar-nav {
           width: 100%;
         }
 
-        .sidebar.sidebar-pos-collapsed
-        .sidebar-nav a {
+        .sidebar.sidebar-pos-collapsed .sidebar-nav a,
+        .sidebar.sidebar-pos-collapsed .financial-parent-button {
           width: 100% !important;
           min-width: 0 !important;
 
@@ -141,7 +228,11 @@ function Sidebar() {
         }
 
         .sidebar.sidebar-pos-collapsed
-        .sidebar-nav a .sidebar-icon {
+          .sidebar-nav a
+          .sidebar-icon,
+        .sidebar.sidebar-pos-collapsed
+          .financial-parent-button
+          .sidebar-icon {
           width: 18px !important;
           min-width: 18px !important;
 
@@ -150,25 +241,31 @@ function Sidebar() {
           font-size: 18px;
         }
 
+        .sidebar.sidebar-pos-collapsed .sidebar-text,
         .sidebar.sidebar-pos-collapsed
-        .sidebar-text {
+          .financial-parent-arrow {
           display: none !important;
         }
 
-        /* ACTIVE PAGE */
-
         .sidebar.sidebar-pos-collapsed
-        .sidebar-nav a.active {
+          .sidebar-nav
+          a.active {
           background: #2f7f7b;
           color: #ffffff;
         }
 
-        /* =====================================
-           LOGOUT
-        ===================================== */
+        .sidebar.sidebar-pos-collapsed
+          .financial-parent-button.active {
+          background: #2f7f7b;
+          color: #ffffff;
+        }
 
         .sidebar.sidebar-pos-collapsed
-        .sidebar-logout {
+          .financial-submenu {
+          display: none !important;
+        }
+
+        .sidebar.sidebar-pos-collapsed .sidebar-logout {
           width: 100% !important;
           min-width: 0 !important;
 
@@ -187,7 +284,8 @@ function Sidebar() {
         }
 
         .sidebar.sidebar-pos-collapsed
-        .sidebar-logout .sidebar-icon {
+          .sidebar-logout
+          .sidebar-icon {
           width: 18px !important;
           min-width: 18px !important;
 
@@ -196,62 +294,137 @@ function Sidebar() {
           font-size: 18px;
         }
 
-        /* =====================================
-           TOOLTIP ON POS
-        ===================================== */
+        /* =====================================================
+           FINANCIAL PARENT
+        ===================================================== */
 
-        .sidebar.sidebar-pos-collapsed
-        .sidebar-nav a {
-          position: relative;
+        .financial-sidebar-group {
+          width: 100%;
         }
 
-        .sidebar.sidebar-pos-collapsed
-        .sidebar-nav a::after {
-          content: attr(data-label);
+        .financial-parent-button {
+          width: 100%;
 
-          position: absolute;
+          border: none;
+          outline: none;
 
-          left: 57px;
-          top: 50%;
+          background: transparent;
+          color: inherit;
 
-          transform: translateY(-50%);
+          font-family: inherit;
 
-          z-index: 99999;
+          cursor: pointer;
 
-          padding: 6px 9px;
+          display: flex;
+          align-items: center;
 
-          border-radius: 5px;
+          box-sizing: border-box;
 
-          background: #263837;
-          color: #ffffff;
-
-          font-size: 11px;
-          font-weight: 500;
-
-          white-space: nowrap;
-
-          opacity: 0;
-          visibility: hidden;
-
-          pointer-events: none;
+          text-align: left;
 
           transition:
-            opacity 0.15s ease,
-            visibility 0.15s ease;
+            background 0.18s ease,
+            color 0.18s ease;
         }
 
-        .sidebar.sidebar-pos-collapsed
-        .sidebar-nav a:hover::after {
-          opacity: 1;
-          visibility: visible;
+        .financial-parent-button:hover {
+          background: rgba(255, 255, 255, 0.12);
         }
 
-        /* =====================================
+        .financial-parent-button.active {
+          background: #2f7f7b;
+          color: #ffffff;
+        }
+
+        .financial-parent-arrow {
+          margin-left: auto;
+
+          width: 14px;
+          min-width: 14px;
+
+          font-size: 11px;
+
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        /* =====================================================
+           FINANCIAL SUBMENU
+        ===================================================== */
+
+        .financial-submenu {
+          width: 100%;
+
+          padding: 4px 0 5px 0;
+
+          display: flex;
+          flex-direction: column;
+
+          gap: 3px;
+
+          box-sizing: border-box;
+        }
+
+        .financial-submenu-button {
+          width: calc(100% - 16px);
+
+          min-height: 39px;
+
+          margin-left: 16px;
+
+          padding: 8px 14px 8px 44px;
+
+          border: none;
+          outline: none;
+
+          border-radius: 8px;
+
+          background: transparent;
+          color: inherit;
+
+          font-family: inherit;
+          font-size: 13px;
+          font-weight: 500;
+
+          cursor: pointer;
+
+          display: flex;
+          align-items: center;
+
+          gap: 9px;
+
+          box-sizing: border-box;
+
+          text-align: left;
+
+          transition:
+            background 0.18s ease,
+            color 0.18s ease;
+        }
+
+        .financial-submenu-button svg {
+          width: 13px;
+          min-width: 13px;
+
+          font-size: 13px;
+        }
+
+        .financial-submenu-button:hover {
+          background: rgba(255, 255, 255, 0.12);
+        }
+
+        .financial-submenu-button.active {
+          background: rgba(47, 127, 123, 0.75);
+          color: #ffffff;
+          font-weight: 700;
+        }
+
+        /* =====================================================
            MOBILE
-        ===================================== */
+        ===================================================== */
 
         @media (max-width: 768px) {
-
           .sidebar.sidebar-pos-collapsed {
             width: 260px !important;
             min-width: 260px !important;
@@ -261,29 +434,30 @@ function Sidebar() {
             padding-right: initial !important;
           }
 
-          .sidebar.sidebar-pos-collapsed
-          .sidebar-logo {
+          .sidebar.sidebar-pos-collapsed .sidebar-logo {
             justify-content: space-between !important;
           }
 
-          .sidebar.sidebar-pos-collapsed
-          .sidebar-brand {
+          .sidebar.sidebar-pos-collapsed .sidebar-brand {
             width: auto;
+
             justify-content: flex-start;
           }
 
           .sidebar.sidebar-pos-collapsed
-          .sidebar-logo-text {
+            .sidebar-logo-text {
             display: block !important;
           }
 
+          .sidebar.sidebar-pos-collapsed .sidebar-text,
           .sidebar.sidebar-pos-collapsed
-          .sidebar-text {
-            display: inline !important;
+            .financial-parent-arrow {
+            display: flex !important;
           }
 
+          .sidebar.sidebar-pos-collapsed .sidebar-nav a,
           .sidebar.sidebar-pos-collapsed
-          .sidebar-nav a {
+            .financial-parent-button {
             height: auto;
 
             padding: 12px 16px !important;
@@ -294,7 +468,11 @@ function Sidebar() {
           }
 
           .sidebar.sidebar-pos-collapsed
-          .sidebar-logout {
+            .financial-submenu {
+            display: flex !important;
+          }
+
+          .sidebar.sidebar-pos-collapsed .sidebar-logout {
             height: auto;
 
             padding: 12px 16px !important;
@@ -302,18 +480,13 @@ function Sidebar() {
             justify-content: flex-start !important;
 
             gap: 12px !important;
-          }
-
-          .sidebar.sidebar-pos-collapsed
-          .sidebar-nav a::after {
-            display: none;
           }
         }
       `}</style>
 
-      {/* ======================================
-          MOBILE HAMBURGER
-      ====================================== */}
+      {/* =====================================================
+          MOBILE BUTTON
+      ===================================================== */}
 
       <button
         className="mobile-menu-button"
@@ -323,9 +496,9 @@ function Sidebar() {
         <FaBars />
       </button>
 
-      {/* ======================================
+      {/* =====================================================
           MOBILE OVERLAY
-      ====================================== */}
+      ===================================================== */}
 
       {menuOpen && (
         <div
@@ -334,11 +507,13 @@ function Sidebar() {
         />
       )}
 
-      {/* ======================================
+      {/* =====================================================
           SIDEBAR
-      ====================================== */}
+      ===================================================== */}
 
       <aside
+        ref={sidebarRef}
+        onScroll={handleSidebarScroll}
         className={`sidebar ${
           menuOpen ? "sidebar-open" : ""
         } ${
@@ -346,24 +521,18 @@ function Sidebar() {
         }`}
       >
         <div>
-
-          {/* ==================================
+          {/* =================================================
               LOGO
-          ================================== */}
+          ================================================= */}
 
           <div className="sidebar-logo">
-
             <div className="sidebar-brand">
-
               <FaPaw className="sidebar-logo-icon" />
 
               <h2 className="sidebar-logo-text">
                 Vet Clinic
               </h2>
-
             </div>
-
-            {/* MOBILE CLOSE */}
 
             <button
               className="mobile-close-button"
@@ -372,20 +541,16 @@ function Sidebar() {
             >
               <FaXmark />
             </button>
-
           </div>
 
-          {/* ==================================
+          {/* =================================================
               NAVIGATION
-          ================================== */}
+          ================================================= */}
 
           <nav className="sidebar-nav">
-
-            {/* DASHBOARD */}
-
             <NavLink
               to="/dashboard"
-              onClick={closeMenu}
+              onClick={handleNavigation}
               data-label="Dashboard"
               title={isPOSPage ? "Dashboard" : ""}
             >
@@ -396,11 +561,9 @@ function Sidebar() {
               </span>
             </NavLink>
 
-            {/* OWNERS */}
-
             <NavLink
               to="/owners"
-              onClick={closeMenu}
+              onClick={handleNavigation}
               data-label="Owners"
               title={isPOSPage ? "Owners" : ""}
             >
@@ -411,11 +574,9 @@ function Sidebar() {
               </span>
             </NavLink>
 
-            {/* PETS */}
-
             <NavLink
               to="/pets"
-              onClick={closeMenu}
+              onClick={handleNavigation}
               data-label="Pets"
               title={isPOSPage ? "Pets" : ""}
             >
@@ -426,11 +587,9 @@ function Sidebar() {
               </span>
             </NavLink>
 
-            {/* APPOINTMENTS */}
-
             <NavLink
               to="/appointments"
-              onClick={closeMenu}
+              onClick={handleNavigation}
               data-label="Appointments"
               title={isPOSPage ? "Appointments" : ""}
             >
@@ -441,16 +600,12 @@ function Sidebar() {
               </span>
             </NavLink>
 
-            {/* MEDICAL RECORDS */}
-
             <NavLink
               to="/medical-records"
-              onClick={closeMenu}
+              onClick={handleNavigation}
               data-label="Medical Records"
               title={
-                isPOSPage
-                  ? "Medical Records"
-                  : ""
+                isPOSPage ? "Medical Records" : ""
               }
             >
               <FaNotesMedical className="sidebar-icon" />
@@ -460,16 +615,12 @@ function Sidebar() {
               </span>
             </NavLink>
 
-            {/* VACCINATIONS */}
-
             <NavLink
               to="/vaccinations"
-              onClick={closeMenu}
+              onClick={handleNavigation}
               data-label="Vaccinations"
               title={
-                isPOSPage
-                  ? "Vaccinations"
-                  : ""
+                isPOSPage ? "Vaccinations" : ""
               }
             >
               <FaSyringe className="sidebar-icon" />
@@ -479,11 +630,9 @@ function Sidebar() {
               </span>
             </NavLink>
 
-            {/* REMINDERS */}
-
             <NavLink
               to="/reminders"
-              onClick={closeMenu}
+              onClick={handleNavigation}
               data-label="Reminders"
               title={isPOSPage ? "Reminders" : ""}
             >
@@ -494,16 +643,12 @@ function Sidebar() {
               </span>
             </NavLink>
 
-            {/* MEDICATIONS */}
-
             <NavLink
               to="/medications"
-              onClick={closeMenu}
+              onClick={handleNavigation}
               data-label="Medications"
               title={
-                isPOSPage
-                  ? "Medications"
-                  : ""
+                isPOSPage ? "Medications" : ""
               }
             >
               <FaPills className="sidebar-icon" />
@@ -513,16 +658,12 @@ function Sidebar() {
               </span>
             </NavLink>
 
-            {/* PRESCRIPTIONS */}
-
             <NavLink
               to="/prescriptions"
-              onClick={closeMenu}
+              onClick={handleNavigation}
               data-label="Prescriptions"
               title={
-                isPOSPage
-                  ? "Prescriptions"
-                  : ""
+                isPOSPage ? "Prescriptions" : ""
               }
             >
               <FaPrescriptionBottleMedical
@@ -534,11 +675,9 @@ function Sidebar() {
               </span>
             </NavLink>
 
-            {/* INVENTORY */}
-
             <NavLink
               to="/inventory"
-              onClick={closeMenu}
+              onClick={handleNavigation}
               data-label="Inventory"
               title={isPOSPage ? "Inventory" : ""}
             >
@@ -549,13 +688,9 @@ function Sidebar() {
               </span>
             </NavLink>
 
-            {/* ==================================
-                POS
-            ================================== */}
-
             <NavLink
               to="/pos"
-              onClick={closeMenu}
+              onClick={handleNavigation}
               data-label="POS"
               title={isPOSPage ? "POS" : ""}
             >
@@ -566,11 +701,9 @@ function Sidebar() {
               </span>
             </NavLink>
 
-            {/* BILLING */}
-
             <NavLink
               to="/billing"
-              onClick={closeMenu}
+              onClick={handleNavigation}
               data-label="Billing"
               title={isPOSPage ? "Billing" : ""}
             >
@@ -583,26 +716,80 @@ function Sidebar() {
               </span>
             </NavLink>
 
-            {/* FINANCIAL */}
+            {/* =================================================
+                FINANCIAL + SUBMENU
+            ================================================= */}
 
-            <NavLink
-              to="/financial"
-              onClick={closeMenu}
-              data-label="Financial"
-              title={isPOSPage ? "Financial" : ""}
-            >
-              <FaChartLine className="sidebar-icon" />
+            <div className="financial-sidebar-group">
+              <button
+                type="button"
+                className={`financial-parent-button ${
+                  isFinancialPage ? "active" : ""
+                }`}
+                onClick={handleFinancialParent}
+                title={isPOSPage ? "Financial" : ""}
+              >
+                <FaChartLine className="sidebar-icon" />
 
-              <span className="sidebar-text">
-                Financial
-              </span>
-            </NavLink>
+                <span className="sidebar-text">
+                  Financial
+                </span>
 
-            {/* REPORTS */}
+                <span className="financial-parent-arrow">
+                  {financialOpen ? (
+                    <FaChevronDown />
+                  ) : (
+                    <FaChevronRight />
+                  )}
+                </span>
+              </button>
+
+              {financialOpen && (
+                <div className="financial-submenu">
+                  <button
+                    type="button"
+                    className={`financial-submenu-button ${
+                      isFinancialPage &&
+                      financialTab === "revenue"
+                        ? "active"
+                        : ""
+                    }`}
+                    onClick={() =>
+                      handleFinancialNavigation(
+                        "revenue"
+                      )
+                    }
+                  >
+                    <FaArrowTrendUp />
+
+                    <span>Revenue</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    className={`financial-submenu-button ${
+                      isFinancialPage &&
+                      financialTab === "expenses"
+                        ? "active"
+                        : ""
+                    }`}
+                    onClick={() =>
+                      handleFinancialNavigation(
+                        "expenses"
+                      )
+                    }
+                  >
+                    <FaArrowTrendDown />
+
+                    <span>Expenses</span>
+                  </button>
+                </div>
+              )}
+            </div>
 
             <NavLink
               to="/reports"
-              onClick={closeMenu}
+              onClick={handleNavigation}
               data-label="Reports"
               title={isPOSPage ? "Reports" : ""}
             >
@@ -613,11 +800,9 @@ function Sidebar() {
               </span>
             </NavLink>
 
-            {/* USERS */}
-
             <NavLink
               to="/users"
-              onClick={closeMenu}
+              onClick={handleNavigation}
               data-label="Users"
               title={isPOSPage ? "Users" : ""}
             >
@@ -628,11 +813,9 @@ function Sidebar() {
               </span>
             </NavLink>
 
-            {/* AUDIT LOG */}
-
             <NavLink
               to="/audit-log"
-              onClick={closeMenu}
+              onClick={handleNavigation}
               data-label="Audit Log"
               title={isPOSPage ? "Audit Log" : ""}
             >
@@ -643,11 +826,9 @@ function Sidebar() {
               </span>
             </NavLink>
 
-            {/* SETTINGS */}
-
             <NavLink
               to="/settings"
-              onClick={closeMenu}
+              onClick={handleNavigation}
               data-label="Settings"
               title={isPOSPage ? "Settings" : ""}
             >
@@ -657,13 +838,12 @@ function Sidebar() {
                 Settings
               </span>
             </NavLink>
-
           </nav>
         </div>
 
-        {/* ======================================
+        {/* =====================================================
             LOGOUT
-        ====================================== */}
+        ===================================================== */}
 
         <button
           className="sidebar-logout"
@@ -676,7 +856,6 @@ function Sidebar() {
             Logout
           </span>
         </button>
-
       </aside>
     </>
   );

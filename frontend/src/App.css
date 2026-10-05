@@ -6590,6 +6590,7 @@ button:hover {
   background: #55b7b3;
 
   border: 1px solid #55b7b3;
+  padding: 10px;
 
   color: #ffffff;
 }
@@ -18070,3 +18071,2488 @@ button:nth-child(2) {
       box-shadow 0.15s ease,
       transform 0.15s ease;
   }
+  /* =========================================================
+   REPORTS QUICK DATE BUTTONS
+========================================================= */
+
+.reports-quick-buttons {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex-wrap: wrap;
+}
+
+.reports-quick-date-button {
+  min-height: 38px;
+  padding: 0 16px;
+
+  border: 1px solid #c9e4e1;
+  border-radius: 9px;
+
+  background: #f7fbfb;
+  color: #53686a;
+
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+
+  cursor: pointer;
+
+  transition: all 0.2s ease;
+}
+
+.reports-quick-date-button:hover {
+  background: #eaf7f5;
+  border-color: #55b7b2;
+  color: #278f8b;
+
+  transform: translateY(-1px);
+
+  box-shadow:
+    0 4px 10px rgba(85, 183, 178, 0.14);
+}
+
+.reports-quick-date-button:active {
+  transform: translateY(0);
+  box-shadow: none;
+}
+
+.reports-quick-date-button:focus {
+  outline: none;
+
+  border-color: #55b7b2;
+
+  box-shadow:
+    0 0 0 3px rgba(85, 183, 178, 0.13);
+}
+
+
+/* =========================================================
+   REPORT SUMMARY TABLE
+========================================================= */
+
+.reports-category-name {
+  color: #34494c;
+  font-weight: 600;
+}
+
+.reports-action-column {
+  width: 130px;
+  text-align: center !important;
+}
+
+
+/* =========================================================
+   PRINT BUTTON
+========================================================= */
+
+.reports-print-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+
+  min-width: 90px;
+
+  padding: 8px 15px;
+
+  border: 1px solid #55b7b2;
+  border-radius: 8px;
+
+  background: #ffffff;
+  color: #319c97;
+
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+
+  cursor: pointer;
+
+  transition: all 0.2s ease;
+}
+
+.reports-print-button svg {
+  font-size: 12px;
+}
+
+.reports-print-button:hover {
+  background: #55b7b2;
+  color: #ffffff;
+
+  transform: translateY(-1px);
+
+  box-shadow:
+    0 4px 10px rgba(85, 183, 178, 0.2);
+}
+
+.reports-print-button:active {
+  transform: translateY(0);
+}
+
+
+/* =========================================================
+   RESPONSIVE
+========================================================= */
+
+@media (max-width: 900px) {
+  .reports-quick-buttons {
+    width: 100%;
+  }
+
+  .reports-quick-date-button {
+    flex: 1 1 calc(50% - 9px);
+  }
+}
+
+@media (max-width: 520px) {
+  .reports-quick-date-button {
+    flex: 1 1 100%;
+  }
+
+  .reports-action-column {
+    width: auto;
+  }
+
+  .reports-print-button {
+    min-width: auto;
+    padding: 7px 11px;
+  }
+}
+.reports-quick-buttons {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.reports-quick-buttons button {
+  padding: 9px 16px;
+
+  border: 1px solid #b9dedb;
+  border-radius: 10px;
+
+  background: #f4fbfa;
+  color: #318681;
+
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+
+  cursor: pointer;
+
+  transition: all 0.2s ease;
+}
+
+.reports-quick-buttons button:hover {
+  background: #55b7b2;
+  border-color: #55b7b2;
+  color: #ffffff;
+
+  transform: translateY(-1px);
+
+  box-shadow: 0 4px 10px rgba(85, 183, 178, 0.18);
+}
+
+.reports-quick-buttons button:active {
+  transform: translateY(0);
+}
+
+.reports-quick-buttons button:focus {
+  outline: none;
+
+  border-color: #55b7b2;
+
+  box-shadow: 0 0 0 3px rgba(85, 183, 178, 0.13);
+}
+.sidebar {
+  background: #55b7b2;
+  color: #ffffff;
+}
+
+/* Sidebar links */
+.sidebar a {
+  color: #ffffff;
+}
+
+/* Icons */
+.sidebar a svg {
+  color: #ffffff;
+}
+
+/* Hover */
+.sidebar a:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: #ffffff;
+}
+
+/* Active page */
+.sidebar a.active {
+  background: #ffffff;
+  color: #55b7b2;
+}
+
+.sidebar a.active svg {
+  color: #55b7b2;
+}
+
+/* Sidebar title / logo text */
+.sidebar h1,
+.sidebar h2,
+.sidebar h3,
+.sidebar span,
+.sidebar p {
+  color: inherit;
+}
+
+/* Logout */
+.sidebar .logout-button {
+  color: #ffffff;
+}
+
+.sidebar .logout-button:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+/* Menu / close buttons if mobile */
+.sidebar button {
+  color: #ffffff;
+}
+
+.sidebar button svg {
+  color: inherit;
+}
+.modal-header,
+.owner-modal-header,
+.pet-modal-header,
+.appointment-modal-header,
+.pos-reference-checkout-header {
+  background: #55b7b2 !important;
+  color: white !important;
+  padding: 16px 20px !important;
+  border-bottom: none !important;
+}
+/* =========================================
+   GLOBAL MODAL
+========================================= */
+
+.modal-content {
+  padding: 0 !important;
+  overflow: hidden !important;
+}
+
+/* HEADER FULL WIDTH - NO WHITE SIDES */
+.modal-header {
+  width: 100% !important;
+  margin: 0 !important;
+
+  padding: 20px 24px !important;
+
+  background: #55b7b2 !important;
+  color: #ffffff !important;
+
+  border-radius: 14px 14px 0 0 !important;
+  border-bottom: none !important;
+
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+}
+
+/* TITLE */
+.modal-header h1,
+.modal-header h2,
+.modal-header h3 {
+  margin: 0 !important;
+  color: #ffffff !important;
+}
+
+/* SUBTITLE */
+.modal-header p {
+  margin: 4px 0 0 !important;
+  color: rgba(255, 255, 255, 0.85) !important;
+}
+
+/* CLOSE BUTTON */
+.modal-header button {
+  background: #ffffff !important;
+  color: #456365 !important;
+
+  border: none !important;
+  border-radius: 50% !important;
+
+  width: 38px !important;
+  height: 38px !important;
+
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  padding: 0 !important;
+}
+
+/* BODY GETS THE SPACING INSTEAD */
+.modal-body {
+  padding: 24px !important;
+  background: #ffffff;
+}
+/* =========================================
+   MODAL HEADER - FULL EDGE TO EDGE
+========================================= */
+
+/* Modal container: NO padding around header */
+.modal-content {
+  padding: 0 !important;
+  overflow: hidden !important;
+}
+
+/* Header fills ALL top area */
+.modal-header {
+  width: 100% !important;
+
+  margin: 0 !important;
+  padding: 22px 24px !important;
+
+  background: #55b7b2 !important;
+  color: #ffffff !important;
+
+  border: none !important;
+  border-radius: 14px 14px 0 0 !important;
+
+  box-sizing: border-box !important;
+
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+}
+
+/* No white space above header */
+.modal-content > .modal-header:first-child {
+  margin-top: 0 !important;
+}
+
+/* Title */
+.modal-header h1,
+.modal-header h2,
+.modal-header h3 {
+  margin: 0 !important;
+  color: #ffffff !important;
+}
+
+/* Subtitle */
+.modal-header p {
+  margin: 4px 0 0 !important;
+  color: rgba(255, 255, 255, 0.85) !important;
+}
+
+/* X */
+.modal-header button {
+  width: 38px !important;
+  height: 38px !important;
+  min-width: 38px !important;
+
+  padding: 0 !important;
+
+  border: none !important;
+  border-radius: 50% !important;
+
+  background: #ffffff !important;
+  color: #496466 !important;
+
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  cursor: pointer !important;
+}
+
+/* Padding starts ONLY under the turquoise header */
+.modal-body {
+  padding: 24px !important;
+  background: #ffffff !important;
+}
+/* REMOVE WHITE SPACE AROUND MODAL HEADER */
+
+.modal-content,
+.modal-container,
+.modal-box {
+  padding: 0 !important;
+  overflow: hidden !important;
+}
+
+/* TURQUOISE HEADER TOUCHES MODAL EDGES */
+
+.modal-header {
+  width: 100% !important;
+  margin: 0 !important;
+
+  padding: 22px 28px !important;
+
+  background: #55b7b2 !important;
+
+  border-radius: 16px 16px 0 0 !important;
+
+  box-sizing: border-box !important;
+}
+
+/* FORM SPACE STARTS UNDER HEADER */
+
+.modal-body,
+.modal-form,
+.modal-content form {
+  padding: 24px 28px !important;
+}
+/* =========================================================
+   MODAL FINAL OVERRIDE
+   PUT THIS AT THE VERY END OF App.css
+========================================================= */
+
+/* MODAL OUTER CONTAINER */
+.modal-content,
+.modal-container,
+.modal-box {
+  padding: 0 !important;
+  overflow: hidden !important;
+
+  background: #ffffff !important;
+  border-radius: 16px !important;
+
+  box-sizing: border-box !important;
+}
+
+/* =========================================================
+   HEADER - FULL WIDTH / NO WHITE AROUND IT
+========================================================= */
+
+.modal-content .modal-header,
+.modal-container .modal-header,
+.modal-box .modal-header,
+.modal-header {
+  width: 100% !important;
+
+  margin: 0 !important;
+  padding: 22px 32px !important;
+
+  box-sizing: border-box !important;
+
+  background: #55b7b2 !important;
+  color: #ffffff !important;
+
+  border: none !important;
+  border-radius: 16px 16px 0 0 !important;
+
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+}
+
+/* TITLE */
+.modal-header h1,
+.modal-header h2,
+.modal-header h3 {
+  margin: 0 !important;
+  padding: 0 !important;
+
+  color: #ffffff !important;
+
+  font-size: 26px !important;
+  font-weight: 700 !important;
+  line-height: 1.2 !important;
+}
+
+/* SUBTITLE */
+.modal-header p {
+  margin: 5px 0 0 !important;
+  padding: 0 !important;
+
+  color: rgba(255, 255, 255, 0.9) !important;
+
+  font-size: 14px !important;
+}
+
+/* CLOSE X */
+.modal-header button {
+  width: 42px !important;
+  min-width: 42px !important;
+  max-width: 42px !important;
+
+  height: 42px !important;
+  min-height: 42px !important;
+
+  margin: 0 !important;
+  padding: 0 !important;
+
+  border: none !important;
+  border-radius: 50% !important;
+
+  background: #ffffff !important;
+  color: #496466 !important;
+
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  cursor: pointer !important;
+}
+
+/* =========================================================
+   BODY - RESTORE SPACE UNDER HEADER
+========================================================= */
+
+.modal-content .modal-body,
+.modal-container .modal-body,
+.modal-box .modal-body,
+.modal-body {
+  padding: 26px 32px 30px !important;
+
+  background: #ffffff !important;
+
+  box-sizing: border-box !important;
+}
+
+/* IF FORM IS DIRECTLY INSIDE MODAL */
+.modal-content > form,
+.modal-container > form,
+.modal-box > form {
+  padding: 26px 32px 30px !important;
+
+  margin: 0 !important;
+
+  box-sizing: border-box !important;
+}
+
+/* =========================================================
+   FORM GRID
+========================================================= */
+
+.modal-content .form-grid,
+.modal-container .form-grid,
+.modal-box .form-grid,
+.modal-body .form-grid {
+  display: grid !important;
+
+  grid-template-columns:
+    repeat(2, minmax(0, 1fr)) !important;
+
+  column-gap: 24px !important;
+  row-gap: 16px !important;
+
+  width: 100% !important;
+}
+
+/* =========================================================
+   FORM GROUPS
+========================================================= */
+
+.modal-content .form-group,
+.modal-container .form-group,
+.modal-box .form-group,
+.modal-body .form-group {
+  margin: 0 0 16px !important;
+
+  min-width: 0 !important;
+}
+
+/* LABELS */
+.modal-content form label,
+.modal-container form label,
+.modal-box form label,
+.modal-body label {
+  display: block !important;
+
+  margin: 0 0 7px !important;
+  padding: 0 !important;
+
+  color: #344054 !important;
+
+  font-size: 14px !important;
+  font-weight: 600 !important;
+
+  line-height: 1.3 !important;
+}
+
+/* =========================================================
+   INPUTS
+========================================================= */
+
+.modal-content form input,
+.modal-content form select,
+.modal-content form textarea,
+.modal-container form input,
+.modal-container form select,
+.modal-container form textarea,
+.modal-box form input,
+.modal-box form select,
+.modal-box form textarea,
+.modal-body input,
+.modal-body select,
+.modal-body textarea {
+  width: 100% !important;
+
+  box-sizing: border-box !important;
+}
+
+/* TEXTAREA */
+.modal-content textarea,
+.modal-container textarea,
+.modal-box textarea,
+.modal-body textarea {
+  min-height: 90px !important;
+
+  resize: vertical !important;
+}
+
+/* =========================================================
+   MOBILE
+========================================================= */
+
+@media (max-width: 700px) {
+  .modal-content .form-grid,
+  .modal-container .form-grid,
+  .modal-box .form-grid,
+  .modal-body .form-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .modal-header {
+    padding: 18px 20px !important;
+  }
+
+  .modal-body,
+  .modal-content > form,
+  .modal-container > form,
+  .modal-box > form {
+    padding: 20px !important;
+  }
+}
+
+/* =========================================================
+   MODAL SCROLL FIX
+   PUT AT VERY END OF App.css
+========================================================= */
+
+/* Modal itself must fit inside screen */
+.modal-content,
+.modal-container,
+.modal-box {
+  max-height: 90vh !important;
+
+  padding: 0 !important;
+
+  display: flex !important;
+  flex-direction: column !important;
+
+  overflow: hidden !important;
+
+  background: #ffffff !important;
+  border-radius: 16px !important;
+}
+
+/* Header stays visible */
+.modal-header {
+  flex: 0 0 auto !important;
+
+  width: 100% !important;
+
+  margin: 0 !important;
+  padding: 22px 32px !important;
+
+  background: #55b7b2 !important;
+
+  border-radius: 16px 16px 0 0 !important;
+
+  box-sizing: border-box !important;
+}
+
+/* BODY SCROLLS */
+.modal-body {
+  flex: 1 1 auto !important;
+
+  min-height: 0 !important;
+
+  padding: 26px 32px 30px !important;
+
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+
+  background: #ffffff !important;
+
+  box-sizing: border-box !important;
+
+  scrollbar-width: thin;
+  scrollbar-color: #55b7b2 #eef6f5;
+}
+
+/* Chrome scrollbar */
+.modal-body::-webkit-scrollbar {
+  width: 7px;
+}
+
+.modal-body::-webkit-scrollbar-track {
+  background: #eef6f5;
+}
+
+.modal-body::-webkit-scrollbar-thumb {
+  background: #55b7b2;
+  border-radius: 10px;
+}
+
+/* If your form is directly inside modal instead of .modal-body */
+.modal-content > form,
+.modal-container > form,
+.modal-box > form {
+  flex: 1 1 auto !important;
+
+  min-height: 0 !important;
+
+  margin: 0 !important;
+  padding: 26px 32px 30px !important;
+
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+
+  box-sizing: border-box !important;
+}
+
+/* Make sure overlay itself doesn't block tall modal */
+.modal-overlay,
+.modal-backdrop {
+  overflow-y: auto !important;
+
+  padding: 20px !important;
+
+  box-sizing: border-box !important;
+}
+/* =========================================================
+   PETS PAGE — FINAL LAYOUT OVERRIDE
+   KEEP THIS AT THE VERY END OF App.css
+========================================================= */
+
+.pets-page {
+  width: 100% !important;
+  min-height: 100vh !important;
+  background: #f7fbfb !important;
+}
+
+/* =========================================================
+   MAIN
+========================================================= */
+
+.pets-page .pets-main {
+  margin-left: 290px !important;
+  width: calc(100% - 290px) !important;
+  min-height: 100vh !important;
+
+  padding: 38px 42px !important;
+  box-sizing: border-box !important;
+
+  background: #f7fbfb !important;
+  overflow-x: hidden !important;
+}
+
+/* =========================================================
+   HEADER
+========================================================= */
+
+.pets-page .pets-header {
+  width: 100% !important;
+
+  display: flex !important;
+  align-items: flex-start !important;
+  justify-content: space-between !important;
+
+  gap: 25px !important;
+
+  margin: 0 0 36px !important;
+  padding: 0 !important;
+
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+
+  box-sizing: border-box !important;
+}
+
+.pets-page .pets-header > div:first-child {
+  min-width: 0 !important;
+}
+
+.pets-page .pets-header h1 {
+  margin: 0 0 7px !important;
+  padding: 0 !important;
+
+  color: #2d3333 !important;
+
+  font-size: 31px !important;
+  font-weight: 800 !important;
+  line-height: 1.15 !important;
+}
+
+.pets-page .pets-header p {
+  margin: 0 !important;
+  padding: 0 !important;
+
+  color: #718181 !important;
+
+  font-size: 14px !important;
+  font-weight: 400 !important;
+}
+
+/* HEADER BUTTONS */
+
+.pets-page .pets-header-actions {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+
+  gap: 12px !important;
+
+  flex-shrink: 0 !important;
+}
+
+.pets-page .pets-export-button,
+.pets-page .pets-add-button {
+  width: auto !important;
+  min-width: 136px !important;
+  height: 48px !important;
+
+  padding: 0 20px !important;
+
+  border-radius: 9px !important;
+
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  gap: 8px !important;
+
+  font-family: inherit !important;
+  font-size: 14px !important;
+  font-weight: 700 !important;
+
+  cursor: pointer !important;
+}
+
+.pets-page .pets-export-button {
+  background: #ffffff !important;
+  color: #159f9f !important;
+
+  border: 1.5px solid #55b7b2 !important;
+}
+
+.pets-page .pets-add-button {
+  background: #55b7b2 !important;
+  color: #ffffff !important;
+
+  border: 1.5px solid #55b7b2 !important;
+}
+
+.pets-page .pets-export-button:hover {
+  background: #f1fbfa !important;
+}
+
+.pets-page .pets-add-button:hover {
+  background: #49aaa5 !important;
+}
+
+/* =========================================================
+   FILTER ROW
+========================================================= */
+
+.pets-page .pets-filters {
+  width: 100% !important;
+
+  display: grid !important;
+
+  grid-template-columns:
+    minmax(320px, 1fr)
+    180px
+    225px !important;
+
+  gap: 12px !important;
+  align-items: center !important;
+
+  margin: 0 0 26px !important;
+  padding: 0 !important;
+
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+
+  box-sizing: border-box !important;
+}
+
+/* CLEAR BUTTON HIDDEN TO MATCH SCREENSHOT */
+
+.pets-page .pets-clear-button {
+  display: none !important;
+}
+
+/* SEARCH */
+
+.pets-page .pets-search-box {
+  position: relative !important;
+
+  width: 100% !important;
+  height: 52px !important;
+
+  display: flex !important;
+  align-items: center !important;
+
+  margin: 0 !important;
+}
+
+.pets-page .pets-search-box > svg {
+  position: absolute !important;
+
+  left: 17px !important;
+  top: 50% !important;
+
+  transform: translateY(-50%) !important;
+
+  z-index: 2 !important;
+
+  color: #7b9292 !important;
+
+  font-size: 15px !important;
+
+  pointer-events: none !important;
+}
+
+.pets-page .pets-search-box input {
+  width: 100% !important;
+  height: 52px !important;
+
+  margin: 0 !important;
+  padding: 0 45px 0 50px !important;
+
+  background: #ffffff !important;
+
+  border: 1px solid #cfe0df !important;
+  border-radius: 9px !important;
+
+  box-sizing: border-box !important;
+
+  color: #384949 !important;
+
+  font-family: inherit !important;
+  font-size: 14px !important;
+
+  outline: none !important;
+}
+
+.pets-page .pets-search-box input:focus {
+  border-color: #55b7b2 !important;
+
+  box-shadow:
+    0 0 0 3px rgba(85, 183, 178, 0.1) !important;
+}
+
+.pets-page .pets-search-box button {
+  position: absolute !important;
+
+  right: 10px !important;
+
+  width: 30px !important;
+  height: 30px !important;
+
+  padding: 0 !important;
+
+  border: 0 !important;
+  background: transparent !important;
+
+  color: #819292 !important;
+
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  cursor: pointer !important;
+}
+
+/* SPECIES */
+
+.pets-page .pets-filters > select {
+  width: 100% !important;
+  height: 52px !important;
+
+  margin: 0 !important;
+  padding: 0 14px !important;
+
+  background: #ffffff !important;
+
+  border: 1px solid #cfe0df !important;
+  border-radius: 9px !important;
+
+  box-sizing: border-box !important;
+
+  color: #425252 !important;
+
+  font-family: inherit !important;
+  font-size: 14px !important;
+
+  outline: none !important;
+
+  cursor: pointer !important;
+}
+
+/* SORT */
+
+.pets-page .pets-sort-box {
+  position: relative !important;
+
+  width: 100% !important;
+  height: 52px !important;
+
+  display: flex !important;
+  align-items: center !important;
+
+  margin: 0 !important;
+}
+
+.pets-page .pets-sort-box > svg {
+  position: absolute !important;
+
+  left: 16px !important;
+
+  z-index: 2 !important;
+
+  color: #159f9f !important;
+
+  font-size: 16px !important;
+
+  pointer-events: none !important;
+}
+
+.pets-page .pets-sort-box select {
+  width: 100% !important;
+  height: 52px !important;
+
+  margin: 0 !important;
+  padding: 0 38px 0 48px !important;
+
+  background: #ffffff !important;
+
+  border: 1px solid #cfe0df !important;
+  border-radius: 9px !important;
+
+  box-sizing: border-box !important;
+
+  color: #425252 !important;
+
+  font-family: inherit !important;
+  font-size: 14px !important;
+
+  outline: none !important;
+
+  cursor: pointer !important;
+}
+
+/* =========================================================
+   TABLE CARD
+========================================================= */
+
+.pets-page .pets-table-card {
+  width: 100% !important;
+
+  margin: 0 !important;
+  padding: 24px !important;
+
+  background: #ffffff !important;
+
+  border: 1px solid #d6e5e4 !important;
+  border-radius: 13px !important;
+
+  box-shadow:
+    0 2px 8px rgba(38, 82, 82, 0.025) !important;
+
+  box-sizing: border-box !important;
+
+  overflow-x: auto !important;
+  overflow-y: hidden !important;
+}
+
+/* =========================================================
+   TABLE
+========================================================= */
+
+.pets-page .pets-table {
+  width: 100% !important;
+  min-width: 760px !important;
+
+  margin: 0 !important;
+
+  border-collapse: collapse !important;
+  border-spacing: 0 !important;
+
+  table-layout: fixed !important;
+
+  background: #ffffff !important;
+}
+
+/* IMPORTANT — NORMAL TABLE DISPLAY */
+
+.pets-page .pets-table thead {
+  display: table-header-group !important;
+}
+
+.pets-page .pets-table tbody {
+  display: table-row-group !important;
+}
+
+.pets-page .pets-table tr {
+  display: table-row !important;
+}
+
+.pets-page .pets-table th,
+.pets-page .pets-table td {
+  display: table-cell !important;
+
+  box-sizing: border-box !important;
+
+  vertical-align: middle !important;
+  text-align: left !important;
+}
+
+/* TABLE HEADER */
+
+.pets-page .pets-table thead tr {
+  background: #f3f8f8 !important;
+}
+
+.pets-page .pets-table th {
+  height: 54px !important;
+
+  padding: 0 18px !important;
+
+  background: #f3f8f8 !important;
+
+  border: 0 !important;
+  border-bottom: 1px solid #dfeaea !important;
+
+  color: #24918f !important;
+
+  font-size: 13px !important;
+  font-weight: 800 !important;
+
+  white-space: nowrap !important;
+}
+
+/* TABLE ROWS */
+
+.pets-page .pets-table td {
+  height: 82px !important;
+
+  padding: 0 18px !important;
+
+  background: #ffffff !important;
+
+  border: 0 !important;
+  border-bottom: 1px solid #e6eeee !important;
+
+  color: #343d3d !important;
+
+  font-size: 14px !important;
+  font-weight: 400 !important;
+
+  white-space: nowrap !important;
+}
+
+.pets-page .pets-table tbody tr:last-child td {
+  border-bottom: 0 !important;
+}
+
+/* =========================================================
+   PET NAME — NO AVATAR
+========================================================= */
+
+.pets-page .pets-pet-cell {
+  display: flex !important;
+  align-items: center !important;
+
+  gap: 0 !important;
+}
+
+.pets-page .pets-table-avatar {
+  display: none !important;
+}
+
+.pets-page .pets-pet-cell strong {
+  color: #343d3d !important;
+
+  font-size: 14px !important;
+  font-weight: 400 !important;
+}
+
+/* =========================================================
+   COLUMN WIDTHS
+========================================================= */
+
+.pets-page .pets-table th:nth-child(1),
+.pets-page .pets-table td:nth-child(1) {
+  width: 15% !important;
+}
+
+.pets-page .pets-table th:nth-child(2),
+.pets-page .pets-table td:nth-child(2) {
+  width: 19% !important;
+}
+
+.pets-page .pets-table th:nth-child(3),
+.pets-page .pets-table td:nth-child(3) {
+  width: 13% !important;
+}
+
+.pets-page .pets-table th:nth-child(4),
+.pets-page .pets-table td:nth-child(4) {
+  width: 22% !important;
+}
+
+.pets-page .pets-table th:nth-child(5),
+.pets-page .pets-table td:nth-child(5) {
+  width: 12% !important;
+}
+
+.pets-page .pets-table th:nth-child(6),
+.pets-page .pets-table td:nth-child(6) {
+  width: 19% !important;
+}
+
+/* =========================================================
+   ACTION BUTTONS
+========================================================= */
+
+.pets-page .pets-actions {
+  display: flex !important;
+  align-items: center !important;
+
+  gap: 8px !important;
+
+  white-space: nowrap !important;
+}
+
+.pets-page .pets-actions .icon-button {
+  width: 46px !important;
+  min-width: 46px !important;
+  max-width: 46px !important;
+
+  height: 46px !important;
+  min-height: 46px !important;
+
+  margin: 0 !important;
+  padding: 0 !important;
+
+  border: 0 !important;
+  border-radius: 9px !important;
+
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  cursor: pointer !important;
+}
+
+.pets-page .pets-actions .view-button {
+  background: #e5f6f4 !important;
+  color: #278f8d !important;
+}
+
+.pets-page .pets-actions .edit-button {
+  background: #55b7b2 !important;
+  color: #ffffff !important;
+}
+
+.pets-page .pets-actions .delete-button {
+  background: #fde7e7 !important;
+  color: #d54c4c !important;
+}
+
+.pets-page .pets-actions .icon-button svg {
+  font-size: 15px !important;
+}
+
+/* =========================================================
+   PAGINATION AREA
+========================================================= */
+
+.pets-page .pets-pagination {
+  width: 100% !important;
+
+  margin: 27px 0 0 !important;
+  padding: 0 !important;
+
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+
+  gap: 20px !important;
+
+  box-sizing: border-box !important;
+}
+
+/* ROWS PER PAGE */
+
+.pets-page .pets-rows-per-page {
+  display: flex !important;
+  align-items: center !important;
+
+  gap: 10px !important;
+
+  color: #536666 !important;
+
+  font-size: 14px !important;
+}
+
+.pets-page .pets-rows-per-page select {
+  width: 73px !important;
+  height: 54px !important;
+
+  padding: 0 14px !important;
+
+  background: #ffffff !important;
+
+  border: 1px solid #cfe0df !important;
+  border-radius: 9px !important;
+
+  color: #3e5050 !important;
+
+  font-size: 14px !important;
+
+  outline: none !important;
+}
+
+/* PAGE CONTROLS */
+
+.pets-page .pets-page-controls {
+  margin-left: auto !important;
+
+  display: flex !important;
+  align-items: center !important;
+
+  gap: 8px !important;
+}
+
+.pets-page .pets-pagination-button,
+.pets-page .pets-page-number {
+  width: 38px !important;
+  min-width: 38px !important;
+
+  height: 38px !important;
+  min-height: 38px !important;
+
+  margin: 0 !important;
+  padding: 0 !important;
+
+  border: 1px solid #d3e1e0 !important;
+  border-radius: 8px !important;
+
+  background: #f3f8f8 !important;
+  color: #8ca0a0 !important;
+
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  font-family: inherit !important;
+  font-size: 14px !important;
+  font-weight: 700 !important;
+
+  cursor: pointer !important;
+}
+
+.pets-page .pets-page-number.active {
+  background: #55b7b2 !important;
+  border-color: #55b7b2 !important;
+
+  color: #ffffff !important;
+}
+
+.pets-page .pets-pagination-button:disabled {
+  opacity: 0.6 !important;
+  cursor: not-allowed !important;
+}
+
+/* =========================================================
+   EMPTY RESULTS
+========================================================= */
+
+.pets-page .pets-table .no-results {
+  height: auto !important;
+
+  padding: 42px 20px !important;
+
+  text-align: center !important;
+
+  color: #7a8d8d !important;
+}
+
+/* =========================================================
+   DON'T TOUCH PET MODALS
+========================================================= */
+
+.pets-page .modal-overlay {
+  margin: 0 !important;
+}
+
+.pets-page .pet-form-modal {
+  margin: 0 !important;
+}
+
+/* =========================================================
+   RESPONSIVE
+========================================================= */
+
+@media (max-width: 1100px) {
+  .pets-page .pets-main {
+    padding: 30px 26px !important;
+  }
+
+  .pets-page .pets-filters {
+    grid-template-columns:
+      minmax(250px, 1fr)
+      170px
+      190px !important;
+  }
+}
+
+@media (max-width: 850px) {
+  .pets-page .pets-main {
+    margin-left: 0 !important;
+    width: 100% !important;
+
+    padding: 24px 18px !important;
+  }
+
+  .pets-page .pets-header {
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+
+  .pets-page .pets-header-actions {
+    width: 100% !important;
+  }
+
+  .pets-page .pets-export-button,
+  .pets-page .pets-add-button {
+    flex: 1 !important;
+  }
+
+  .pets-page .pets-filters {
+    grid-template-columns: 1fr !important;
+  }
+}
+/* =========================================================
+   PETS PAGE — MATCH ORIGINAL SCREENSHOT
+   MUST BE THE LAST CSS IN App.css
+========================================================= */
+
+/* MAIN CONTENT */
+.pets-page .pets-main {
+  margin-left: 290px !important;
+  width: calc(100% - 290px) !important;
+
+  /* original page is narrower */
+  padding: 46px 46px 40px !important;
+
+  box-sizing: border-box !important;
+}
+
+/* =========================================================
+   HEADER
+========================================================= */
+
+.pets-page .pets-header {
+  width: 100% !important;
+
+  display: flex !important;
+  align-items: flex-start !important;
+  justify-content: space-between !important;
+
+  margin: 0 0 42px !important;
+  padding: 0 !important;
+}
+
+/* title */
+.pets-page .pets-header h1 {
+  margin: 0 0 7px !important;
+  padding: 0 !important;
+
+  font-size: 31px !important;
+  line-height: 1.15 !important;
+}
+
+/* subtitle */
+.pets-page .pets-header p {
+  margin: 0 !important;
+  padding: 0 !important;
+
+  font-size: 14px !important;
+}
+
+/* =========================================================
+   EXPORT + ADD PET
+   LOWER THEM - THEY ARE TOO HIGH NOW
+========================================================= */
+
+.pets-page .pets-header-actions {
+  display: flex !important;
+  align-items: center !important;
+
+  gap: 12px !important;
+
+  /* THIS LOWERS THE BUTTONS */
+  margin-top: 9px !important;
+
+  position: static !important;
+  top: auto !important;
+  right: auto !important;
+
+  transform: none !important;
+}
+
+.pets-page .pets-export-button,
+.pets-page .pets-add-button {
+  height: 47px !important;
+  min-height: 47px !important;
+
+  min-width: 136px !important;
+
+  padding: 0 19px !important;
+
+  border-radius: 9px !important;
+}
+
+/* =========================================================
+   FILTERS
+========================================================= */
+
+.pets-page .pets-filters {
+  width: 100% !important;
+
+  display: grid !important;
+
+  grid-template-columns:
+    minmax(330px, 1fr)
+    180px
+    225px !important;
+
+  gap: 12px !important;
+
+  margin: 0 0 26px !important;
+  padding: 0 !important;
+
+  background: transparent !important;
+  border: 0 !important;
+}
+
+/* all filter controls same height */
+.pets-page .pets-search-box,
+.pets-page .pets-search-box input,
+.pets-page .pets-filters > select,
+.pets-page .pets-sort-box,
+.pets-page .pets-sort-box select {
+  height: 51px !important;
+  min-height: 51px !important;
+}
+
+/* =========================================================
+   TABLE CARD
+   REMOVE THE BIG INNER SIDE PADDING
+========================================================= */
+
+.pets-page .pets-table-card {
+  width: 100% !important;
+
+  margin: 0 !important;
+
+  /*
+    IMPORTANT:
+    previous CSS had padding:24px;
+    that's why the table was too far from the card sides.
+  */
+  padding: 0 !important;
+
+  background: #ffffff !important;
+
+  border: 1px solid #d6e5e4 !important;
+  border-radius: 13px !important;
+
+  overflow: hidden !important;
+
+  box-sizing: border-box !important;
+}
+
+/* =========================================================
+   TABLE
+========================================================= */
+
+.pets-page .pets-table {
+  width: 100% !important;
+  min-width: 0 !important;
+
+  margin: 0 !important;
+
+  table-layout: fixed !important;
+
+  border-collapse: collapse !important;
+  border-spacing: 0 !important;
+}
+
+/* HEADER */
+.pets-page .pets-table thead tr {
+  background: #f3f8f8 !important;
+}
+
+.pets-page .pets-table th {
+  height: 56px !important;
+
+  padding: 0 20px !important;
+
+  background: #f3f8f8 !important;
+
+  border-bottom: 1px solid #dfe9e9 !important;
+
+  vertical-align: middle !important;
+
+  color: #24918f !important;
+
+  font-size: 13px !important;
+  font-weight: 800 !important;
+}
+
+/* ROWS */
+.pets-page .pets-table td {
+  height: 82px !important;
+
+  padding: 0 20px !important;
+
+  background: #ffffff !important;
+
+  border-bottom: 1px solid #e5eeee !important;
+
+  vertical-align: middle !important;
+
+  font-size: 14px !important;
+}
+
+.pets-page .pets-table tbody tr:last-child td {
+  border-bottom: 0 !important;
+}
+
+/* =========================================================
+   COLUMN SIZES
+========================================================= */
+
+.pets-page .pets-table th:nth-child(1),
+.pets-page .pets-table td:nth-child(1) {
+  width: 15% !important;
+}
+
+.pets-page .pets-table th:nth-child(2),
+.pets-page .pets-table td:nth-child(2) {
+  width: 18% !important;
+}
+
+.pets-page .pets-table th:nth-child(3),
+.pets-page .pets-table td:nth-child(3) {
+  width: 13% !important;
+}
+
+.pets-page .pets-table th:nth-child(4),
+.pets-page .pets-table td:nth-child(4) {
+  width: 22% !important;
+}
+
+.pets-page .pets-table th:nth-child(5),
+.pets-page .pets-table td:nth-child(5) {
+  width: 12% !important;
+}
+
+.pets-page .pets-table th:nth-child(6),
+.pets-page .pets-table td:nth-child(6) {
+  width: 20% !important;
+}
+
+/* =========================================================
+   PET NAME
+========================================================= */
+
+/* keep original simple pet name - no avatar */
+.pets-page .pets-table-avatar {
+  display: none !important;
+}
+
+.pets-page .pets-pet-cell {
+  display: block !important;
+}
+
+.pets-page .pets-pet-cell strong {
+  font-size: 14px !important;
+  font-weight: 400 !important;
+  color: #343d3d !important;
+}
+
+/* =========================================================
+   ACTIONS
+========================================================= */
+
+.pets-page .pets-actions {
+  display: flex !important;
+  align-items: center !important;
+
+  gap: 8px !important;
+}
+
+.pets-page .pets-actions .icon-button {
+  width: 45px !important;
+  min-width: 45px !important;
+
+  height: 45px !important;
+  min-height: 45px !important;
+
+  padding: 0 !important;
+  margin: 0 !important;
+
+  border-radius: 9px !important;
+
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+/* =========================================================
+   PAGINATION
+========================================================= */
+
+.pets-page .pets-pagination {
+  width: 100% !important;
+
+  margin: 27px 0 0 !important;
+  padding: 0 !important;
+
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+}
+
+/* rows per page left */
+.pets-page .pets-rows-per-page {
+  display: flex !important;
+  align-items: center !important;
+
+  gap: 10px !important;
+}
+
+.pets-page .pets-rows-per-page select {
+  width: 73px !important;
+  height: 54px !important;
+
+  padding: 0 13px !important;
+
+  border-radius: 9px !important;
+}
+
+/* pagination right */
+.pets-page .pets-page-controls {
+  margin-left: auto !important;
+
+  display: flex !important;
+  align-items: center !important;
+
+  gap: 8px !important;
+}
+
+/* =========================================================
+   IMPORTANT:
+   KEEP MODAL CENTERED
+========================================================= */
+
+.pets-page .modal-overlay {
+  position: fixed !important;
+
+  inset: 0 !important;
+
+  width: 100vw !important;
+  height: 100vh !important;
+
+  margin: 0 !important;
+  padding: 20px !important;
+
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  box-sizing: border-box !important;
+
+  z-index: 9999 !important;
+}
+
+/* =========================================================
+   DESKTOP LIMIT
+   Stops content from becoming too stretched
+========================================================= */
+
+@media (min-width: 1200px) {
+  .pets-page .pets-main {
+    padding-right: 46px !important;
+    padding-left: 46px !important;
+  }
+}
+
+/* =========================================================
+   MOBILE
+========================================================= */
+
+@media (max-width: 850px) {
+  .pets-page .pets-main {
+    margin-left: 0 !important;
+
+    width: 100% !important;
+
+    padding: 25px 18px !important;
+  }
+
+  .pets-page .pets-header {
+    flex-direction: column !important;
+
+    gap: 18px !important;
+  }
+
+  .pets-page .pets-header-actions {
+    width: 100% !important;
+
+    margin-top: 0 !important;
+  }
+
+  .pets-page .pets-header-actions button {
+    flex: 1 !important;
+  }
+
+  .pets-page .pets-filters {
+    grid-template-columns: 1fr !important;
+  }
+
+  .pets-page .pets-table-card {
+    overflow-x: auto !important;
+  }
+
+  .pets-page .pets-table {
+    min-width: 760px !important;
+  }
+}
+/* =========================================================
+   FORCE OWNERS HEADER BUTTONS AWAY FROM RIGHT EDGE
+========================================================= */
+
+html body #root .owners-page .owners-main .owners-header,
+html body #root .owners-page .owners-main .page-header {
+  width: calc(100% - 35px) !important;
+  max-width: calc(100% - 35px) !important;
+
+  margin-left: 0 !important;
+  margin-right: 35px !important;
+
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+
+  box-sizing: border-box !important;
+}
+
+/* FORCE ACTIONS CONTAINER */
+html body #root .owners-page .owners-main .owners-header-actions,
+html body #root .owners-page .owners-main .header-actions,
+html body #root .owners-page .owners-main .page-header-actions {
+  position: static !important;
+
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+
+  gap: 12px !important;
+
+  margin-left: auto !important;
+  margin-right: 0 !important;
+
+  padding: 0 !important;
+
+  transform: none !important;
+  right: auto !important;
+  left: auto !important;
+  top: auto !important;
+
+  flex-shrink: 0 !important;
+}
+
+/* FORCE EXPORT + ADD OWNER */
+html body #root .owners-page .owners-main .owners-header-actions button,
+html body #root .owners-page .owners-main .header-actions button,
+html body #root .owners-page .owners-main .page-header-actions button {
+  position: static !important;
+
+  width: auto !important;
+  height: 48px !important;
+  min-height: 48px !important;
+
+  margin: 0 !important;
+  padding: 0 22px !important;
+
+  transform: none !important;
+
+  box-sizing: border-box !important;
+}
+
+/* EXTRA FORCE IF ADD OWNER ITSELF HAS POSITIONING */
+html body #root .owners-page button.add-owner-button,
+html body #root .owners-page .add-owner-button,
+html body #root .owners-page .add-button {
+  position: static !important;
+  padding: 10px;
+
+  right: auto !important;
+  left: auto !important;
+  top: auto !important;
+
+  margin: 0 !important;
+
+  transform: none !important;
+
+  min-width: 145px !important;
+}
+/* =========================================================
+   OWNERS PAGE — FORCE RIGHT SAFE SPACE
+   PUT THIS AT THE VERY END OF App.css
+========================================================= */
+
+/*
+  Owners.jsx structure is:
+  .dashboard-layout
+      Sidebar
+      .dashboard-main
+          .page-header
+          toolbar
+          .owners-table-container
+          pagination
+*/
+
+html body #root .dashboard-layout > main.dashboard-main {
+  padding-left: 48px !important;
+  padding-right: 48px !important;
+
+  box-sizing: border-box !important;
+  overflow-x: hidden !important;
+}
+
+/* Every direct child stays INSIDE the main padding */
+html body #root .dashboard-layout > main.dashboard-main > * {
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+/* Owners toolbar */
+html body #root
+.dashboard-layout
+> main.dashboard-main
+> .page-header
++ div {
+  width: 100% !important;
+  max-width: 100% !important;
+
+  box-sizing: border-box !important;
+
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+}
+
+/* Owners table same alignment */
+html body #root
+.dashboard-layout
+> main.dashboard-main
+> .owners-table-container {
+  width: 100% !important;
+  max-width: 100% !important;
+
+  box-sizing: border-box !important;
+}
+
+/* ---------------------------------------------------------
+   DESKTOP
+--------------------------------------------------------- */
+
+@media (min-width: 1100px) {
+  html body #root .dashboard-layout > main.dashboard-main {
+    padding-left: 48px !important;
+    padding-right: 48px !important;
+  }
+}
+
+/* ---------------------------------------------------------
+   SMALL SCREEN
+--------------------------------------------------------- */
+
+@media (max-width: 900px) {
+  html body #root .dashboard-layout > main.dashboard-main {
+    padding-left: 22px !important;
+    padding-right: 22px !important;
+  }
+}
+/* ================================
+   BILLING - INVOICE DETAILS FIX
+================================ */
+
+.invoice-details-modal,
+.invoice-modal {
+  padding: 0 !important;
+  overflow: hidden !important;
+  border-radius: 18px !important;
+}
+
+/* Teal header stays edge-to-edge */
+.invoice-details-modal .modal-header,
+.invoice-modal .modal-header {
+  padding: 26px 36px !important;
+  margin: 0 !important;
+}
+
+/* Give the details proper breathing room */
+.invoice-details-modal .modal-body,
+.invoice-modal .modal-body {
+  padding: 22px 36px !important;
+}
+
+/* Invoice information rows */
+.invoice-details-modal .detail-row,
+.invoice-modal .detail-row {
+  padding: 17px 0 !important;
+  margin: 0 !important;
+  border-bottom: 1px solid #e1eceb !important;
+}
+
+/* Invoice lines table/card */
+.invoice-details-modal .invoice-lines,
+.invoice-modal .invoice-lines {
+  margin-top: 22px !important;
+  border: 1px solid #dbe8e7 !important;
+  border-radius: 10px !important;
+  overflow: hidden !important;
+}
+
+/* Grand total */
+.invoice-details-modal .grand-total,
+.invoice-modal .grand-total {
+  margin-top: 22px !important;
+  padding: 17px 20px !important;
+  border-radius: 8px !important;
+}
+
+/* Footer buttons */
+.invoice-details-modal .modal-footer,
+.invoice-modal .modal-footer {
+  padding: 12px 36px 24px !important;
+  margin: 0 !important;
+  gap: 12px !important;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .invoice-details-modal .modal-header,
+  .invoice-details-modal .modal-body,
+  .invoice-details-modal .modal-footer,
+  .invoice-modal .modal-header,
+  .invoice-modal .modal-body,
+  .invoice-modal .modal-footer {
+    padding-left: 20px !important;
+    padding-right: 20px !important;
+  }
+}
+/* FIX OWNERS SIDEBAR ACTIVE ITEM ALIGNMENT */
+.sidebar .active,
+.sidebar-menu .active,
+.sidebar-nav .active {
+  padding-left: 0 !important;
+  margin-left: 0 !important;
+}
+
+/* Keep Owners text aligned exactly like Pets / Appointments */
+.sidebar .active span,
+.sidebar-menu .active span,
+.sidebar-nav .active span {
+  margin-left: 0 !important;
+  padding-left: 0 !important;
+}
+/* =========================================================
+   PETS PAGE — FINAL LAYOUT FIX
+   ========================================================= */
+
+/* Keep the page inside the available space beside sidebar */
+.pets-page {
+  min-height: 100vh;
+  background: #f7fbfb;
+  overflow-x: hidden;
+}
+
+.pets-main {
+  margin-left: 290px !important;
+  width: calc(100% - 290px) !important;
+  max-width: none !important;
+  box-sizing: border-box !important;
+
+  padding: 54px 54px 60px !important;
+
+  overflow-x: hidden !important;
+}
+
+/* =========================================================
+   HEADER
+   ========================================================= */
+
+.pets-header {
+  width: 100% !important;
+  box-sizing: border-box !important;
+
+  display: flex !important;
+  align-items: flex-start !important;
+  justify-content: space-between !important;
+
+  gap: 30px !important;
+  margin-bottom: 44px !important;
+}
+
+.pets-header h1 {
+  margin: 0 0 5px !important;
+}
+
+.pets-header p {
+  margin: 0 !important;
+}
+
+.pets-header-actions {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+  gap: 14px !important;
+
+  flex-shrink: 0 !important;
+}
+
+/* =========================================================
+   FILTERS
+   ========================================================= */
+
+.pets-filters {
+  width: 100% !important;
+  box-sizing: border-box !important;
+
+  display: grid !important;
+  grid-template-columns:
+    minmax(280px, 1fr)
+    minmax(180px, 215px)
+    minmax(160px, 190px) !important;
+
+  gap: 14px !important;
+  align-items: center !important;
+
+  margin-bottom: 30px !important;
+}
+
+/* Hide Clear button from normal layout.
+   Search already has its own X clear button. */
+.pets-clear-button {
+  display: none !important;
+}
+
+.pets-search-box,
+.pets-filters > select,
+.pets-sort-box {
+  width: 100% !important;
+  min-width: 0 !important;
+  box-sizing: border-box !important;
+}
+
+.pets-search-box {
+  height: 58px !important;
+}
+
+.pets-search-box input {
+  width: 100% !important;
+  min-width: 0 !important;
+}
+
+.pets-filters > select {
+  height: 58px !important;
+}
+
+.pets-sort-box {
+  height: 58px !important;
+}
+
+.pets-sort-box select {
+  width: 100% !important;
+  height: 100% !important;
+  min-width: 0 !important;
+}
+
+/* =========================================================
+   TABLE CARD
+   ========================================================= */
+
+.pets-table-card {
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+
+  box-sizing: border-box !important;
+
+  margin: 0 !important;
+
+  background: #ffffff !important;
+  border: 1px solid #dce9e8 !important;
+  border-radius: 14px !important;
+
+  overflow: hidden !important;
+}
+
+/* =========================================================
+   TABLE
+   ========================================================= */
+
+.pets-table {
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+
+  table-layout: fixed !important;
+  border-collapse: collapse !important;
+
+  margin: 0 !important;
+}
+
+.pets-table th,
+.pets-table td {
+  box-sizing: border-box !important;
+  vertical-align: middle !important;
+
+  padding: 22px 22px !important;
+
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+/* Exact column distribution */
+.pets-table th:nth-child(1),
+.pets-table td:nth-child(1) {
+  width: 15% !important;
+}
+
+.pets-table th:nth-child(2),
+.pets-table td:nth-child(2) {
+  width: 19% !important;
+}
+
+.pets-table th:nth-child(3),
+.pets-table td:nth-child(3) {
+  width: 13% !important;
+}
+
+.pets-table th:nth-child(4),
+.pets-table td:nth-child(4) {
+  width: 22% !important;
+}
+
+.pets-table th:nth-child(5),
+.pets-table td:nth-child(5) {
+  width: 12% !important;
+}
+
+.pets-table th:nth-child(6),
+.pets-table td:nth-child(6) {
+  width: 19% !important;
+}
+
+/* =========================================================
+   PET NAME
+   Remove avatar so table returns to original clean look
+   ========================================================= */
+
+.pets-pet-cell {
+  display: block !important;
+  min-width: 0 !important;
+}
+
+.pets-table-avatar {
+  display: none !important;
+}
+
+.pets-pet-cell strong {
+  font-weight: 500 !important;
+}
+
+/* =========================================================
+   ACTIONS
+   Make ALL 3 buttons visible
+   ========================================================= */
+
+.pets-actions {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+
+  gap: 8px !important;
+
+  width: 100% !important;
+  min-width: 0 !important;
+
+  overflow: visible !important;
+}
+
+.pets-actions .icon-button {
+  width: 42px !important;
+  min-width: 42px !important;
+  max-width: 42px !important;
+
+  height: 42px !important;
+  min-height: 42px !important;
+
+  padding: 0 !important;
+  margin: 0 !important;
+
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  flex: 0 0 42px !important;
+}
+
+/* =========================================================
+   PAGINATION
+   ========================================================= */
+
+.pets-pagination {
+  width: 100% !important;
+  box-sizing: border-box !important;
+
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+
+  gap: 20px !important;
+
+  padding: 18px 22px !important;
+  margin: 0 !important;
+
+  border-top: 1px solid #e6eeee !important;
+}
+
+.pets-rows-per-page {
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+
+  white-space: nowrap !important;
+}
+
+.pets-page-controls {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+
+  gap: 8px !important;
+
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.pets-page-controls button {
+  min-width: 40px !important;
+  width: 40px !important;
+  height: 40px !important;
+
+  padding: 0 !important;
+
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  border-radius: 8px !important;
+
+  font-size: 0 !important;
+}
+
+/* Previous = < */
+.pets-page-controls button:first-child::after {
+  content: "<";
+  font-size: 22px !important;
+  line-height: 1 !important;
+}
+
+/* Next = > */
+.pets-page-controls button:last-child::after {
+  content: ">";
+  font-size: 22px !important;
+  line-height: 1 !important;
+}
+
+/* Page number stays visible */
+.pets-page-controls .pets-page-number {
+  font-size: 16px !important;
+}
+
+.pets-page-controls .pets-page-number::after {
+  content: none !important;
+}
+
+.pets-page-number.active {
+  background: #159f9f !important;
+  border-color: #159f9f !important;
+  color: #ffffff !important;
+}
+
+/* =========================================================
+   RESPONSIVE
+   ========================================================= */
+
+@media (max-width: 1200px) {
+  .pets-main {
+    padding-left: 35px !important;
+    padding-right: 35px !important;
+  }
+
+  .pets-table th,
+  .pets-table td {
+    padding-left: 15px !important;
+    padding-right: 15px !important;
+  }
+
+  .pets-actions {
+    gap: 6px !important;
+  }
+
+  .pets-actions .icon-button {
+    width: 38px !important;
+    min-width: 38px !important;
+    max-width: 38px !important;
+    height: 38px !important;
+    flex-basis: 38px !important;
+  }
+}
+
+@media (max-width: 900px) {
+  .pets-main {
+    margin-left: 0 !important;
+    width: 100% !important;
+
+    padding: 30px 20px 50px !important;
+  }
+
+  .pets-filters {
+    grid-template-columns: 1fr !important;
+  }
+
+  .pets-header {
+    flex-direction: column !important;
+  }
+
+  .pets-header-actions {
+    width: 100% !important;
+    justify-content: flex-start !important;
+  }
+}
