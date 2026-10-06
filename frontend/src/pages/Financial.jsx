@@ -11,7 +11,6 @@ import {
   FaTrash,
   FaFileExcel,
   FaXmark,
-  FaChartColumn,
 } from "react-icons/fa6";
 
 import * as XLSX from "xlsx";
@@ -20,50 +19,35 @@ function Financial() {
   const location = useLocation();
 
   // =========================================================
-  // FINANCIAL VIEW
-  //
-  // /financial
-  //   -> original full Financial page
-  //
-  // /financial?tab=revenue
-  //   -> same Financial page + Revenue table only
-  //
-  // /financial?tab=expenses
-  //   -> same Financial page + Expenses table only
+  // PAGE
   // =========================================================
 
   const financialTab = useMemo(() => {
-    const params = new URLSearchParams(
-      location.search
-    );
-
+    const params = new URLSearchParams(location.search);
     const tab = params.get("tab");
 
-    if (tab === "revenue") {
-      return "revenue";
-    }
+    if (tab === "revenue") return "revenue";
+    if (tab === "expenses") return "expenses";
 
-    if (tab === "expenses") {
-      return "expenses";
-    }
-
-    return "all";
+    return "overview";
   }, [location.search]);
+
+  const isOverview = financialTab === "overview";
+  const isRevenue = financialTab === "revenue";
+  const isExpenses = financialTab === "expenses";
 
   // =========================================================
   // REVENUES
   // =========================================================
 
   const [revenues, setRevenues] = useState(() => {
-    const saved = localStorage.getItem(
-      "financialRevenues"
-    );
+    const saved = localStorage.getItem("financialRevenues");
 
     if (saved) {
       try {
         return JSON.parse(saved);
       } catch {
-        // use default data below
+        // use default data
       }
     }
 
@@ -132,15 +116,13 @@ function Financial() {
   // =========================================================
 
   const [expenses, setExpenses] = useState(() => {
-    const saved = localStorage.getItem(
-      "financialExpenses"
-    );
+    const saved = localStorage.getItem("financialExpenses");
 
     if (saved) {
       try {
         return JSON.parse(saved);
       } catch {
-        // use default data below
+        // use default data
       }
     }
 
@@ -208,80 +190,49 @@ function Financial() {
   // MODALS
   // =========================================================
 
-  const [
-    showRevenueModal,
-    setShowRevenueModal,
-  ] = useState(false);
+  const [showRevenueModal, setShowRevenueModal] =
+    useState(false);
 
-  const [
-    showExpenseModal,
-    setShowExpenseModal,
-  ] = useState(false);
+  const [showExpenseModal, setShowExpenseModal] =
+    useState(false);
 
   // =========================================================
   // CHART
   // =========================================================
 
-  const [chartMetric, setChartMetric] =
-    useState("all");
-
-  const [chartPeriod, setChartPeriod] =
-    useState("month");
+  const [chartMetric, setChartMetric] = useState("all");
+  const [chartPeriod, setChartPeriod] = useState("month");
 
   // =========================================================
-  // NEW REVENUE
+  // FORMS
   // =========================================================
 
-  const [newRevenue, setNewRevenue] =
-    useState({
-      date: "",
-      type: "Visit",
-      description: "",
-      amount: "",
-    });
+  const [newRevenue, setNewRevenue] = useState({
+    date: "",
+    type: "Visit",
+    description: "",
+    amount: "",
+  });
 
-  // =========================================================
-  // NEW EXPENSE
-  // =========================================================
-
-  const [newExpense, setNewExpense] =
-    useState({
-      date: "",
-      type: "Medical Supplies",
-      description: "",
-      amount: "",
-    });
+  const [newExpense, setNewExpense] = useState({
+    date: "",
+    type: "Medical Supplies",
+    description: "",
+    amount: "",
+  });
 
   // =========================================================
   // PAGINATION
   // =========================================================
 
-  const [itemsPerPage, setItemsPerPage] =
-    useState(5);
+  const [itemsPerPage, setItemsPerPage] = useState(5);
+  const [currentPage, setCurrentPage] = useState(1);
 
-  const [currentPage, setCurrentPage] =
-    useState(1);
-
-  /*
-    On normal Financial:
-      both tables use same pagination, same as original.
-
-    On Revenue:
-      pagination is based on revenues.
-
-    On Expenses:
-      pagination is based on expenses.
-  */
-
-  const totalRows =
-    financialTab === "revenue"
-      ? revenues.length
-      : financialTab === "expenses"
-        ? expenses.length
-        : Math.max(
-            revenues.length,
-            expenses.length
-          );
+  const totalRows = isRevenue
+    ? revenues.length
+    : isExpenses
+      ? expenses.length
+      : 0;
 
   const totalPages = Math.max(
     1,
@@ -294,32 +245,25 @@ function Financial() {
   );
 
   const startIndex =
-    (safeCurrentPage - 1) *
-    itemsPerPage;
+    (safeCurrentPage - 1) * itemsPerPage;
 
-  const endIndex =
-    startIndex + itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
 
-  const paginatedRevenues =
-    revenues.slice(
-      startIndex,
-      endIndex
-    );
+  const paginatedRevenues = revenues.slice(
+    startIndex,
+    endIndex
+  );
 
-  const paginatedExpenses =
-    expenses.slice(
-      startIndex,
-      endIndex
-    );
+  const paginatedExpenses = expenses.slice(
+    startIndex,
+    endIndex
+  );
 
   const pageNumbers = Array.from(
-    {
-      length: totalPages,
-    },
+    { length: totalPages },
     (_, index) => index + 1
   );
 
-  // Reset pagination when clicking Revenue / Expenses
   useEffect(() => {
     setCurrentPage(1);
   }, [financialTab]);
@@ -352,43 +296,31 @@ function Financial() {
   // TOTALS
   // =========================================================
 
-  const totalRevenue =
-    revenues.reduce(
+  const totalRevenue = revenues.reduce(
+    (total, item) =>
+      total + Number(item.amount || 0),
+    0
+  );
+
+  const totalExpenses = expenses.reduce(
+    (total, item) =>
+      total + Number(item.amount || 0),
+    0
+  );
+
+  const netProfit = totalRevenue - totalExpenses;
+
+  const totalVisits = revenues.filter(
+    (item) => item.type === "Visit"
+  ).length;
+
+  const visitRevenue = revenues
+    .filter((item) => item.type === "Visit")
+    .reduce(
       (total, item) =>
-        total +
-        Number(item.amount || 0),
+        total + Number(item.amount || 0),
       0
     );
-
-  const totalExpenses =
-    expenses.reduce(
-      (total, item) =>
-        total +
-        Number(item.amount || 0),
-      0
-    );
-
-  const netProfit =
-    totalRevenue - totalExpenses;
-
-  const totalVisits =
-    revenues.filter(
-      (item) =>
-        item.type === "Visit"
-    ).length;
-
-  const visitRevenue =
-    revenues
-      .filter(
-        (item) =>
-          item.type === "Visit"
-      )
-      .reduce(
-        (total, item) =>
-          total +
-          Number(item.amount || 0),
-        0
-      );
 
   const averageVisitRevenue =
     totalVisits > 0
@@ -401,99 +333,50 @@ function Financial() {
 
   const monthlyData = useMemo(() => {
     const months = [
-      {
-        number: "01",
-        label: "Jan",
-      },
-      {
-        number: "02",
-        label: "Feb",
-      },
-      {
-        number: "03",
-        label: "Mar",
-      },
-      {
-        number: "04",
-        label: "Apr",
-      },
-      {
-        number: "05",
-        label: "May",
-      },
-      {
-        number: "06",
-        label: "Jun",
-      },
-      {
-        number: "07",
-        label: "Jul",
-      },
-      {
-        number: "08",
-        label: "Aug",
-      },
-      {
-        number: "09",
-        label: "Sep",
-      },
-      {
-        number: "10",
-        label: "Oct",
-      },
-      {
-        number: "11",
-        label: "Nov",
-      },
-      {
-        number: "12",
-        label: "Dec",
-      },
+      { number: "01", label: "Jan" },
+      { number: "02", label: "Feb" },
+      { number: "03", label: "Mar" },
+      { number: "04", label: "Apr" },
+      { number: "05", label: "May" },
+      { number: "06", label: "Jun" },
+      { number: "07", label: "Jul" },
+      { number: "08", label: "Aug" },
+      { number: "09", label: "Sep" },
+      { number: "10", label: "Oct" },
+      { number: "11", label: "Nov" },
+      { number: "12", label: "Dec" },
     ];
 
     return months.map((month) => {
-      const revenue =
-        revenues
-          .filter(
-            (item) =>
-              item.date?.slice(
-                5,
-                7
-              ) === month.number
-          )
-          .reduce(
-            (total, item) =>
-              total +
-              Number(
-                item.amount || 0
-              ),
-            0
-          );
+      const revenue = revenues
+        .filter(
+          (item) =>
+            item.date?.slice(5, 7) ===
+            month.number
+        )
+        .reduce(
+          (total, item) =>
+            total + Number(item.amount || 0),
+          0
+        );
 
-      const expense =
-        expenses
-          .filter(
-            (item) =>
-              item.date?.slice(
-                5,
-                7
-              ) === month.number
-          )
-          .reduce(
-            (total, item) =>
-              total +
-              Number(
-                item.amount || 0
-              ),
-            0
-          );
+      const expense = expenses
+        .filter(
+          (item) =>
+            item.date?.slice(5, 7) ===
+            month.number
+        )
+        .reduce(
+          (total, item) =>
+            total + Number(item.amount || 0),
+          0
+        );
 
       return {
         month: month.label,
         revenue,
         expense,
-        profit:
-          revenue - expense,
+        profit: revenue - expense,
       };
     });
   }, [revenues, expenses]);
@@ -503,10 +386,7 @@ function Financial() {
       Math.max(
         item.revenue,
         item.expense,
-        Math.max(
-          item.profit,
-          0
-        )
+        Math.max(item.profit, 0)
       )
     ),
     100
@@ -515,96 +395,64 @@ function Financial() {
   const chartHeight = 250;
 
   const getHeight = (value) => {
-    if (value <= 0) {
-      return 0;
-    }
+    if (value <= 0) return 0;
 
-    return (
-      (value / maxChartValue) *
-      190
-    );
+    return (value / maxChartValue) * 190;
   };
 
-  const getLinePoints = () => {
-    return monthlyData
+  const getLinePoints = () =>
+    monthlyData
       .map((item, index) => {
-        const x =
-          60 + index * 75;
+        const x = 60 + index * 75;
 
         const y =
           chartHeight -
           35 -
-          getHeight(
-            Math.max(
-              item.profit,
-              0
-            )
-          );
+          getHeight(Math.max(item.profit, 0));
 
         return `${x},${y}`;
       })
       .join(" ");
+
+  // =========================================================
+  // FORM CHANGE
+  // =========================================================
+
+  const handleRevenueChange = (event) => {
+    const { name, value } = event.target;
+
+    setNewRevenue((previous) => ({
+      ...previous,
+      [name]: value,
+    }));
+  };
+
+  const handleExpenseChange = (event) => {
+    const { name, value } = event.target;
+
+    setNewExpense((previous) => ({
+      ...previous,
+      [name]: value,
+    }));
   };
 
   // =========================================================
-  // FORM CHANGES
+  // ADD
   // =========================================================
 
-  const handleRevenueChange = (
-    event
-  ) => {
-    const {
-      name,
-      value,
-    } = event.target;
-
-    setNewRevenue(
-      (previous) => ({
-        ...previous,
-        [name]: value,
-      })
-    );
-  };
-
-  const handleExpenseChange = (
-    event
-  ) => {
-    const {
-      name,
-      value,
-    } = event.target;
-
-    setNewExpense(
-      (previous) => ({
-        ...previous,
-        [name]: value,
-      })
-    );
-  };
-
-  // =========================================================
-  // ADD REVENUE
-  // =========================================================
-
-  const handleAddRevenue = (
-    event
-  ) => {
+  const handleAddRevenue = (event) => {
     event.preventDefault();
 
     const revenue = {
       id: Date.now(),
       ...newRevenue,
-      amount: Number(
-        newRevenue.amount
-      ),
+      amount: Number(newRevenue.amount),
     };
 
-    setRevenues(
-      (previous) => [
-        ...previous,
-        revenue,
-      ]
-    );
+    setRevenues((previous) => [
+      ...previous,
+      revenue,
+    ]);
 
     setNewRevenue({
       date: "",
@@ -616,29 +464,19 @@ function Financial() {
     setShowRevenueModal(false);
   };
 
-  // =========================================================
-  // ADD EXPENSE
-  // =========================================================
-
-  const handleAddExpense = (
-    event
-  ) => {
+  const handleAddExpense = (event) => {
     event.preventDefault();
 
     const expense = {
       id: Date.now(),
       ...newExpense,
-      amount: Number(
-        newExpense.amount
-      ),
+      amount: Number(newExpense.amount),
     };
 
-    setExpenses(
-      (previous) => [
-        ...previous,
-        expense,
-      ]
-    );
+    setExpenses((previous) => [
+      ...previous,
+      expense,
+    ]);
 
     setNewExpense({
       date: "",
@@ -654,45 +492,27 @@ function Financial() {
   // DELETE
   // =========================================================
 
-  const handleDeleteRevenue = (
-    id
-  ) => {
-    const confirmed =
-      window.confirm(
-        "Are you sure you want to delete this revenue?"
-      );
+  const handleDeleteRevenue = (id) => {
+    const confirmed = window.confirm(
+      "Are you sure you want to delete this revenue?"
+    );
 
-    if (!confirmed) {
-      return;
-    }
+    if (!confirmed) return;
 
-    setRevenues(
-      (previous) =>
-        previous.filter(
-          (item) =>
-            item.id !== id
-        )
+    setRevenues((previous) =>
+      previous.filter((item) => item.id !== id)
     );
   };
 
-  const handleDeleteExpense = (
-    id
-  ) => {
-    const confirmed =
-      window.confirm(
-        "Are you sure you want to delete this expense?"
-      );
+  const handleDeleteExpense = (id) => {
+    const confirmed = window.confirm(
+      "Are you sure you want to delete this expense?"
+    );
 
-    if (!confirmed) {
-      return;
-    }
+    if (!confirmed) return;
 
-    setExpenses(
-      (previous) =>
-        previous.filter(
-          (item) =>
-            item.id !== id
-        )
+    setExpenses((previous) =>
+      previous.filter((item) => item.id !== id)
     );
   };
 
@@ -703,95 +523,62 @@ function Financial() {
   const handleExport = () => {
     const summary = [
       {
-        Statistic:
-          "Total Revenue",
+        Statistic: "Total Revenue",
         Value: totalRevenue,
       },
       {
-        Statistic:
-          "Total Expenses",
+        Statistic: "Total Expenses",
         Value: totalExpenses,
       },
       {
-        Statistic:
-          "Net Profit",
+        Statistic: "Net Profit",
         Value: netProfit,
       },
       {
-        Statistic:
-          "Total Visits",
+        Statistic: "Total Visits",
         Value: totalVisits,
       },
       {
-        Statistic:
-          "Visit Revenue",
+        Statistic: "Visit Revenue",
         Value: visitRevenue,
       },
       {
-        Statistic:
-          "Average Revenue / Visit",
-        Value:
-          averageVisitRevenue.toFixed(
-            2
-          ),
+        Statistic: "Average Revenue / Visit",
+        Value: averageVisitRevenue.toFixed(2),
       },
     ];
 
-    const revenueData =
-      revenues.map((item) => ({
-        Date: item.date,
-        Type: item.type,
-        Description:
-          item.description,
-        Amount: Number(
-          item.amount || 0
-        ),
-      }));
+    const revenueData = revenues.map((item) => ({
+      Date: item.date,
+      Type: item.type,
+      Description: item.description,
+      Amount: Number(item.amount || 0),
+    }));
 
-    const expenseData =
-      expenses.map((item) => ({
-        Date: item.date,
-        Type: item.type,
-        Description:
-          item.description,
-        Amount: Number(
-          item.amount || 0
-        ),
-      }));
+    const expenseData = expenses.map((item) => ({
+      Date: item.date,
+      Type: item.type,
+      Description: item.description,
+      Amount: Number(item.amount || 0),
+    }));
 
-    const workbook =
-      XLSX.utils.book_new();
-
-    const summarySheet =
-      XLSX.utils.json_to_sheet(
-        summary
-      );
-
-    const revenueSheet =
-      XLSX.utils.json_to_sheet(
-        revenueData
-      );
-
-    const expenseSheet =
-      XLSX.utils.json_to_sheet(
-        expenseData
-      );
+    const workbook = XLSX.utils.book_new();
 
     XLSX.utils.book_append_sheet(
       workbook,
-      summarySheet,
+      XLSX.utils.json_to_sheet(summary),
       "Summary"
     );
 
     XLSX.utils.book_append_sheet(
       workbook,
-      revenueSheet,
+      XLSX.utils.json_to_sheet(revenueData),
       "Revenue"
     );
 
     XLSX.utils.book_append_sheet(
       workbook,
-      expenseSheet,
+      XLSX.utils.json_to_sheet(expenseData),
       "Expenses"
     );
 
@@ -801,7 +588,10 @@ function Financial() {
     );
   };
 
-  // PART 2 CONTINUES HERE
+  // =========================================================
+  // RENDER
+  // =========================================================
+
   return (
     <div className="dashboard-layout">
       <Sidebar />
@@ -813,404 +603,484 @@ function Financial() {
 
         <div className="page-header financial-page-header">
           <div>
-            <h1>Financial</h1>
+            <h1>
+              {isRevenue
+                ? "Revenue"
+                : isExpenses
+                  ? "Expenses"
+                  : "Financial"}
+            </h1>
 
             <p>
-              Manage clinic revenues, expenses and financial
-              performance
+              {isRevenue
+                ? "Track all clinic revenue and income"
+                : isExpenses
+                  ? "Track all clinic expenses and spending"
+                  : "Manage clinic revenues, expenses and financial performance"}
             </p>
           </div>
 
-          <button
-            type="button"
-            className="financial-export-button"
-            onClick={handleExport}
-          >
-            <FaFileExcel />
-            Export
-          </button>
-        </div>
-
-        {/* =====================================================
-            STATISTICS
-        ===================================================== */}
-
-        <div className="financial-stats">
-          <div className="financial-stat-card">
-            <div className="financial-stat-icon revenue">
-              <FaArrowTrendUp />
-            </div>
-
-            <div>
-              <span>Total Revenue</span>
-
-              <h2>
-                ${totalRevenue.toLocaleString()}
-              </h2>
-
-              <small>All clinic income</small>
-            </div>
-          </div>
-
-          <div className="financial-stat-card">
-            <div className="financial-stat-icon expense">
-              <FaArrowTrendDown />
-            </div>
-
-            <div>
-              <span>Total Expenses</span>
-
-              <h2>
-                ${totalExpenses.toLocaleString()}
-              </h2>
-
-              <small>Total clinic spending</small>
-            </div>
-          </div>
-
-          <div className="financial-stat-card">
-            <div className="financial-stat-icon profit">
-              <FaDollarSign />
-            </div>
-
-            <div>
-              <span>Net Profit</span>
-
-              <h2>
-                ${netProfit.toLocaleString()}
-              </h2>
-
-              <small>Revenue - Expenses</small>
-            </div>
-          </div>
-
-          <div className="financial-stat-card">
-            <div className="financial-stat-icon visits">
-              <FaStethoscope />
-            </div>
-
-            <div>
-              <span>Total Visits</span>
-
-              <h2>{totalVisits}</h2>
-
-              <small>Revenue visits</small>
-            </div>
-          </div>
-        </div>
-
-        {/* =====================================================
-            FINANCIAL PERFORMANCE
-        ===================================================== */}
-
-        <section className="financial-analytics-card">
-          <div className="financial-analytics-header">
-            <div>
-              <h2>Financial Performance</h2>
-
-              <p>
-                Track clinic revenue, expenses and profit
-                throughout the year
-              </p>
-            </div>
-
-            <div className="financial-chart-controls">
-              <div className="financial-filter-box">
-                <span>Filter by</span>
-
-                <select
-                  value={chartMetric}
-                  onChange={(event) =>
-                    setChartMetric(event.target.value)
-                  }
-                >
-                  <option value="all">
-                    All Financial Data
-                  </option>
-
-                  <option value="revenue">
-                    Revenue
-                  </option>
-
-                  <option value="expenses">
-                    Expenses
-                  </option>
-
-                  <option value="profit">
-                    Profit
-                  </option>
-                </select>
-              </div>
-
-              <button
-                type="button"
-                className="financial-small-export"
-                onClick={handleExport}
-              >
-                <FaFileExcel />
-                Export
-              </button>
-            </div>
-          </div>
-
-          <div className="financial-chart-wrapper">
-            <svg
-              viewBox="0 0 960 290"
-              className="financial-custom-chart"
-              preserveAspectRatio="none"
+          {isOverview && (
+            <button
+              type="button"
+              className="financial-export-button"
+              onClick={handleExport}
             >
-              {[40, 85, 130, 175, 220].map((y) => (
-                <line
-                  key={y}
-                  x1="35"
-                  y1={y}
-                  x2="940"
-                  y2={y}
-                  className="financial-grid-line"
-                />
-              ))}
-
-              {monthlyData.map((item, index) => {
-                const x = 48 + index * 75;
-
-                const revenueHeight = getHeight(
-                  item.revenue
-                );
-
-                const expenseHeight = getHeight(
-                  item.expense
-                );
-
-                return (
-                  <g key={item.month}>
-                    {(chartMetric === "all" ||
-                      chartMetric === "revenue") && (
-                      <rect
-                        x={x}
-                        y={
-                          chartHeight -
-                          35 -
-                          revenueHeight
-                        }
-                        width="22"
-                        height={revenueHeight}
-                        rx="3"
-                        className="financial-revenue-bar"
-                      />
-                    )}
-
-                    {(chartMetric === "all" ||
-                      chartMetric === "expenses") && (
-                      <rect
-                        x={x + 24}
-                        y={
-                          chartHeight -
-                          35 -
-                          expenseHeight
-                        }
-                        width="22"
-                        height={expenseHeight}
-                        rx="3"
-                        className="financial-expense-bar"
-                      />
-                    )}
-
-                    <text
-                      x={x + 22}
-                      y="270"
-                      textAnchor="middle"
-                      className="financial-month-label"
-                    >
-                      {item.month}
-                    </text>
-                  </g>
-                );
-              })}
-
-              {(chartMetric === "all" ||
-                chartMetric === "profit") && (
-                <>
-                  <polyline
-                    points={getLinePoints()}
-                    fill="none"
-                    className="financial-profit-line"
-                  />
-
-                  {monthlyData.map((item, index) => {
-                    const x = 60 + index * 75;
-
-                    const y =
-                      chartHeight -
-                      35 -
-                      getHeight(
-                        Math.max(item.profit, 0)
-                      );
-
-                    return (
-                      <circle
-                        key={`profit-${item.month}`}
-                        cx={x}
-                        cy={y}
-                        r="4"
-                        className="financial-profit-dot"
-                      />
-                    );
-                  })}
-                </>
-              )}
-            </svg>
-          </div>
-
-          <div className="financial-chart-bottom">
-            <div className="financial-chart-legend">
-              <div>
-                <span className="legend-dot revenue" />
-                Revenue
-              </div>
-
-              <div>
-                <span className="legend-dot expense" />
-                Expenses
-              </div>
-
-              <div>
-                <span className="legend-line profit" />
-                Profit
-              </div>
-            </div>
-
-            <div className="financial-period-switch">
-              <span>Graph by:</span>
-
-              <button
-                type="button"
-                className={
-                  chartPeriod === "day" ? "active" : ""
-                }
-                onClick={() => setChartPeriod("day")}
-              >
-                Day
-              </button>
-
-              <button
-                type="button"
-                className={
-                  chartPeriod === "week" ? "active" : ""
-                }
-                onClick={() => setChartPeriod("week")}
-              >
-                Week
-              </button>
-
-              <button
-                type="button"
-                className={
-                  chartPeriod === "month" ? "active" : ""
-                }
-                onClick={() => setChartPeriod("month")}
-              >
-                Month
-              </button>
-            </div>
-          </div>
-        </section>
+              <FaFileExcel />
+              Export
+            </button>
+          )}
+        </div>
 
         {/* =====================================================
-            SMALL ANALYTICS
+            FINANCIAL OVERVIEW ONLY
         ===================================================== */}
 
-        <div className="financial-bottom-analytics">
-          <div className="financial-mini-chart-card">
-            <div className="financial-mini-title">
-              <div>
-                <h3>Revenue Overview</h3>
-                <p>Revenue by month</p>
+        {isOverview && (
+          <>
+            {/* STATS */}
+
+            <div className="financial-stats">
+              <div className="financial-stat-card">
+                <div className="financial-stat-icon revenue">
+                  <FaArrowTrendUp />
+                </div>
+
+                <div>
+                  <span>Total Revenue</span>
+
+                  <h2>
+                    ${totalRevenue.toLocaleString()}
+                  </h2>
+
+                  <small>All clinic income</small>
+                </div>
               </div>
 
-              <FaArrowTrendUp />
+              <div className="financial-stat-card">
+                <div className="financial-stat-icon expense">
+                  <FaArrowTrendDown />
+                </div>
+
+                <div>
+                  <span>Total Expenses</span>
+
+                  <h2>
+                    ${totalExpenses.toLocaleString()}
+                  </h2>
+
+                  <small>
+                    Total clinic spending
+                  </small>
+                </div>
+              </div>
+
+              <div className="financial-stat-card">
+                <div className="financial-stat-icon profit">
+                  <FaDollarSign />
+                </div>
+
+                <div>
+                  <span>Net Profit</span>
+
+                  <h2>
+                    ${netProfit.toLocaleString()}
+                  </h2>
+
+                  <small>
+                    Revenue - Expenses
+                  </small>
+                </div>
+              </div>
+
+              <div className="financial-stat-card">
+                <div className="financial-stat-icon visits">
+                  <FaStethoscope />
+                </div>
+
+                <div>
+                  <span>Total Visits</span>
+
+                  <h2>{totalVisits}</h2>
+
+                  <small>Revenue visits</small>
+                </div>
+              </div>
             </div>
 
-            <div className="financial-mini-bars">
-              {monthlyData.slice(4, 12).map((item) => (
-                <div
-                  className="financial-mini-bar-item"
-                  key={item.month}
-                >
-                  <div className="mini-bar-track">
-                    <div
-                      className="mini-bar-fill revenue"
-                      style={{
-                        height: `${Math.max(
-                          10,
-                          (item.revenue /
-                            maxChartValue) *
-                            100
-                        )}%`,
-                      }}
-                    />
+            {/* =================================================
+                FINANCIAL PERFORMANCE
+            ================================================= */}
+
+            <section className="financial-analytics-card">
+              <div className="financial-analytics-header">
+                <div>
+                  <h2>
+                    Financial Performance
+                  </h2>
+
+                  <p>
+                    Track clinic revenue,
+                    expenses and profit
+                    throughout the year
+                  </p>
+                </div>
+
+                <div className="financial-chart-controls">
+                  <div className="financial-filter-box">
+                    <span>Filter by</span>
+
+                    <select
+                      value={chartMetric}
+                      onChange={(event) =>
+                        setChartMetric(
+                          event.target.value
+                        )
+                      }
+                    >
+                      <option value="all">
+                        All Financial Data
+                      </option>
+
+                      <option value="revenue">
+                        Revenue
+                      </option>
+
+                      <option value="expenses">
+                        Expenses
+                      </option>
+
+                      <option value="profit">
+                        Profit
+                      </option>
+                    </select>
                   </div>
 
-                  <span>{item.month}</span>
+                  <button
+                    type="button"
+                    className="financial-small-export"
+                    onClick={handleExport}
+                  >
+                    <FaFileExcel />
+                    Export
+                  </button>
                 </div>
-              ))}
+              </div>
+
+              <div className="financial-chart-wrapper">
+                <svg
+                  viewBox="0 0 960 290"
+                  className="financial-custom-chart"
+                  preserveAspectRatio="none"
+                >
+                  {[40, 85, 130, 175, 220].map(
+                    (y) => (
+                      <line
+                        key={y}
+                        x1="35"
+                        y1={y}
+                        x2="940"
+                        y2={y}
+                        className="financial-grid-line"
+                      />
+                    )
+                  )}
+
+                  {monthlyData.map(
+                    (item, index) => {
+                      const x =
+                        48 + index * 75;
+
+                      const revenueHeight =
+                        getHeight(
+                          item.revenue
+                        );
+
+                      const expenseHeight =
+                        getHeight(
+                          item.expense
+                        );
+
+                      return (
+                        <g key={item.month}>
+                          {(chartMetric ===
+                            "all" ||
+                            chartMetric ===
+                              "revenue") && (
+                            <rect
+                              x={x}
+                              y={
+                                chartHeight -
+                                35 -
+                                revenueHeight
+                              }
+                              width="22"
+                              height={
+                                revenueHeight
+                              }
+                              rx="3"
+                              className="financial-revenue-bar"
+                            />
+                          )}
+
+                          {(chartMetric ===
+                            "all" ||
+                            chartMetric ===
+                              "expenses") && (
+                            <rect
+                              x={x + 24}
+                              y={
+                                chartHeight -
+                                35 -
+                                expenseHeight
+                              }
+                              width="22"
+                              height={
+                                expenseHeight
+                              }
+                              rx="3"
+                              className="financial-expense-bar"
+                            />
+                          )}
+
+                          <text
+                            x={x + 22}
+                            y="270"
+                            textAnchor="middle"
+                            className="financial-month-label"
+                          >
+                            {item.month}
+                          </text>
+                        </g>
+                      );
+                    }
+                  )}
+
+                  {(chartMetric === "all" ||
+                    chartMetric ===
+                      "profit") && (
+                    <>
+                      <polyline
+                        points={getLinePoints()}
+                        fill="none"
+                        className="financial-profit-line"
+                      />
+
+                      {monthlyData.map(
+                        (item, index) => {
+                          const x =
+                            60 +
+                            index * 75;
+
+                          const y =
+                            chartHeight -
+                            35 -
+                            getHeight(
+                              Math.max(
+                                item.profit,
+                                0
+                              )
+                            );
+
+                          return (
+                            <circle
+                              key={`profit-${item.month}`}
+                              cx={x}
+                              cy={y}
+                              r="4"
+                              className="financial-profit-dot"
+                            />
+                          );
+                        }
+                      )}
+                    </>
+                  )}
+                </svg>
+              </div>
+
+              <div className="financial-chart-bottom">
+                <div className="financial-chart-legend">
+                  <div>
+                    <span className="legend-dot revenue" />
+                    Revenue
+                  </div>
+
+                  <div>
+                    <span className="legend-dot expense" />
+                    Expenses
+                  </div>
+
+                  <div>
+                    <span className="legend-line profit" />
+                    Profit
+                  </div>
+                </div>
+
+                <div className="financial-period-switch">
+                  <span>Graph by:</span>
+
+                  <button
+                    type="button"
+                    className={
+                      chartPeriod === "day"
+                        ? "active"
+                        : ""
+                    }
+                    onClick={() =>
+                      setChartPeriod("day")
+                    }
+                  >
+                    Day
+                  </button>
+
+                  <button
+                    type="button"
+                    className={
+                      chartPeriod === "week"
+                        ? "active"
+                        : ""
+                    }
+                    onClick={() =>
+                      setChartPeriod("week")
+                    }
+                  >
+                    Week
+                  </button>
+
+                  <button
+                    type="button"
+                    className={
+                      chartPeriod === "month"
+                        ? "active"
+                        : ""
+                    }
+                    onClick={() =>
+                      setChartPeriod("month")
+                    }
+                  >
+                    Month
+                  </button>
+                </div>
+              </div>
+            </section>
+
+            {/* =================================================
+                SMALL ANALYTICS
+            ================================================= */}
+
+            <div className="financial-bottom-analytics">
+              <div className="financial-mini-chart-card">
+                <div className="financial-mini-title">
+                  <div>
+                    <h3>
+                      Revenue Overview
+                    </h3>
+
+                    <p>Revenue by month</p>
+                  </div>
+
+                  <FaArrowTrendUp />
+                </div>
+
+                <div className="financial-mini-bars">
+                  {monthlyData
+                    .slice(4, 12)
+                    .map((item) => (
+                      <div
+                        className="financial-mini-bar-item"
+                        key={item.month}
+                      >
+                        <div className="mini-bar-track">
+                          <div
+                            className="mini-bar-fill revenue"
+                            style={{
+                              height: `${Math.max(
+                                10,
+                                (item.revenue /
+                                  maxChartValue) *
+                                  100
+                              )}%`,
+                            }}
+                          />
+                        </div>
+
+                        <span>
+                          {item.month}
+                        </span>
+                      </div>
+                    ))}
+                </div>
+              </div>
+
+              <div className="financial-mini-chart-card">
+                <div className="financial-mini-title">
+                  <div>
+                    <h3>
+                      Financial Summary
+                    </h3>
+
+                    <p>
+                      Current clinic
+                      performance
+                    </p>
+                  </div>
+
+                  <FaDollarSign />
+                </div>
+
+                <div className="financial-summary-list">
+                  <div>
+                    <span>
+                      Visit Revenue
+                    </span>
+
+                    <strong>
+                      $
+                      {visitRevenue.toLocaleString()}
+                    </strong>
+                  </div>
+
+                  <div>
+                    <span>
+                      Average / Visit
+                    </span>
+
+                    <strong>
+                      $
+                      {averageVisitRevenue.toFixed(
+                        2
+                      )}
+                    </strong>
+                  </div>
+
+                  <div>
+                    <span>Revenue</span>
+
+                    <strong className="positive">
+                      +$
+                      {totalRevenue.toLocaleString()}
+                    </strong>
+                  </div>
+
+                  <div>
+                    <span>Expenses</span>
+
+                    <strong className="negative">
+                      -$
+                      {totalExpenses.toLocaleString()}
+                    </strong>
+                  </div>
+                </div>
+              </div>
             </div>
-          </div>
-
-          <div className="financial-mini-chart-card">
-            <div className="financial-mini-title">
-              <div>
-                <h3>Financial Summary</h3>
-                <p>Current clinic performance</p>
-              </div>
-
-              <FaDollarSign />
-            </div>
-
-            <div className="financial-summary-list">
-              <div>
-                <span>Visit Revenue</span>
-
-                <strong>
-                  ${visitRevenue.toLocaleString()}
-                </strong>
-              </div>
-
-              <div>
-                <span>Average / Visit</span>
-
-                <strong>
-                  ${averageVisitRevenue.toFixed(2)}
-                </strong>
-              </div>
-
-              <div>
-                <span>Revenue</span>
-
-                <strong className="positive">
-                  +${totalRevenue.toLocaleString()}
-                </strong>
-              </div>
-
-              <div>
-                <span>Expenses</span>
-
-                <strong className="negative">
-                  -${totalExpenses.toLocaleString()}
-                </strong>
-              </div>
-            </div>
-          </div>
-        </div>
+          </>
+        )}
 
         {/* =====================================================
-            IMPORTANT:
-            /financial            => BOTH TABLES
-            ?tab=revenue          => REVENUE ONLY
-            ?tab=expenses         => EXPENSES ONLY
+            REVENUE TABLE ONLY
         ===================================================== */}
 
-        {(financialTab === "all" ||
-          financialTab === "revenue") && (
+        {isRevenue && (
           <section
             className="financial-section"
             id="revenue-table"
@@ -1220,7 +1090,8 @@ function Financial() {
                 <h2>Revenue</h2>
 
                 <p>
-                  Track all clinic revenue and income
+                  Track all clinic revenue
+                  and income
                 </p>
               </div>
 
@@ -1249,11 +1120,14 @@ function Financial() {
                 </thead>
 
                 <tbody>
-                  {paginatedRevenues.length > 0 ? (
+                  {paginatedRevenues.length >
+                  0 ? (
                     paginatedRevenues.map(
                       (revenue) => (
                         <tr key={revenue.id}>
-                          <td>{revenue.date}</td>
+                          <td>
+                            {revenue.date}
+                          </td>
 
                           <td>
                             <span className="financial-type-badge revenue-badge">
@@ -1262,13 +1136,15 @@ function Financial() {
                           </td>
 
                           <td>
-                            {revenue.description || "—"}
+                            {revenue.description ||
+                              "—"}
                           </td>
 
                           <td className="financial-amount revenue-amount">
                             +$
                             {Number(
-                              revenue.amount || 0
+                              revenue.amount ||
+                                0
                             ).toLocaleString()}
                           </td>
 
@@ -1295,7 +1171,8 @@ function Financial() {
                         colSpan="5"
                         className="financial-empty-row"
                       >
-                        No revenue records found.
+                        No revenue records
+                        found.
                       </td>
                     </tr>
                   )}
@@ -1305,8 +1182,11 @@ function Financial() {
           </section>
         )}
 
-        {(financialTab === "all" ||
-          financialTab === "expenses") && (
+        {/* =====================================================
+            EXPENSE TABLE ONLY
+        ===================================================== */}
+
+        {isExpenses && (
           <section
             className="financial-section"
             id="expenses-table"
@@ -1316,7 +1196,8 @@ function Financial() {
                 <h2>Expenses</h2>
 
                 <p>
-                  Track all clinic expenses and spending
+                  Track all clinic expenses
+                  and spending
                 </p>
               </div>
 
@@ -1345,11 +1226,14 @@ function Financial() {
                 </thead>
 
                 <tbody>
-                  {paginatedExpenses.length > 0 ? (
+                  {paginatedExpenses.length >
+                  0 ? (
                     paginatedExpenses.map(
                       (expense) => (
                         <tr key={expense.id}>
-                          <td>{expense.date}</td>
+                          <td>
+                            {expense.date}
+                          </td>
 
                           <td>
                             <span className="financial-type-badge expense-badge">
@@ -1358,13 +1242,15 @@ function Financial() {
                           </td>
 
                           <td>
-                            {expense.description || "—"}
+                            {expense.description ||
+                              "—"}
                           </td>
 
                           <td className="financial-amount expense-amount">
                             -$
                             {Number(
-                              expense.amount || 0
+                              expense.amount ||
+                                0
                             ).toLocaleString()}
                           </td>
 
@@ -1391,7 +1277,8 @@ function Financial() {
                         colSpan="5"
                         className="financial-empty-row"
                       >
-                        No expense records found.
+                        No expense records
+                        found.
                       </td>
                     </tr>
                   )}
@@ -1402,83 +1289,100 @@ function Financial() {
         )}
 
         {/* =====================================================
-            PAGINATION
+            PAGINATION - TABLE PAGES ONLY
         ===================================================== */}
 
-        <div className="financial-page-pagination">
-          <div className="financial-pagination-left">
-            <span>Rows per page</span>
+        {(isRevenue || isExpenses) && (
+          <div className="financial-page-pagination">
+            <div className="financial-pagination-left">
+              <span>Rows per page</span>
 
-            <select
-              value={itemsPerPage}
-              onChange={(event) => {
-                setItemsPerPage(
-                  Number(event.target.value)
-                );
+              <select
+                value={itemsPerPage}
+                onChange={(event) => {
+                  setItemsPerPage(
+                    Number(
+                      event.target.value
+                    )
+                  );
 
-                setCurrentPage(1);
-              }}
-            >
-              <option value={5}>5</option>
-              <option value={10}>10</option>
-              <option value={20}>20</option>
-              <option value={50}>50</option>
-            </select>
-          </div>
+                  setCurrentPage(1);
+                }}
+              >
+                <option value={5}>5</option>
+                <option value={10}>
+                  10
+                </option>
+                <option value={20}>
+                  20
+                </option>
+                <option value={50}>
+                  50
+                </option>
+              </select>
+            </div>
 
-          <div className="financial-pagination-right">
-            <button
-              type="button"
-              className="financial-pagination-nav"
-              disabled={safeCurrentPage === 1}
-              onClick={() =>
-                setCurrentPage((previous) =>
-                  Math.max(1, previous - 1)
-                )
-              }
-            >
-              &lt;
-            </button>
-
-            {pageNumbers.map((page) => (
+            <div className="financial-pagination-right">
               <button
                 type="button"
-                key={page}
-                className={`financial-page-number ${
-                  safeCurrentPage === page
-                    ? "active"
-                    : ""
-                }`}
+                className="financial-pagination-nav"
+                disabled={
+                  safeCurrentPage === 1
+                }
                 onClick={() =>
-                  setCurrentPage(page)
+                  setCurrentPage(
+                    (previous) =>
+                      Math.max(
+                        1,
+                        previous - 1
+                      )
+                  )
                 }
               >
-                {page}
+                &lt;
               </button>
-            ))}
 
-            <button
-              type="button"
-              className="financial-pagination-nav"
-              disabled={
-                safeCurrentPage === totalPages
-              }
-              onClick={() =>
-                setCurrentPage((previous) =>
-                  Math.min(
-                    totalPages,
-                    previous + 1
+              {pageNumbers.map((page) => (
+                <button
+                  type="button"
+                  key={page}
+                  className={`financial-page-number ${
+                    safeCurrentPage === page
+                      ? "active"
+                      : ""
+                  }`}
+                  onClick={() =>
+                    setCurrentPage(page)
+                  }
+                >
+                  {page}
+                </button>
+              ))}
+
+              <button
+                type="button"
+                className="financial-pagination-nav"
+                disabled={
+                  safeCurrentPage ===
+                  totalPages
+                }
+                onClick={() =>
+                  setCurrentPage(
+                    (previous) =>
+                      Math.min(
+                        totalPages,
+                        previous + 1
+                      )
                   )
-                )
-              }
-            >
-              &gt;
-            </button>
+                }
+              >
+                &gt;
+              </button>
+            </div>
           </div>
-        </div>
+        )}
       </main>
 
-      {/* PART 3 CONTINUES HERE */}
       {/* =====================================================
           ADD REVENUE MODAL
       ===================================================== */}
@@ -1499,7 +1403,11 @@ function Financial() {
             <div className="modal-header">
               <div>
                 <h2>Add Revenue</h2>
-                <p>Add a new clinic revenue record</p>
+
+                <p>
+                  Add a new clinic revenue
+                  record
+                </p>
               </div>
 
               <button
@@ -1514,7 +1422,9 @@ function Financial() {
               </button>
             </div>
 
-            <form onSubmit={handleAddRevenue}>
+            <form
+              onSubmit={handleAddRevenue}
+            >
               <div className="form-row">
                 <div className="form-field">
                   <label>Date</label>
@@ -1523,18 +1433,24 @@ function Financial() {
                     type="date"
                     name="date"
                     value={newRevenue.date}
-                    onChange={handleRevenueChange}
+                    onChange={
+                      handleRevenueChange
+                    }
                     required
                   />
                 </div>
 
                 <div className="form-field">
-                  <label>Revenue Type</label>
+                  <label>
+                    Revenue Type
+                  </label>
 
                   <select
                     name="type"
                     value={newRevenue.type}
-                    onChange={handleRevenueChange}
+                    onChange={
+                      handleRevenueChange
+                    }
                     required
                   >
                     <option value="Visit">
@@ -1578,8 +1494,12 @@ function Financial() {
                 <input
                   type="text"
                   name="description"
-                  value={newRevenue.description}
-                  onChange={handleRevenueChange}
+                  value={
+                    newRevenue.description
+                  }
+                  onChange={
+                    handleRevenueChange
+                  }
                   placeholder="Enter revenue description"
                   required
                 />
@@ -1592,7 +1512,9 @@ function Financial() {
                   type="number"
                   name="amount"
                   value={newRevenue.amount}
-                  onChange={handleRevenueChange}
+                  onChange={
+                    handleRevenueChange
+                  }
                   min="0"
                   step="0.01"
                   placeholder="0.00"
@@ -1605,7 +1527,9 @@ function Financial() {
                   type="button"
                   className="modal-cancel-button"
                   onClick={() =>
-                    setShowRevenueModal(false)
+                    setShowRevenueModal(
+                      false
+                    )
                   }
                 >
                   Cancel
@@ -1644,7 +1568,11 @@ function Financial() {
             <div className="modal-header">
               <div>
                 <h2>Add Expense</h2>
-                <p>Add a new clinic expense record</p>
+
+                <p>
+                  Add a new clinic expense
+                  record
+                </p>
               </div>
 
               <button
@@ -1659,7 +1587,9 @@ function Financial() {
               </button>
             </div>
 
-            <form onSubmit={handleAddExpense}>
+            <form
+              onSubmit={handleAddExpense}
+            >
               <div className="form-row">
                 <div className="form-field">
                   <label>Date</label>
@@ -1668,18 +1598,24 @@ function Financial() {
                     type="date"
                     name="date"
                     value={newExpense.date}
-                    onChange={handleExpenseChange}
+                    onChange={
+                      handleExpenseChange
+                    }
                     required
                   />
                 </div>
 
                 <div className="form-field">
-                  <label>Expense Type</label>
+                  <label>
+                    Expense Type
+                  </label>
 
                   <select
                     name="type"
                     value={newExpense.type}
-                    onChange={handleExpenseChange}
+                    onChange={
+                      handleExpenseChange
+                    }
                     required
                   >
                     <option value="Medical Supplies">
@@ -1727,8 +1663,12 @@ function Financial() {
                 <input
                   type="text"
                   name="description"
-                  value={newExpense.description}
-                  onChange={handleExpenseChange}
+                  value={
+                    newExpense.description
+                  }
+                  onChange={
+                    handleExpenseChange
+                  }
                   placeholder="Enter expense description"
                   required
                 />
@@ -1741,7 +1681,9 @@ function Financial() {
                   type="number"
                   name="amount"
                   value={newExpense.amount}
-                  onChange={handleExpenseChange}
+                  onChange={
+                    handleExpenseChange
+                  }
                   min="0"
                   step="0.01"
                   placeholder="0.00"
@@ -1754,7 +1696,9 @@ function Financial() {
                   type="button"
                   className="modal-cancel-button"
                   onClick={() =>
-                    setShowExpenseModal(false)
+                    setShowExpenseModal(
+                      false
+                    )
                   }
                 >
                   Cancel

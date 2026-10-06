@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import {
@@ -18,7 +18,14 @@ import {
   FaSignOutAlt,
   FaCog,
   FaTimes,
+  FaHome,
+  FaInfoCircle,
+  FaEnvelope,
 } from "react-icons/fa";
+
+/* =========================================================
+   PRODUCTS
+========================================================= */
 
 const PRODUCTS = [
   {
@@ -131,68 +138,210 @@ const PRODUCTS = [
   },
 ];
 
+/* =========================================================
+   CATEGORIES
+========================================================= */
+
 const CATEGORY_ITEMS = [
-  {
-    name: "Food",
-    icon: <FaBone />,
-  },
-  {
-    name: "Care",
-    icon: <FaPaw />,
-  },
-  {
-    name: "Hygiene",
-    icon: <FaPumpSoap />,
-  },
-  {
-    name: "Accessories",
-    icon: <FaDog />,
-  },
-  {
-    name: "Supplements",
-    icon: <FaCapsules />,
-  },
-  {
-    name: "Grooming",
-    icon: <FaPumpSoap />,
-  },
+  { name: "Food", icon: <FaBone /> },
+  { name: "Care", icon: <FaPaw /> },
+  { name: "Hygiene", icon: <FaPumpSoap /> },
+  { name: "Accessories", icon: <FaDog /> },
+  { name: "Supplements", icon: <FaCapsules /> },
+  { name: "Grooming", icon: <FaPumpSoap /> },
 ];
+
+/* =========================================================
+   ECOMMERCE
+========================================================= */
 
 function Ecommerce() {
   const navigate = useNavigate();
 
   const [search, setSearch] = useState("");
-  const [category, setCategory] = useState("All categories");
+  const [category, setCategory] =
+    useState("All categories");
 
   const [cart, setCart] = useState([]);
-  const [favorites, setFavorites] = useState([]);
+  const [favorites, setFavorites] =
+    useState([]);
 
-  const [accountOpen, setAccountOpen] = useState(false);
+  const [accountOpen, setAccountOpen] =
+    useState(false);
+
+  const [categoriesOpen, setCategoriesOpen] =
+    useState(false);
+
+  /* =========================================================
+     STORE SETTINGS
+
+     IMPORTANT:
+     Nothing from the Home Banner is predefined here.
+     Everything comes from Settings.jsx.
+  ========================================================= */
+
+  const [storeSettings, setStoreSettings] =
+    useState({
+      storeName: "",
+      storeDescription: "",
+      storeBanner: null,
+
+      // HOME BANNER
+      homeBanner: null,
+      homeBannerTitle: "",
+      homeBannerDescription: "",
+      homeBannerButtonText: "",
+    });
+
+  /* =========================================================
+     LOAD SETTINGS
+  ========================================================= */
+
+  useEffect(() => {
+    const loadStoreSettings = () => {
+      try {
+        const saved =
+          localStorage.getItem(
+            "storeSettings"
+          );
+
+        if (!saved) {
+          setStoreSettings({
+            storeName: "",
+            storeDescription: "",
+            storeBanner: null,
+
+            homeBanner: null,
+            homeBannerTitle: "",
+            homeBannerDescription: "",
+            homeBannerButtonText: "",
+          });
+
+          return;
+        }
+
+        const settings =
+          JSON.parse(saved);
+
+        setStoreSettings({
+          storeName:
+            settings.storeName || "",
+
+          storeDescription:
+            settings.storeDescription ||
+            "",
+
+          // HEADER + FOOTER LOGO
+          storeBanner:
+            settings.storeBanner || null,
+
+          // HOME BANNER IMAGE
+          homeBanner:
+            settings.homeBanner || null,
+
+          // HOME BANNER CONTENT
+          // NO fallback words here
+          homeBannerTitle:
+            settings.homeBannerTitle ||
+            "",
+
+          homeBannerDescription:
+            settings.homeBannerDescription ||
+            "",
+
+          homeBannerButtonText:
+            settings.homeBannerButtonText ||
+            "",
+        });
+      } catch (error) {
+        console.error(
+          "Could not load store settings:",
+          error
+        );
+      }
+    };
+
+    loadStoreSettings();
+
+    window.addEventListener(
+      "storage",
+      loadStoreSettings
+    );
+
+    window.addEventListener(
+      "storeSettingsUpdated",
+      loadStoreSettings
+    );
+
+    return () => {
+      window.removeEventListener(
+        "storage",
+        loadStoreSettings
+      );
+
+      window.removeEventListener(
+        "storeSettingsUpdated",
+        loadStoreSettings
+      );
+    };
+  }, []);
+
+  /* =========================================================
+     PRODUCTS
+  ========================================================= */
 
   const products = useMemo(
-    () => PRODUCTS.filter((product) => product.showOnStore),
+    () =>
+      PRODUCTS.filter(
+        (product) =>
+          product.showOnStore
+      ),
     []
   );
 
-  const filteredProducts = useMemo(() => {
-    const searchValue = search.toLowerCase().trim();
+  const filteredProducts =
+    useMemo(() => {
+      const value =
+        search
+          .toLowerCase()
+          .trim();
 
-    return products.filter((product) => {
-      const matchesSearch =
-        !searchValue ||
-        product.name.toLowerCase().includes(searchValue) ||
-        product.category.toLowerCase().includes(searchValue);
+      return products.filter(
+        (product) => {
+          const matchesSearch =
+            !value ||
+            product.name
+              .toLowerCase()
+              .includes(value) ||
+            product.category
+              .toLowerCase()
+              .includes(value);
 
-      const matchesCategory =
-        category === "All categories" ||
-        product.category === category;
+          const matchesCategory =
+            category ===
+              "All categories" ||
+            product.category ===
+              category;
 
-      return matchesSearch && matchesCategory;
-    });
-  }, [products, search, category]);
+          return (
+            matchesSearch &&
+            matchesCategory
+          );
+        }
+      );
+    }, [
+      products,
+      search,
+      category,
+    ]);
+
+  /* =========================================================
+     CART
+  ========================================================= */
 
   const cartCount = cart.reduce(
-    (total, item) => total + item.quantity,
+    (total, item) =>
+      total + item.quantity,
     0
   );
 
@@ -200,22 +349,30 @@ function Ecommerce() {
     if (product.stock <= 0) return;
 
     setCart((currentCart) => {
-      const existingItem = currentCart.find(
-        (item) => item.id === product.id
-      );
+      const existingItem =
+        currentCart.find(
+          (item) =>
+            item.id === product.id
+        );
 
       if (existingItem) {
-        if (existingItem.quantity >= product.stock) {
+        if (
+          existingItem.quantity >=
+          product.stock
+        ) {
           return currentCart;
         }
 
-        return currentCart.map((item) =>
-          item.id === product.id
-            ? {
-                ...item,
-                quantity: item.quantity + 1,
-              }
-            : item
+        return currentCart.map(
+          (item) =>
+            item.id === product.id
+              ? {
+                  ...item,
+                  quantity:
+                    item.quantity +
+                    1,
+                }
+              : item
         );
       }
 
@@ -229,20 +386,20 @@ function Ecommerce() {
     });
   };
 
-  const toggleFavorite = (productId) => {
+  const toggleFavorite = (
+    productId
+  ) => {
     setFavorites((current) =>
       current.includes(productId)
-        ? current.filter((id) => id !== productId)
+        ? current.filter(
+            (id) =>
+              id !== productId
+          )
         : [...current, productId]
     );
   };
 
   const openCart = () => {
-    /*
-      We save the current demo cart so Cart.jsx
-      can read it in the next step.
-    */
-
     localStorage.setItem(
       "vetClinicStoreCart",
       JSON.stringify(cart)
@@ -256,6 +413,58 @@ function Ecommerce() {
     navigate("/");
   };
 
+  /* =========================================================
+     SCROLL
+  ========================================================= */
+
+  const scrollToTop = () => {
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth",
+    });
+  };
+
+  const scrollToProducts = () => {
+    document
+      .getElementById(
+        "store-products"
+      )
+      ?.scrollIntoView({
+        behavior: "smooth",
+      });
+  };
+
+  const scrollToAbout = () => {
+    document
+      .getElementById(
+        "store-about"
+      )
+      ?.scrollIntoView({
+        behavior: "smooth",
+      });
+  };
+
+  const scrollToContact = () => {
+    document
+      .getElementById(
+        "store-contact-anchor"
+      )
+      ?.scrollIntoView({
+        behavior: "smooth",
+      });
+  };
+
+  const chooseCategory = (
+    categoryName
+  ) => {
+    setCategory(categoryName);
+    setCategoriesOpen(false);
+
+    setTimeout(() => {
+      scrollToProducts();
+    }, 80);
+  };
+
   return (
     <div className="store-page">
       <style>{`
@@ -263,111 +472,475 @@ function Ecommerce() {
           box-sizing: border-box;
         }
 
+        html {
+          scroll-behavior: smooth;
+        }
+
         body {
           margin: 0;
         }
 
-        .store-page {
-          min-height: 100vh;
-          background: #f7faf9;
-          color: #344054;
-          font-family: Arial, Helvetica, sans-serif;
+        button,
+        input,
+        select {
+          font: inherit;
         }
 
-        /* ================================
+        .store-page {
+          --teal: #1aa6a6;
+          --teal-dark: #11797b;
+          --teal-deep: #0d6668;
+          --teal-light: #e8f7f7;
+          --teal-soft: #f1fbfa;
+          --text: #263b4f;
+          --muted: #728197;
+          --border: #dcebea;
+
+          min-height: 100vh;
+
+          background: #f8fbfa;
+          color: var(--text);
+
+          font-family:
+            Arial,
+            Helvetica,
+            sans-serif;
+        }
+
+        /* =====================================================
            HEADER
-        ================================= */
+        ===================================================== */
 
         .store-header {
-          height: 72px;
-          padding: 0 5%;
-          background: #ffffff;
-          border-bottom: 1px solid #e6eceb;
+          min-height: 84px;
+          width: 100%;
 
-          display: flex;
+          padding: 0 4%;
+
+          display: grid;
+
+          grid-template-columns:
+            minmax(160px, 1fr)
+            auto
+            minmax(260px, 1fr);
+
           align-items: center;
-          justify-content: space-between;
+
+          gap: 30px;
+
+          background:
+            var(--teal);
+
+          border-bottom:
+            1px solid
+            rgba(
+              255,
+              255,
+              255,
+              0.18
+            );
+
+          box-shadow:
+            0 7px 25px
+            rgba(
+              17,
+              121,
+              123,
+              0.14
+            );
 
           position: sticky;
           top: 0;
+
           z-index: 1000;
         }
 
+        /* =====================================================
+           LOGO
+        ===================================================== */
+
         .store-logo {
+          width: fit-content;
+          min-width: 150px;
+          height: 64px;
+
           display: flex;
           align-items: center;
+
           gap: 10px;
 
           cursor: pointer;
         }
 
+        .store-header-logo-image {
+          display: block;
+
+          width: auto;
+          max-width: 190px;
+
+          height: 60px;
+          max-height: 60px;
+
+          object-fit: contain;
+          object-position:
+            left center;
+
+          border-radius: 10px;
+        }
+
+        .store-logo-fallback {
+          display: flex;
+          align-items: center;
+
+          gap: 10px;
+
+          color: white;
+        }
+
         .store-logo-icon {
-          color: #159f9f;
-          font-size: 27px;
+          font-size: 29px;
+          color: white;
         }
 
         .store-logo-text {
           margin: 0;
 
-          color: #176d6a;
+          color: white;
+
           font-size: 20px;
           font-weight: 800;
+
+          letter-spacing: -0.4px;
+
+          white-space: nowrap;
         }
 
-        .store-logo-text span {
-          color: #159f9f;
-        }
+        /* =====================================================
+           NAVBAR
+        ===================================================== */
 
         .store-nav {
-          display: flex;
-          align-items: center;
-          gap: 28px;
-        }
-
-        .store-nav button {
-          padding: 0;
-          border: 0;
-          background: transparent;
-
-          color: #667085;
-          font-size: 13px;
-          font-weight: 600;
-
-          cursor: pointer;
-        }
-
-        .store-nav button:hover {
-          color: #159f9f;
-        }
-
-        .store-header-actions {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-        }
-
-        .store-icon-button {
-          width: 39px;
-          height: 39px;
-
-          border: 1px solid #e1e8e7;
-          border-radius: 50%;
-          background: #ffffff;
-
-          color: #667085;
+          height: 84px;
 
           display: flex;
           align-items: center;
           justify-content: center;
 
+          gap: 34px;
+
+          background: transparent;
+        }
+
+        .store-nav-link {
+          height: 84px;
+
+          padding: 0;
+
+          border: none;
+          outline: none;
+
+          background:
+            transparent !important;
+
+          color:
+            rgba(
+              255,
+              255,
+              255,
+              0.88
+            );
+
+          display: flex;
+          align-items: center;
+          justify-content: center;
+
+          gap: 7px;
+
+          position: relative;
+
+          font-size: 13px;
+          font-weight: 700;
+
+          white-space: nowrap;
+
           cursor: pointer;
+
+          transition:
+            color 0.2s ease,
+            transform 0.2s ease;
+        }
+
+        .store-nav-link svg {
+          font-size: 11px;
+
+          color: currentColor;
+        }
+
+        .store-nav-link:hover {
+          color: #ffffff;
+
+          transform:
+            translateY(-1px);
+        }
+
+        .store-nav-link::after {
+          content: "";
+
+          position: absolute;
+
+          left: 50%;
+          bottom: 19px;
+
+          width: 0;
+          height: 2px;
+
+          border-radius: 20px;
+
+          background: #ffffff;
+
+          transform:
+            translateX(-50%);
+
+          transition:
+            width 0.22s ease;
+        }
+
+        .store-nav-link:hover::after {
+          width: 100%;
+        }
+
+        .store-nav-link.home {
+          color: #ffffff;
+        }
+
+        /* =====================================================
+           CATEGORY DROPDOWN
+        ===================================================== */
+
+        .store-category-dropdown {
+          height: 84px;
+
+          display: flex;
+          align-items: center;
+
           position: relative;
         }
 
+        .store-nav-chevron {
+          margin-left: 2px;
+
+          font-size:
+            7px !important;
+
+          transition:
+            transform 0.2s ease;
+        }
+
+        .store-nav-chevron.open {
+          transform:
+            rotate(180deg);
+        }
+
+        .store-category-menu {
+          position: absolute;
+
+          top: 72px;
+          left: 50%;
+
+          width: 220px;
+
+          padding: 8px;
+
+          border:
+            1px solid
+            var(--border);
+
+          border-radius: 14px;
+
+          background: #ffffff;
+
+          box-shadow:
+            0 18px 45px
+            rgba(
+              13,
+              102,
+              104,
+              0.16
+            );
+
+          transform:
+            translateX(-50%);
+
+          z-index: 1300;
+        }
+
+        .store-category-menu::before {
+          content: "";
+
+          position: absolute;
+
+          top: -6px;
+          left: 50%;
+
+          width: 12px;
+          height: 12px;
+
+          background: white;
+
+          border-left:
+            1px solid
+            var(--border);
+
+          border-top:
+            1px solid
+            var(--border);
+
+          transform:
+            translateX(-50%)
+            rotate(45deg);
+        }
+
+        .store-category-menu-title {
+          padding: 8px 10px;
+
+          color: #98a2b3;
+
+          font-size: 9px;
+          font-weight: 800;
+
+          text-transform: uppercase;
+          letter-spacing: 0.8px;
+        }
+
+        .store-category-menu button {
+          width: 100%;
+          min-height: 40px;
+
+          padding: 6px 9px;
+
+          border: none;
+          border-radius: 9px;
+
+          background: transparent;
+
+          color: #475467;
+
+          display: flex;
+          align-items: center;
+
+          gap: 10px;
+
+          text-align: left;
+
+          font-size: 11px;
+          font-weight: 650;
+
+          cursor: pointer;
+
+          transition: 0.18s ease;
+        }
+
+        .store-category-menu button:hover,
+        .store-category-menu button.active {
+          background:
+            var(--teal-light);
+
+          color:
+            var(--teal-dark);
+        }
+
+        .store-dropdown-icon {
+          width: 29px;
+          height: 29px;
+
+          border-radius: 8px;
+
+          background:
+            var(--teal-light);
+
+          color: var(--teal);
+
+          display: flex;
+          align-items: center;
+          justify-content: center;
+
+          flex-shrink: 0;
+
+          font-size: 11px;
+        }
+
+        /* =====================================================
+           HEADER RIGHT
+        ===================================================== */
+
+        .store-header-actions {
+          display: flex;
+          align-items: center;
+          justify-content: flex-end;
+
+          gap: 10px;
+        }
+
+        .store-icon-button {
+          width: 42px;
+          height: 42px;
+
+          padding: 0;
+
+          border:
+            1px solid
+            rgba(
+              255,
+              255,
+              255,
+              0.32
+            );
+
+          border-radius: 50%;
+
+          background:
+            rgba(
+              255,
+              255,
+              255,
+              0.12
+            );
+
+          color: #ffffff;
+
+          display: flex;
+          align-items: center;
+          justify-content: center;
+
+          position: relative;
+
+          cursor: pointer;
+
+          transition:
+            background 0.2s ease,
+            transform 0.2s ease,
+            border-color 0.2s ease;
+        }
+
         .store-icon-button:hover {
-          border-color: #159f9f;
-          color: #159f9f;
-          background: #f4fbfa;
+          background:
+            rgba(
+              255,
+              255,
+              255,
+              0.23
+            );
+
+          border-color:
+            rgba(
+              255,
+              255,
+              255,
+              0.65
+            );
+
+          transform:
+            translateY(-2px);
         }
 
         .store-cart-count {
@@ -381,54 +954,100 @@ function Ecommerce() {
 
           padding: 0 5px;
 
-          border: 2px solid #ffffff;
+          border:
+            2px solid
+            var(--teal);
+
           border-radius: 20px;
 
-          background: #159f9f;
-          color: #ffffff;
+          background: #ffffff;
+          color: var(--teal-dark);
 
           display: flex;
           align-items: center;
           justify-content: center;
 
           font-size: 9px;
-          font-weight: 700;
+          font-weight: 800;
         }
 
-        /* ================================
+        /* =====================================================
            ACCOUNT
-        ================================= */
+        ===================================================== */
 
         .store-account-wrapper {
           position: relative;
         }
 
         .store-account-button {
-          height: 40px;
+          height: 42px;
 
-          padding: 0 11px;
+          padding:
+            0 14px 0 7px;
 
-          border: 1px solid #e1e8e7;
-          border-radius: 20px;
-          background: #ffffff;
+          border:
+            1px solid
+            rgba(
+              255,
+              255,
+              255,
+              0.32
+            );
+
+          border-radius: 24px;
+
+          background:
+            rgba(
+              255,
+              255,
+              255,
+              0.12
+            );
+
+          color: #ffffff;
 
           display: flex;
           align-items: center;
-          gap: 8px;
 
-          color: #475467;
+          gap: 9px;
 
           cursor: pointer;
+
+          transition:
+            background 0.2s ease,
+            border-color 0.2s ease,
+            transform 0.2s ease;
+        }
+
+        .store-account-button:hover {
+          background:
+            rgba(
+              255,
+              255,
+              255,
+              0.23
+            );
+
+          border-color:
+            rgba(
+              255,
+              255,
+              255,
+              0.65
+            );
+
+          transform:
+            translateY(-1px);
         }
 
         .store-account-avatar {
-          width: 27px;
-          height: 27px;
+          width: 29px;
+          height: 29px;
 
           border-radius: 50%;
 
-          background: #e4f7f5;
-          color: #159f9f;
+          background: #ffffff;
+          color: var(--teal);
 
           display: flex;
           align-items: center;
@@ -439,36 +1058,49 @@ function Ecommerce() {
 
         .store-account-name {
           font-size: 11px;
-          font-weight: 700;
+          font-weight: 750;
         }
 
         .store-account-arrow {
           font-size: 8px;
-          color: #98a2b3;
+          opacity: 0.8;
         }
 
         .store-account-menu {
           position: absolute;
 
-          top: calc(100% + 8px);
+          top: calc(100% + 12px);
           right: 0;
 
-          width: 200px;
+          width: 205px;
 
           padding: 7px;
 
-          border: 1px solid #e2e9e8;
-          border-radius: 10px;
+          border:
+            1px solid
+            var(--border);
+
+          border-radius: 14px;
 
           background: #ffffff;
 
-          box-shadow: 0 12px 35px rgba(16, 24, 40, 0.12);
+          box-shadow:
+            0 18px 45px
+            rgba(
+              16,
+              24,
+              40,
+              0.14
+            );
+
+          z-index: 1300;
         }
 
         .store-account-menu-header {
           padding: 10px;
 
-          border-bottom: 1px solid #edf1f1;
+          border-bottom:
+            1px solid #edf1f1;
 
           margin-bottom: 5px;
         }
@@ -476,8 +1108,9 @@ function Ecommerce() {
         .store-account-menu-header strong {
           display: block;
 
+          color: var(--text);
+
           font-size: 11px;
-          color: #344054;
         }
 
         .store-account-menu-header span {
@@ -486,23 +1119,24 @@ function Ecommerce() {
           margin-top: 3px;
 
           color: #98a2b3;
+
           font-size: 9px;
         }
 
         .store-account-menu button {
           width: 100%;
 
-          padding: 9px 10px;
+          padding: 10px;
 
-          border: 0;
-          border-radius: 6px;
+          border: none;
+          border-radius: 8px;
 
           background: transparent;
-
           color: #475467;
 
           display: flex;
           align-items: center;
+
           gap: 9px;
 
           text-align: left;
@@ -513,1198 +1147,2127 @@ function Ecommerce() {
         }
 
         .store-account-menu button:hover {
-          background: #f3f9f8;
-          color: #159f9f;
+          background:
+            var(--teal-light);
+
+          color:
+            var(--teal-dark);
         }
 
         .store-account-menu .logout {
           color: #d92d20;
         }
 
-        /* ================================
+        /* =====================================================
            MAIN
-        ================================= */
+        ===================================================== */
 
         .store-container {
-          width: min(1400px, 92%);
+          width:
+            min(1400px, 92%);
+
           margin: 0 auto;
+
+          padding-bottom: 60px;
         }
 
-        /* ================================
-           HERO
-        ================================= */
+        /* =====================================================
+           HOME BANNER / HERO
+        ===================================================== */
 
         .store-hero {
-          min-height: 300px;
+          min-height: 390px;
 
-          margin-top: 26px;
+          margin-top: 28px;
 
-          padding: 48px 54px;
+          padding: 55px 60px;
 
-          border: 1px solid #dcebea;
-          border-radius: 20px;
+          border:
+            1px solid #d7ebe9;
+
+          border-radius: 24px;
 
           background:
             radial-gradient(
-              circle at 85% 35%,
-              rgba(21, 159, 159, 0.15),
-              transparent 25%
+              circle at 84% 38%,
+              rgba(
+                26,
+                166,
+                166,
+                0.16
+              ),
+              transparent 28%
             ),
             linear-gradient(
               120deg,
-              #f3fbfa 0%,
-              #eef8f7 50%,
-              #e3f4f2 100%
+              #f7fcfb 0%,
+              #eef9f8 50%,
+              #e4f6f4 100%
             );
 
           display: flex;
           align-items: center;
-          justify-content: space-between;
+          justify-content:
+            space-between;
 
           overflow: hidden;
 
           position: relative;
+
+          isolation: isolate;
+        }
+
+        /* Banner uploaded from Settings */
+
+        .store-hero.has-banner {
+          min-height: 430px;
+
+          border: none;
+
+          background-size: cover;
+          background-position: center;
+          background-repeat: no-repeat;
+
+          box-shadow:
+            0 18px 45px
+            rgba(
+              17,
+              121,
+              123,
+              0.12
+            );
+        }
+
+        .store-hero-overlay {
+          position: absolute;
+
+          inset: 0;
+
+          z-index: 0;
+
+          background:
+            linear-gradient(
+              90deg,
+              rgba(
+                8,
+                50,
+                52,
+                0.82
+              ) 0%,
+              rgba(
+                8,
+                50,
+                52,
+                0.69
+              ) 34%,
+              rgba(
+                8,
+                50,
+                52,
+                0.42
+              ) 58%,
+              rgba(
+                8,
+                50,
+                52,
+                0.12
+              ) 82%,
+              rgba(
+                8,
+                50,
+                52,
+                0.05
+              ) 100%
+            );
         }
 
         .store-hero-content {
-          width: 55%;
+          width: 57%;
+
           position: relative;
+
           z-index: 2;
+        }
+
+        .store-hero.has-banner
+        .store-hero-content {
+          width: 60%;
+
+          max-width: 690px;
         }
 
         .store-hero-badge {
           display: inline-flex;
           align-items: center;
+
           gap: 7px;
 
-          margin-bottom: 15px;
+          margin-bottom: 17px;
 
-          padding: 6px 11px;
+          padding: 7px 12px;
 
-          border-radius: 20px;
+          border:
+            1px solid
+            rgba(
+              26,
+              166,
+              166,
+              0.12
+            );
 
-          background: #ffffff;
-          color: #159f9f;
+          border-radius: 30px;
+
+          background:
+            rgba(
+              255,
+              255,
+              255,
+              0.9
+            );
+
+          color:
+            var(--teal-dark);
 
           font-size: 10px;
-          font-weight: 700;
+          font-weight: 800;
+        }
+
+        .store-hero.has-banner
+        .store-hero-badge {
+          border-color:
+            rgba(
+              255,
+              255,
+              255,
+              0.25
+            );
+
+          background:
+            rgba(
+              255,
+              255,
+              255,
+              0.15
+            );
+
+          color: #ffffff;
+
+          backdrop-filter:
+            blur(9px);
+
+          -webkit-backdrop-filter:
+            blur(9px);
         }
 
         .store-hero h1 {
           margin: 0;
 
-          max-width: 580px;
+          max-width: 650px;
 
-          color: #24364b;
+          color: #263b4f;
 
-          font-size: clamp(34px, 4vw, 55px);
+          font-size:
+            clamp(
+              38px,
+              4vw,
+              58px
+            );
+
           line-height: 1.03;
-          letter-spacing: -2px;
+
+          letter-spacing: -2.4px;
         }
 
-        .store-hero h1 span {
-          color: #159f9f;
+        .store-hero.has-banner h1 {
+          color: #ffffff;
+
+          text-shadow:
+            0 3px 18px
+            rgba(
+              0,
+              0,
+              0,
+              0.18
+            );
         }
 
         .store-hero p {
-          max-width: 520px;
+          max-width: 570px;
 
-          margin: 18px 0 24px;
+          margin:
+            20px 0 27px;
 
           color: #667085;
 
           font-size: 14px;
-          line-height: 1.7;
+
+          line-height: 1.75;
         }
 
-        .store-shop-now {
-          padding: 11px 20px;
+        .store-hero.has-banner p {
+          color:
+            rgba(
+              255,
+              255,
+              255,
+              0.9
+            );
 
-          border: 0;
-          border-radius: 7px;
-
-          background: #159f9f;
-          color: #ffffff;
-
-          font-size: 11px;
-          font-weight: 700;
-
-          cursor: pointer;
+          text-shadow:
+            0 2px 8px
+            rgba(
+              0,
+              0,
+              0,
+              0.14
+            );
         }
+
+       .store-shop-now {
+  min-width: 0 !important;
+  width: fit-content !important;
+  height: 30px !important;
+  padding: 0 12px !important;
+
+  border: none;
+  border-radius: 8px;
+
+  background: var(--teal);
+  color: #ffffff;
+
+  font-size: 10px !important;
+  font-weight: 800;
+
+  cursor: pointer;
+
+  box-shadow:
+    0 6px 14px
+    rgba(26, 166, 166, 0.18);
+
+  transition:
+    background 0.2s ease,
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
 
         .store-shop-now:hover {
-          background: #118887;
+          background:
+            var(--teal-dark);
+
+          transform:
+            translateY(-2px);
+
+          box-shadow:
+            0 11px 22px
+            rgba(
+              17,
+              121,
+              123,
+              0.22
+            );
         }
+
+        .store-hero.has-banner
+        .store-shop-now {
+          background: #ffffff;
+
+          color:
+            var(--teal-dark);
+
+          box-shadow:
+            0 10px 25px
+            rgba(
+              0,
+              0,
+              0,
+              0.16
+            );
+        }
+
+        .store-hero.has-banner
+        .store-shop-now:hover {
+          background:
+            var(--teal-light);
+
+          transform:
+            translateY(-2px);
+
+          box-shadow:
+            0 13px 28px
+            rgba(
+              0,
+              0,
+              0,
+              0.2
+            );
+        }
+
+        /*
+          Paw fallback stays only when
+          no Home Banner image exists.
+        */
 
         .store-hero-visual {
-          width: 38%;
-
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
-
-        .store-hero-circle {
-          width: 240px;
-          height: 240px;
-
-          border-radius: 50%;
-
-          background: rgba(255, 255, 255, 0.75);
+          width: 36%;
 
           display: flex;
           align-items: center;
           justify-content: center;
 
           position: relative;
+
+          z-index: 1;
+        }
+
+        .store-hero-circle {
+          width: 245px;
+          height: 245px;
+
+          border:
+            1px solid
+            rgba(
+              255,
+              255,
+              255,
+              0.7
+            );
+
+          border-radius: 50%;
+
+          background:
+            rgba(
+              255,
+              255,
+              255,
+              0.72
+            );
+
+          display: flex;
+          align-items: center;
+          justify-content: center;
+
+          position: relative;
+
+          box-shadow:
+            0 20px 45px
+            rgba(
+              26,
+              166,
+              166,
+              0.08
+            );
         }
 
         .store-hero-paw {
-          color: #159f9f;
-          font-size: 95px;
-          opacity: 0.75;
+          color: var(--teal);
+
+          font-size: 92px;
+
+          opacity: 0.72;
         }
 
         .store-hero-mini-paw {
           position: absolute;
 
-          color: #92d6d1;
+          color: #86d4cf;
 
-          font-size: 27px;
+          font-size: 28px;
         }
 
         .store-hero-mini-paw.one {
           top: 30px;
-          right: 22px;
+          right: 24px;
 
-          transform: rotate(20deg);
+          transform:
+            rotate(20deg);
         }
 
         .store-hero-mini-paw.two {
-          bottom: 31px;
-          left: 23px;
+          bottom: 30px;
+          left: 24px;
 
-          transform: rotate(-20deg);
+          transform:
+            rotate(-20deg);
         }
 
-        /* ================================
-           BENEFITS
-        ================================= */
+        /* =====================================================
+           PART 2 CONTINUES HERE
+        ===================================================== */
+        /* =====================================================
+        BENEFITS
+     ===================================================== */
 
-        .store-benefits {
-          display: grid;
-          grid-template-columns: repeat(4, 1fr);
+     .store-benefits {
+       display: grid;
+       grid-template-columns: repeat(4, 1fr);
 
-          margin: 18px 0 0;
+       margin-top: 20px;
 
-          border: 1px solid #e2eae9;
-          border-radius: 12px;
+       border: 1px solid #e1eceb;
+       border-radius: 14px;
 
-          background: #ffffff;
+       background: #ffffff;
 
-          overflow: hidden;
-        }
+       overflow: hidden;
+     }
 
-        .store-benefit {
-          padding: 17px;
+     .store-benefit {
+       min-height: 76px;
 
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          gap: 10px;
+       padding: 16px 20px;
 
-          border-right: 1px solid #edf1f1;
-        }
+       display: flex;
+       align-items: center;
+       justify-content: center;
 
-        .store-benefit:last-child {
-          border-right: 0;
-        }
+       gap: 11px;
 
-        .store-benefit-icon {
-          width: 34px;
-          height: 34px;
+       border-right:
+         1px solid #edf2f1;
+     }
 
-          border-radius: 50%;
+     .store-benefit:last-child {
+       border-right: none;
+     }
 
-          background: #e9f8f6;
-          color: #159f9f;
+     .store-benefit-icon {
+       width: 38px;
+       height: 38px;
 
-          display: flex;
-          align-items: center;
-          justify-content: center;
+       border-radius: 50%;
 
-          font-size: 13px;
-        }
+       background:
+         var(--teal-light);
 
-        .store-benefit strong {
-          display: block;
+       color: var(--teal);
 
-          color: #344054;
-          font-size: 10px;
-        }
+       display: flex;
+       align-items: center;
+       justify-content: center;
 
-        .store-benefit span {
-          display: block;
+       flex-shrink: 0;
 
-          margin-top: 2px;
+       font-size: 14px;
+     }
 
-          color: #98a2b3;
-          font-size: 8px;
-        }
+     .store-benefit strong {
+       display: block;
 
-        /* ================================
-           SECTIONS
-        ================================= */
+       color: #344054;
 
-        .store-section {
-          margin-top: 36px;
-        }
+       font-size: 10px;
+     }
 
-        .store-section-heading {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
+     .store-benefit span {
+       display: block;
 
-          margin-bottom: 16px;
-        }
+       margin-top: 3px;
 
-        .store-section-heading h2 {
-          margin: 0;
+       color: #98a2b3;
 
-          color: #344054;
+       font-size: 8px;
+     }
 
-          font-size: 21px;
-        }
+     /* =====================================================
+        SECTION HEADINGS
+     ===================================================== */
 
-        .store-section-heading p {
-          margin: 5px 0 0;
+     .store-section {
+       margin-top: 40px;
+     }
 
-          color: #98a2b3;
+     .store-section-heading {
+       display: flex;
+       align-items: flex-end;
+       justify-content: space-between;
 
-          font-size: 10px;
-        }
+       margin-bottom: 17px;
+     }
 
-        /* ================================
-           CATEGORIES
-        ================================= */
+     .store-section-heading h2 {
+       margin: 0;
 
-        .store-categories {
-          display: grid;
-          grid-template-columns: repeat(6, 1fr);
+       color: #304156;
 
-          gap: 12px;
-        }
+       font-size: 23px;
 
-        .store-category-card {
-          min-height: 100px;
+       letter-spacing: -0.5px;
+     }
 
-          padding: 15px;
+     .store-section-heading p {
+       margin: 6px 0 0;
 
-          border: 1px solid #e2e9e8;
-          border-radius: 12px;
+       color: #98a2b3;
 
-          background: #ffffff;
+       font-size: 10px;
+     }
 
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
+     /* =====================================================
+        CATEGORY CARDS
+     ===================================================== */
 
-          cursor: pointer;
+     .store-categories {
+       display: grid;
 
-          transition: 0.2s;
-        }
+       grid-template-columns:
+         repeat(6, 1fr);
 
-        .store-category-card:hover,
-        .store-category-card.active {
-          border-color: #159f9f;
+       gap: 13px;
+     }
 
-          background: #f0faf9;
+     .store-category-card {
+       min-height: 108px;
 
-          transform: translateY(-2px);
-        }
+       padding: 15px;
 
-        .store-category-icon {
-          width: 40px;
-          height: 40px;
+       border:
+         1px solid #e1e9e8;
 
-          margin-bottom: 8px;
+       border-radius: 14px;
 
-          border-radius: 50%;
+       background: #ffffff;
+       color: #475467;
 
-          background: #e9f8f6;
-          color: #159f9f;
+       display: flex;
+       flex-direction: column;
+       align-items: center;
+       justify-content: center;
 
-          display: flex;
-          align-items: center;
-          justify-content: center;
+       cursor: pointer;
 
-          font-size: 16px;
-        }
+       transition:
+         border-color 0.2s ease,
+         background 0.2s ease,
+         transform 0.2s ease,
+         box-shadow 0.2s ease;
+     }
 
-        .store-category-card strong {
-          color: #475467;
+     .store-category-card:hover,
+     .store-category-card.active {
+       border-color:
+         rgba(26, 166, 166, 0.5);
 
-          font-size: 10px;
-        }
+       background:
+         var(--teal-soft);
 
-        /* ================================
-           SEARCH
-        ================================= */
+       transform:
+         translateY(-3px);
 
-        .store-products-toolbar {
-          display: grid;
-          grid-template-columns: minmax(0, 1fr) 220px;
+       box-shadow:
+         0 10px 25px
+         rgba(17, 121, 123, 0.08);
+     }
 
-          gap: 10px;
+     .store-category-icon {
+       width: 43px;
+       height: 43px;
 
-          margin-bottom: 16px;
-        }
+       margin-bottom: 9px;
 
-        .store-search {
-          position: relative;
-        }
+       border-radius: 50%;
 
-        .store-search > svg {
-          position: absolute;
+       background:
+         var(--teal-light);
 
-          left: 15px;
-          top: 50%;
+       color: var(--teal);
 
-          transform: translateY(-50%);
+       display: flex;
+       align-items: center;
+       justify-content: center;
 
-          color: #98a2b3;
+       font-size: 16px;
+     }
 
-          font-size: 12px;
-        }
+     .store-category-card strong {
+       font-size: 10px;
+     }
 
-        .store-search input {
-          width: 100%;
-          height: 44px;
+     /* =====================================================
+        TOOLBAR
+     ===================================================== */
 
-          padding: 0 42px;
+     .store-products-toolbar {
+       margin-bottom: 18px;
 
-          border: 1px solid #dfe7e7;
-          border-radius: 8px;
+       display: grid;
 
-          background: #ffffff;
+       grid-template-columns:
+         1fr 190px;
 
-          outline: none;
+       gap: 12px;
+     }
 
-          color: #344054;
+     .store-search {
+       height: 45px;
 
-          font-size: 11px;
-        }
+       padding: 0 15px;
 
-        .store-search input:focus {
-          border-color: #159f9f;
+       border:
+         1px solid #dce7e6;
 
-          box-shadow: 0 0 0 3px rgba(21, 159, 159, 0.08);
-        }
+       border-radius: 11px;
 
-        .store-search-clear {
-          position: absolute;
+       background: #ffffff;
 
-          right: 9px;
-          top: 50%;
+       display: flex;
+       align-items: center;
 
-          transform: translateY(-50%);
+       gap: 10px;
 
-          width: 26px;
-          height: 26px;
+       color: #98a2b3;
 
-          border: 0;
-          background: transparent;
+       transition:
+         border-color 0.2s ease,
+         box-shadow 0.2s ease;
+     }
 
-          color: #98a2b3;
+     .store-search:focus-within {
+       border-color:
+         rgba(26, 166, 166, 0.65);
 
-          cursor: pointer;
-        }
+       box-shadow:
+         0 0 0 3px
+         rgba(26, 166, 166, 0.08);
+     }
 
-        .store-category-select {
-          width: 100%;
-          height: 44px;
+     .store-search input {
+       width: 100%;
 
-          padding: 0 12px;
+       border: none;
+       outline: none;
 
-          border: 1px solid #dfe7e7;
-          border-radius: 8px;
+       background: transparent;
 
-          background: #ffffff;
+       color: #344054;
 
-          color: #475467;
+       font-size: 11px;
+     }
 
-          outline: none;
+     .store-search input::placeholder {
+       color: #a4adb9;
+     }
 
-          font-size: 11px;
+     .store-search-clear {
+       width: 26px;
+       height: 26px;
 
-          cursor: pointer;
-        }
+       padding: 0;
 
-        /* ================================
-           PRODUCTS
-        ================================= */
+       border: none;
+       border-radius: 50%;
 
-        .store-products-grid {
-          display: grid;
-          grid-template-columns: repeat(4, minmax(0, 1fr));
+       background: #f1f5f4;
+       color: #7d8998;
 
-          gap: 15px;
+       display: flex;
+       align-items: center;
+       justify-content: center;
 
-          padding-bottom: 50px;
-        }
+       cursor: pointer;
+     }
 
-        .store-product-card {
-          min-width: 0;
+     .store-category-select {
+       height: 45px;
 
-          border: 1px solid #e1e8e7;
-          border-radius: 12px;
+       padding: 0 13px;
 
-          background: #ffffff;
+       border:
+         1px solid #dce7e6;
 
-          overflow: hidden;
+       border-radius: 11px;
 
-          transition: 0.2s;
+       outline: none;
 
-          position: relative;
-        }
+       background: #ffffff;
+       color: #475467;
 
-        .store-product-card:hover {
-          transform: translateY(-3px);
+       font-size: 11px;
 
-          border-color: #afdcd8;
+       cursor: pointer;
+     }
 
-          box-shadow: 0 9px 24px rgba(16, 24, 40, 0.07);
-        }
+     /* =====================================================
+        PRODUCTS
+     ===================================================== */
 
-        .store-favorite-button {
-          position: absolute;
+     .store-products-grid {
+       display: grid;
 
-          top: 10px;
-          right: 10px;
+       grid-template-columns:
+         repeat(4, 1fr);
 
-          z-index: 5;
+       gap: 18px;
+     }
 
-          width: 31px;
-          height: 31px;
+     .store-product-card {
+       min-width: 0;
 
-          border: 1px solid #e2e9e8;
-          border-radius: 50%;
+       border:
+         1px solid #e1e9e8;
 
-          background: rgba(255, 255, 255, 0.94);
+       border-radius: 16px;
 
-          color: #98a2b3;
+       background: #ffffff;
 
-          display: flex;
-          align-items: center;
-          justify-content: center;
+       overflow: hidden;
 
-          cursor: pointer;
+       position: relative;
 
-          font-size: 11px;
-        }
+       transition:
+         transform 0.22s ease,
+         box-shadow 0.22s ease,
+         border-color 0.22s ease;
+     }
 
-        .store-favorite-button.active {
-          color: #d95050;
+     .store-product-card:hover {
+       border-color:
+         rgba(26, 166, 166, 0.28);
 
-          border-color: #f0caca;
+       transform:
+         translateY(-4px);
 
-          background: #fff5f5;
-        }
+       box-shadow:
+         0 14px 35px
+         rgba(17, 121, 123, 0.09);
+     }
 
-        .store-product-image {
-          height: 190px;
+     .store-favorite-button {
+       width: 30px;
+       height: 30px;
 
-          margin: 9px;
+       padding: 0;
 
-          border-radius: 9px;
+       border: none;
+       border-radius: 50%;
 
-          background: #f7f9f9;
+       background: #ffffff;
+       color: #b4bdc8;
 
-          display: flex;
-          align-items: center;
-          justify-content: center;
+       display: flex;
+       align-items: center;
+       justify-content: center;
 
-          overflow: hidden;
-        }
+       position: absolute;
 
-        .store-product-image img {
-          width: 100%;
-          height: 100%;
+       top: 11px;
+       right: 11px;
 
-          object-fit: cover;
-        }
+       z-index: 5;
 
-        .store-product-image svg {
-          color: #a5b9b7;
+       cursor: pointer;
 
-          font-size: 43px;
-        }
+       box-shadow:
+         0 4px 12px
+         rgba(0, 0, 0, 0.08);
 
-        .store-product-info {
-          padding: 8px 14px 14px;
-        }
+       transition: 0.2s ease;
+     }
 
-        .store-product-name {
-          margin: 0;
+     .store-favorite-button:hover,
+     .store-favorite-button.active {
+       color: #e25555;
 
-          color: #344054;
+       transform: scale(1.06);
+     }
 
-          font-size: 12px;
-          font-weight: 700;
+     .store-product-image {
+       height: 190px;
 
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
-        }
+       background:
+         linear-gradient(
+           145deg,
+           #f2fbfa,
+           #e9f7f6
+         );
 
-        .store-product-category {
-          margin-top: 5px;
+       display: flex;
+       align-items: center;
+       justify-content: center;
 
-          color: #98a2b3;
+       color: #83d0cb;
 
-          font-size: 9px;
-        }
+       font-size: 42px;
 
-        .store-product-meta {
-          margin-top: 13px;
+       overflow: hidden;
+     }
 
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
+     .store-product-image img {
+       width: 100%;
+       height: 100%;
 
-          gap: 8px;
-        }
+       object-fit: cover;
+     }
 
-        .store-product-price {
-          color: #24364b;
+     .store-product-info {
+       padding: 16px;
+     }
 
-          font-size: 15px;
-          font-weight: 800;
-        }
+     .store-product-name {
+       min-height: 32px;
 
-        .store-stock {
-          padding: 4px 7px;
+       margin: 0;
 
-          border-radius: 20px;
+       color: #344054;
 
-          background: #edf7f6;
-          color: #58716f;
+       font-size: 12px;
+       font-weight: 800;
 
-          font-size: 8px;
-          font-weight: 700;
-        }
+       line-height: 1.4;
+     }
 
-        .store-stock.low {
-          background: #fff4e8;
-          color: #b66a17;
-        }
+     .store-product-category {
+       margin-top: 4px;
 
-        .store-stock.out {
-          background: #fff0ef;
-          color: #d92d20;
-        }
+       color: #98a2b3;
 
-        .store-add-cart {
-          width: 100%;
+       font-size: 9px;
+     }
 
-          margin-top: 12px;
+     .store-product-meta {
+       margin: 13px 0;
 
-          padding: 9px 12px;
+       display: flex;
+       align-items: center;
+       justify-content: space-between;
 
-          border: 1px solid #159f9f;
-          border-radius: 7px;
+       gap: 10px;
+     }
 
-          background: #159f9f;
-          color: #ffffff;
+     .store-product-price {
+       color: #263b4f;
 
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          gap: 7px;
+       font-size: 13px;
+       font-weight: 850;
+     }
 
-          font-size: 10px;
-          font-weight: 700;
+     .store-stock {
+       padding: 4px 7px;
 
-          cursor: pointer;
-        }
+       border-radius: 20px;
 
-        .store-add-cart:hover {
-          background: #118887;
-        }
+       background: #edf9f5;
+       color: #288264;
 
-        .store-add-cart:disabled {
-          border-color: #d7dfde;
-          background: #d7dfde;
+       font-size: 8px;
+       font-weight: 700;
+     }
 
-          cursor: not-allowed;
-        }
+     .store-stock.low {
+       background: #fff6e8;
+       color: #b87519;
+     }
 
-        .store-no-products {
-          grid-column: 1 / -1;
+     .store-stock.out {
+       background: #fff0f0;
+       color: #c84c4c;
+     }
 
-          padding: 70px 20px;
+     .store-add-cart {
+       width: 100%;
+       height: 39px;
 
-          border: 1px dashed #dce6e5;
-          border-radius: 12px;
+       border: none;
+       border-radius: 9px;
 
-          background: #ffffff;
+       background:
+         var(--teal);
 
-          text-align: center;
+       color: #ffffff;
 
-          color: #98a2b3;
-        }
+       display: flex;
+       align-items: center;
+       justify-content: center;
 
-        .store-no-products svg {
-          margin-bottom: 12px;
+       gap: 7px;
 
-          font-size: 35px;
-        }
+       font-size: 10px;
+       font-weight: 800;
 
-        .store-no-products h3 {
-          margin: 0 0 5px;
+       cursor: pointer;
 
-          color: #667085;
+       transition:
+         background 0.2s ease,
+         transform 0.2s ease;
+     }
 
-          font-size: 14px;
-        }
+     .store-add-cart:hover:not(:disabled) {
+       background:
+         var(--teal-dark);
 
-        .store-no-products p {
-          margin: 0;
+       transform:
+         translateY(-1px);
+     }
 
-          font-size: 10px;
-        }
+     .store-add-cart:disabled {
+       background: #d8e2e1;
+       color: #8c9998;
 
-        /* ================================
-           RESPONSIVE
-        ================================= */
+       cursor: not-allowed;
+     }
 
-        @media (max-width: 1050px) {
-          .store-products-grid {
-            grid-template-columns: repeat(3, 1fr);
-          }
+     /* =====================================================
+        EMPTY PRODUCTS
+     ===================================================== */
 
-          .store-categories {
-            grid-template-columns: repeat(3, 1fr);
-          }
+     .store-empty-products {
+       grid-column: 1 / -1;
 
-          .store-nav {
-            display: none;
-          }
-        }
+       padding: 50px 20px;
 
-        @media (max-width: 760px) {
-          .store-header {
-            padding: 0 16px;
-          }
+       border:
+         1px dashed #cfe0df;
 
-          .store-account-name,
-          .store-account-arrow {
-            display: none;
-          }
+       border-radius: 16px;
 
-          .store-account-button {
-            width: 40px;
-            padding: 0;
+       background: #ffffff;
 
-            justify-content: center;
-          }
+       text-align: center;
 
-          .store-hero {
-            padding: 35px 25px;
-          }
+       color: #98a2b3;
+     }
 
-          .store-hero-content {
-            width: 100%;
-          }
+     .store-empty-products svg {
+       margin-bottom: 12px;
 
-          .store-hero-visual {
-            display: none;
-          }
+       color: var(--teal);
 
-          .store-benefits {
-            grid-template-columns: repeat(2, 1fr);
-          }
+       font-size: 35px;
+     }
 
-          .store-benefit:nth-child(2) {
-            border-right: 0;
-          }
+     .store-empty-products h3 {
+       margin: 0 0 7px;
 
-          .store-benefit:nth-child(-n + 2) {
-            border-bottom: 1px solid #edf1f1;
-          }
+       color: #475467;
 
-          .store-products-toolbar {
-            grid-template-columns: 1fr;
-          }
+       font-size: 15px;
+     }
 
-          .store-products-grid {
-            grid-template-columns: repeat(2, 1fr);
-          }
-        }
+     .store-empty-products p {
+       margin: 0;
 
-        @media (max-width: 500px) {
-          .store-logo-text {
-            font-size: 16px;
-          }
+       font-size: 10px;
+     }
 
-          .store-categories {
-            grid-template-columns: repeat(2, 1fr);
-          }
+     /* =====================================================
+        CONTACT ANCHOR
+     ===================================================== */
 
-          .store-products-grid {
-            grid-template-columns: 1fr;
-          }
+     #store-contact-anchor {
+       height: 1px;
+       width: 100%;
+     }
 
-          .store-benefits {
-            grid-template-columns: 1fr;
-          }
+     /* =====================================================
+        RESPONSIVE
+     ===================================================== */
 
-          .store-benefit {
-            border-right: 0;
-            border-bottom: 1px solid #edf1f1;
-          }
+     @media (max-width: 1180px) {
+       .store-header {
+         grid-template-columns:
+           auto 1fr auto;
 
-          .store-benefit:last-child {
-            border-bottom: 0;
-          }
-        }
-      `}</style>
+         gap: 18px;
 
-      {/* =================================
-          HEADER
-      ================================= */}
+         padding: 0 3%;
+       }
 
-      <header className="store-header">
-        <div
-          className="store-logo"
-          onClick={() => navigate("/store")}
-        >
-          <FaPaw className="store-logo-icon" />
+       .store-nav {
+         gap: 20px;
+       }
 
-          <h2 className="store-logo-text">
-            Vet <span>Clinic</span>
-          </h2>
-        </div>
+       .store-products-grid {
+         grid-template-columns:
+           repeat(3, 1fr);
+       }
 
-        <nav className="store-nav">
-          <button
-            type="button"
-            onClick={() => navigate("/store")}
-          >
-            Shop
-          </button>
+       .store-categories {
+         grid-template-columns:
+           repeat(3, 1fr);
+       }
 
-          <button
-            type="button"
-            onClick={() => navigate("/orders")}
-          >
-            My Orders
-          </button>
-        </nav>
+       .store-hero {
+         padding: 45px;
+       }
+     }
 
-        <div className="store-header-actions">
-          <button
-            type="button"
-            className="store-icon-button"
-            title="My Orders"
-            onClick={() => navigate("/orders")}
-          >
-            <FaClipboardList />
-          </button>
+     @media (max-width: 960px) {
+       .store-header {
+         min-height: auto;
 
-          <button
-            type="button"
-            className="store-icon-button"
-            title="Cart"
-            onClick={openCart}
-          >
-            <FaShoppingCart />
+         grid-template-columns:
+           1fr auto;
 
-            {cartCount > 0 && (
-              <span className="store-cart-count">
-                {cartCount}
-              </span>
-            )}
-          </button>
+         padding:
+           10px 4% 0;
 
-          <div className="store-account-wrapper">
-            <button
-              type="button"
-              className="store-account-button"
-              onClick={() =>
-                setAccountOpen((current) => !current)
-              }
-            >
-              <span className="store-account-avatar">
-                <FaUser />
-              </span>
+         gap: 8px 16px;
+       }
 
-              <span className="store-account-name">
-                My Account
-              </span>
+       .store-logo {
+         height: 58px;
+       }
 
-              <FaChevronDown className="store-account-arrow" />
-            </button>
+       .store-header-logo-image {
+         height: 54px;
+         max-height: 54px;
+       }
 
-            {accountOpen && (
-              <div className="store-account-menu">
-                <div className="store-account-menu-header">
-                  <strong>Pet Owner</strong>
-                  <span>Owner account</span>
-                </div>
+       .store-header-actions {
+         grid-column: 2;
+         grid-row: 1;
+       }
 
-                <button
-                  type="button"
-                  onClick={() => {
-                    setAccountOpen(false);
-                    navigate("/owners");
-                  }}
-                >
-                  <FaUser />
-                  My Profile
-                </button>
+       .store-nav {
+         grid-column: 1 / -1;
 
-                <button
-                  type="button"
-                  onClick={() => {
-                    setAccountOpen(false);
-                    navigate("/orders");
-                  }}
-                >
-                  <FaClipboardList />
-                  My Orders
-                </button>
+         width: 100%;
+         height: 55px;
 
-                <button
-                  type="button"
-                  onClick={() => {
-                    setAccountOpen(false);
-                    navigate("/settings");
-                  }}
-                >
-                  <FaCog />
-                  Settings
-                </button>
+         justify-content: center;
 
-                <button
-                  type="button"
-                  className="logout"
-                  onClick={handleLogout}
-                >
-                  <FaSignOutAlt />
-                  Logout
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-      </header>
+         gap: 28px;
 
-      <main className="store-container">
-        {/* =================================
-            HERO
-        ================================= */}
+         overflow-x: auto;
+       }
 
-        <section className="store-hero">
-          <div className="store-hero-content">
-            <div className="store-hero-badge">
-              <FaPaw />
-              Vet Clinic Pet Store
-            </div>
+       .store-nav-link,
+       .store-category-dropdown {
+         height: 55px;
+       }
 
-            <h1>
-              Happy Pets,
-              <br />
-              <span>Healthier Lives.</span>
-            </h1>
+       .store-nav-link::after {
+         bottom: 7px;
+       }
 
-            <p>
-              Everything your pet needs in one place.
-              Shop trusted food, care products, hygiene
-              essentials, supplements and accessories.
-            </p>
+       .store-category-menu {
+         top: 49px;
+       }
 
-            <button
-              type="button"
-              className="store-shop-now"
-              onClick={() =>
-                document
-                  .getElementById("store-products")
-                  ?.scrollIntoView({
-                    behavior: "smooth",
-                  })
-              }
-            >
-              Shop Products
-            </button>
-          </div>
+       .store-hero {
+         min-height: 380px;
 
-          <div className="store-hero-visual">
-            <div className="store-hero-circle">
-              <FaPaw className="store-hero-paw" />
+         padding: 45px 40px;
+       }
 
-              <FaPaw className="store-hero-mini-paw one" />
+       .store-hero.has-banner {
+         min-height: 410px;
+       }
 
-              <FaPaw className="store-hero-mini-paw two" />
-            </div>
-          </div>
-        </section>
+       .store-hero-content {
+         width: 60%;
+       }
 
-        {/* =================================
-            BENEFITS
-        ================================= */}
+       .store-hero.has-banner
+       .store-hero-content {
+         width: 70%;
+       }
 
-        <section className="store-benefits">
-          <div className="store-benefit">
-            <div className="store-benefit-icon">
-              <FaPaw />
-            </div>
+       .store-hero-visual {
+         width: 35%;
+       }
 
-            <div>
-              <strong>Trusted Products</strong>
-              <span>Selected for pets</span>
-            </div>
-          </div>
+       .store-hero-circle {
+         width: 200px;
+         height: 200px;
+       }
 
-          <div className="store-benefit">
-            <div className="store-benefit-icon">
-              <FaHeart />
-            </div>
+       .store-hero-paw {
+         font-size: 75px;
+       }
 
-            <div>
-              <strong>Quality Care</strong>
-              <span>Vet clinic products</span>
-            </div>
-          </div>
+       .store-benefits {
+         grid-template-columns:
+           repeat(2, 1fr);
+       }
 
-          <div className="store-benefit">
-            <div className="store-benefit-icon">
-              <FaShoppingCart />
-            </div>
+       .store-benefit:nth-child(2) {
+         border-right: none;
+       }
 
-            <div>
-              <strong>Easy Shopping</strong>
-              <span>Simple checkout</span>
-            </div>
-          </div>
-
-          <div className="store-benefit">
-            <div className="store-benefit-icon">
-              <FaBoxOpen />
-            </div>
-
-            <div>
-              <strong>Same Inventory</strong>
-              <span>Clinic & online store</span>
-            </div>
-          </div>
-        </section>
-
-        {/* =================================
-            CATEGORIES
-        ================================= */}
-
-        <section className="store-section">
-          <div className="store-section-heading">
-            <div>
-              <h2>Shop by Category</h2>
-
-              <p>
-                Find exactly what your pet needs.
-              </p>
-            </div>
-          </div>
-
-          <div className="store-categories">
-            {CATEGORY_ITEMS.map((item) => (
-              <button
-                type="button"
-                key={item.name}
-                className={`store-category-card ${
-                  category === item.name ? "active" : ""
-                }`}
-                onClick={() =>
-                  setCategory((current) =>
-                    current === item.name
-                      ? "All categories"
-                      : item.name
-                  )
-                }
-              >
-                <span className="store-category-icon">
-                  {item.icon}
-                </span>
-
-                <strong>{item.name}</strong>
-              </button>
-            ))}
-          </div>
-        </section>
-
-        {/* =================================
-            PRODUCTS
-        ================================= */}
-
-        <section
-          className="store-section"
-          id="store-products"
-        >
-          <div className="store-section-heading">
-            <div>
-              <h2>All Products</h2>
-
-              <p>
-                Browse products available from the clinic.
-              </p>
-            </div>
-          </div>
-
-          <div className="store-products-toolbar">
-            <div className="store-search">
-              <FaSearch />
-
-              <input
-                type="text"
-                placeholder="Search products..."
-                value={search}
-                onChange={(e) =>
-                  setSearch(e.target.value)
-                }
-              />
-
-              {search && (
-                <button
-                  type="button"
-                  className="store-search-clear"
-                  onClick={() => setSearch("")}
-                >
-                  <FaTimes />
-                </button>
-              )}
-            </div>
-
-            <select
-              className="store-category-select"
-              value={category}
-              onChange={(e) =>
-                setCategory(e.target.value)
-              }
-            >
-              <option value="All categories">
-                All categories
-              </option>
-
-              {CATEGORY_ITEMS.map((item) => (
-                <option
-                  key={item.name}
-                  value={item.name}
-                >
-                  {item.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="store-products-grid">
-            {filteredProducts.length === 0 ? (
-              <div className="store-no-products">
-                <FaBoxOpen />
-
-                <h3>No products found</h3>
-
-                <p>
-                  Try another search or category.
-                </p>
-              </div>
-            ) : (
-              filteredProducts.map((product) => {
-                const favorite = favorites.includes(
-                  product.id
-                );
-
-                return (
-                  <article
-                    className="store-product-card"
-                    key={product.id}
-                  >
-                    <button
-                      type="button"
-                      className={`store-favorite-button ${
-                        favorite ? "active" : ""
-                      }`}
-                      onClick={() =>
-                        toggleFavorite(product.id)
-                      }
-                      aria-label="Favorite"
-                    >
-                      <FaHeart />
-                    </button>
-
-                    <div className="store-product-image">
-                      {product.image ? (
-                        <img
-                          src={product.image}
-                          alt={product.name}
-                        />
-                      ) : (
-                        <FaBoxOpen />
-                      )}
-                    </div>
-
-                    <div className="store-product-info">
-                      <h3 className="store-product-name">
-                        {product.name}
-                      </h3>
-
-                      <div className="store-product-category">
-                        {product.category}
-                      </div>
-
-                      <div className="store-product-meta">
-                        <span className="store-product-price">
-                          ${product.price.toFixed(2)}
-                        </span>
-
-                        <span
-                          className={`store-stock ${
-                            product.stock === 0
-                              ? "out"
-                              : product.stock <= 5
-                              ? "low"
-                              : ""
-                          }`}
-                        >
-                          {product.stock === 0
-                            ? "Out of stock"
-                            : `${product.stock} in stock`}
-                        </span>
-                      </div>
-
-                      <button
-                        type="button"
-                        className="store-add-cart"
-                        disabled={product.stock === 0}
-                        onClick={() =>
-                          addToCart(product)
-                        }
-                      >
-                        <FaPlus />
-
-                        {product.stock === 0
-                          ? "Out of Stock"
-                          : "Add to Cart"}
-                      </button>
-                    </div>
-                  </article>
-                );
-              })
-            )}
-          </div>
-        </section>
-      </main>
-    </div>
-  );
+       .store-benefit:nth-child(-n + 2) {
+         border-bottom:
+           1px solid #edf2f1;
+       }
+     }
+
+     @media (max-width: 760px) {
+       .store-account-name,
+       .store-account-arrow {
+         display: none;
+       }
+
+       .store-account-button {
+         width: 42px;
+
+         padding: 0;
+
+         justify-content: center;
+       }
+
+       .store-account-avatar {
+         width: 30px;
+         height: 30px;
+       }
+
+       .store-products-grid {
+         grid-template-columns:
+           repeat(2, 1fr);
+       }
+
+       .store-products-toolbar {
+         grid-template-columns: 1fr;
+       }
+
+       .store-categories {
+         grid-template-columns:
+           repeat(2, 1fr);
+       }
+
+       .store-hero,
+       .store-hero.has-banner {
+         min-height: 390px;
+
+         padding: 38px 30px;
+
+         border-radius: 18px;
+       }
+
+       .store-hero-content,
+       .store-hero.has-banner
+       .store-hero-content {
+         width: 72%;
+       }
+
+       .store-hero h1 {
+         font-size: 40px;
+       }
+
+       .store-hero-visual {
+         position: absolute;
+
+         right: -30px;
+         bottom: -30px;
+
+         width: auto;
+
+         opacity: 0.35;
+       }
+
+       .store-hero.has-banner
+       .store-hero-overlay {
+         background:
+           linear-gradient(
+             90deg,
+             rgba(
+               8,
+               50,
+               52,
+               0.88
+             ) 0%,
+             rgba(
+               8,
+               50,
+               52,
+               0.72
+             ) 55%,
+             rgba(
+               8,
+               50,
+               52,
+               0.25
+             ) 100%
+           );
+       }
+     }
+
+     @media (max-width: 560px) {
+       .store-header {
+         padding:
+           8px 3% 0;
+       }
+
+       .store-logo {
+         min-width: 0;
+       }
+
+       .store-header-logo-image {
+         max-width: 130px;
+
+         height: 48px;
+       }
+
+       .store-logo-text {
+         font-size: 16px;
+       }
+
+       .store-header-actions {
+         gap: 6px;
+       }
+
+       .store-icon-button,
+       .store-account-button {
+         width: 37px;
+         height: 37px;
+       }
+
+       .store-account-avatar {
+         width: 27px;
+         height: 27px;
+       }
+
+       .store-nav {
+         justify-content:
+           flex-start;
+
+         gap: 24px;
+
+         padding: 0 4px;
+       }
+
+       .store-nav-link {
+         font-size: 11px;
+       }
+
+       .store-nav-link svg {
+         display: none;
+       }
+
+       .store-container {
+         width: 94%;
+       }
+
+       .store-hero,
+       .store-hero.has-banner {
+         min-height: 410px;
+
+         margin-top: 18px;
+
+         padding: 34px 24px;
+
+         align-items: center;
+
+         background-position: center;
+       }
+
+       .store-hero-content,
+       .store-hero.has-banner
+       .store-hero-content {
+         width: 100%;
+       }
+
+       .store-hero.has-banner
+       .store-hero-overlay {
+         background:
+           linear-gradient(
+             90deg,
+             rgba(
+               8,
+               50,
+               52,
+               0.89
+             ) 0%,
+             rgba(
+               8,
+               50,
+               52,
+               0.75
+             ) 60%,
+             rgba(
+               8,
+               50,
+               52,
+               0.5
+             ) 100%
+           );
+       }
+
+       .store-hero h1 {
+         max-width: 340px;
+
+         font-size: 36px;
+
+         letter-spacing: -1.5px;
+       }
+
+       .store-hero p {
+         max-width: 340px;
+
+         font-size: 12px;
+       }
+
+       .store-hero-visual {
+         display: none;
+       }
+
+       .store-benefits {
+         grid-template-columns: 1fr;
+       }
+
+       .store-benefit {
+         justify-content:
+           flex-start;
+
+         border-right: none;
+
+         border-bottom:
+           1px solid #edf2f1;
+       }
+
+       .store-benefit:last-child {
+         border-bottom: none;
+       }
+
+       .store-categories {
+         gap: 9px;
+       }
+
+       .store-products-grid {
+         grid-template-columns: 1fr;
+       }
+
+       .store-product-image {
+         height: 220px;
+       }
+     }
+   `}</style>
+
+   {/* =====================================================
+       HEADER
+   ===================================================== */}
+
+   <header className="store-header">
+
+     {/* LOGO */}
+
+     <div
+       className="store-logo"
+       onClick={scrollToTop}
+     >
+       {storeSettings.storeBanner ? (
+         <img
+           src={
+             storeSettings.storeBanner
+           }
+           alt={
+             storeSettings.storeName ||
+             "Store Logo"
+           }
+           className="store-header-logo-image"
+         />
+       ) : (
+         <div className="store-logo-fallback">
+           <FaPaw className="store-logo-icon" />
+
+           {storeSettings.storeName && (
+             <h2 className="store-logo-text">
+               {
+                 storeSettings.storeName
+               }
+             </h2>
+           )}
+         </div>
+       )}
+     </div>
+
+     {/* NAVIGATION */}
+
+     <nav className="store-nav">
+
+       <button
+         type="button"
+         className="store-nav-link home"
+         onClick={() => {
+           setCategoriesOpen(false);
+           setAccountOpen(false);
+           scrollToTop();
+         }}
+       >
+         <FaHome />
+         <span>Home</span>
+       </button>
+
+       <button
+         type="button"
+         className="store-nav-link"
+         onClick={() => {
+           setCategoriesOpen(false);
+           setAccountOpen(false);
+           scrollToAbout();
+         }}
+       >
+         <FaInfoCircle />
+         <span>About Us</span>
+       </button>
+
+       {/* CATEGORIES */}
+
+       <div className="store-category-dropdown">
+         <button
+           type="button"
+           className="store-nav-link"
+           onClick={() => {
+             setCategoriesOpen(
+               (current) => !current
+             );
+
+             setAccountOpen(false);
+           }}
+         >
+           <FaBoxOpen />
+
+           <span>Categories</span>
+
+           <FaChevronDown
+             className={`store-nav-chevron ${
+               categoriesOpen
+                 ? "open"
+                 : ""
+             }`}
+           />
+         </button>
+
+         {categoriesOpen && (
+           <div className="store-category-menu">
+
+             <div className="store-category-menu-title">
+               Shop by category
+             </div>
+
+             <button
+               type="button"
+               className={
+                 category ===
+                 "All categories"
+                   ? "active"
+                   : ""
+               }
+               onClick={() =>
+                 chooseCategory(
+                   "All categories"
+                 )
+               }
+             >
+               <span className="store-dropdown-icon">
+                 <FaBoxOpen />
+               </span>
+
+               All Products
+             </button>
+
+             {CATEGORY_ITEMS.map(
+               (item) => (
+                 <button
+                   type="button"
+                   key={item.name}
+                   className={
+                     category ===
+                     item.name
+                       ? "active"
+                       : ""
+                   }
+                   onClick={() =>
+                     chooseCategory(
+                       item.name
+                     )
+                   }
+                 >
+                   <span className="store-dropdown-icon">
+                     {item.icon}
+                   </span>
+
+                   {item.name}
+                 </button>
+               )
+             )}
+           </div>
+         )}
+       </div>
+
+       <button
+         type="button"
+         className="store-nav-link"
+         onClick={() => {
+           setCategoriesOpen(false);
+           setAccountOpen(false);
+           scrollToContact();
+         }}
+       >
+         <FaEnvelope />
+         <span>Contact Us</span>
+       </button>
+     </nav>
+
+     {/* HEADER ACTIONS */}
+
+     <div className="store-header-actions">
+
+       <button
+         type="button"
+         className="store-icon-button"
+         title="My Orders"
+         onClick={() =>
+           navigate("/orders")
+         }
+       >
+         <FaClipboardList />
+       </button>
+
+       <button
+         type="button"
+         className="store-icon-button"
+         title="Shopping Cart"
+         onClick={openCart}
+       >
+         <FaShoppingCart />
+
+         {cartCount > 0 && (
+           <span className="store-cart-count">
+             {cartCount}
+           </span>
+         )}
+       </button>
+
+       {/* ACCOUNT */}
+
+       <div className="store-account-wrapper">
+
+         <button
+           type="button"
+           className="store-account-button"
+           onClick={() => {
+             setAccountOpen(
+               (current) =>
+                 !current
+             );
+
+             setCategoriesOpen(false);
+           }}
+         >
+           <span className="store-account-avatar">
+             <FaUser />
+           </span>
+
+           <span className="store-account-name">
+             My Account
+           </span>
+
+           <FaChevronDown className="store-account-arrow" />
+         </button>
+
+         {accountOpen && (
+           <div className="store-account-menu">
+
+             <div className="store-account-menu-header">
+               <strong>
+                 My Account
+               </strong>
+
+               <span>
+                 Manage your store
+                 account
+               </span>
+             </div>
+
+             <button
+               type="button"
+               onClick={() => {
+                 setAccountOpen(false);
+                 navigate("/orders");
+               }}
+             >
+               <FaClipboardList />
+               My Orders
+             </button>
+
+             <button
+               type="button"
+               onClick={() => {
+                 setAccountOpen(false);
+                 navigate("/owners");
+               }}
+             >
+               <FaUser />
+               Owners
+             </button>
+
+             <button
+               type="button"
+               onClick={() => {
+                 setAccountOpen(false);
+                 navigate(
+                   "/settings"
+                 );
+               }}
+             >
+               <FaCog />
+               Settings
+             </button>
+
+             <button
+               type="button"
+               className="logout"
+               onClick={
+                 handleLogout
+               }
+             >
+               <FaSignOutAlt />
+               Logout
+             </button>
+           </div>
+         )}
+       </div>
+     </div>
+   </header>
+
+   {/* =====================================================
+       MAIN
+   ===================================================== */}
+
+   <main className="store-container">
+
+     {/* =====================================================
+         HOME BANNER
+
+         ALL BANNER CONTENT COMES FROM SETTINGS.
+         NO DEFAULT BANNER WORDS.
+     ===================================================== */}
+
+     <section
+       className={`store-hero ${
+         storeSettings.homeBanner
+           ? "has-banner"
+           : ""
+       }`}
+       id="store-about"
+       style={
+         storeSettings.homeBanner
+           ? {
+               backgroundImage:
+                 `url(${storeSettings.homeBanner})`,
+             }
+           : undefined
+       }
+     >
+
+       {storeSettings.homeBanner && (
+         <div className="store-hero-overlay" />
+       )}
+
+       <div className="store-hero-content">
+
+         {/* Store name only appears if
+             the owner defined it */}
+
+         {storeSettings.storeName && (
+           <div className="store-hero-badge">
+             <FaPaw />
+
+             {
+               storeSettings.storeName
+             }
+           </div>
+         )}
+
+         {/* Banner title only appears
+             if entered in Settings */}
+
+         {storeSettings.homeBannerTitle && (
+           <h1>
+             {
+               storeSettings.homeBannerTitle
+             }
+           </h1>
+         )}
+
+         {/* Banner description only appears
+             if entered in Settings */}
+
+         {storeSettings.homeBannerDescription && (
+           <p>
+             {
+               storeSettings.homeBannerDescription
+             }
+           </p>
+         )}
+
+         {/* Button only appears if button text
+             was entered in Settings */}
+
+         {storeSettings.homeBannerButtonText && (
+           <button
+             type="button"
+             className="store-shop-now"
+             onClick={
+               scrollToProducts
+             }
+           >
+             {
+               storeSettings.homeBannerButtonText
+             }
+           </button>
+         )}
+       </div>
+
+       {/* Paw fallback appears only when
+           no banner image was uploaded */}
+
+       {!storeSettings.homeBanner && (
+         <div className="store-hero-visual">
+
+           <div className="store-hero-circle">
+
+             <FaPaw className="store-hero-paw" />
+
+             <FaPaw className="store-hero-mini-paw one" />
+
+             <FaPaw className="store-hero-mini-paw two" />
+
+           </div>
+         </div>
+       )}
+     </section>
+
+     {/* =====================================================
+         BENEFITS
+     ===================================================== */}
+
+     <section className="store-benefits">
+
+       <div className="store-benefit">
+         <div className="store-benefit-icon">
+           <FaPaw />
+         </div>
+
+         <div>
+           <strong>
+             Pet Friendly
+           </strong>
+
+           <span>
+             Products selected with care
+           </span>
+         </div>
+       </div>
+
+       <div className="store-benefit">
+         <div className="store-benefit-icon">
+           <FaBoxOpen />
+         </div>
+
+         <div>
+           <strong>
+             Quality Products
+           </strong>
+
+           <span>
+             Trusted essentials
+           </span>
+         </div>
+       </div>
+
+       <div className="store-benefit">
+         <div className="store-benefit-icon">
+           <FaShoppingCart />
+         </div>
+
+         <div>
+           <strong>
+             Easy Shopping
+           </strong>
+
+           <span>
+             Simple and fast ordering
+           </span>
+         </div>
+       </div>
+
+       <div className="store-benefit">
+         <div className="store-benefit-icon">
+           <FaHeart />
+         </div>
+
+         <div>
+           <strong>
+             Made With Care
+           </strong>
+
+           <span>
+             Everything pets need
+           </span>
+         </div>
+       </div>
+     </section>
+
+     {/* =====================================================
+         CATEGORIES
+     ===================================================== */}
+
+     <section className="store-section">
+
+       <div className="store-section-heading">
+         <div>
+           <h2>
+             Shop by Category
+           </h2>
+
+           <p>
+             Find the right products
+             for your pet.
+           </p>
+         </div>
+       </div>
+
+       <div className="store-categories">
+
+         {CATEGORY_ITEMS.map(
+           (item) => (
+             <button
+               type="button"
+               key={item.name}
+               className={`store-category-card ${
+                 category ===
+                 item.name
+                   ? "active"
+                   : ""
+               }`}
+               onClick={() =>
+                 chooseCategory(
+                   item.name
+                 )
+               }
+             >
+               <span className="store-category-icon">
+                 {item.icon}
+               </span>
+
+               <strong>
+                 {item.name}
+               </strong>
+             </button>
+           )
+         )}
+       </div>
+     </section>
+
+     {/* =====================================================
+         PRODUCTS
+     ===================================================== */}
+
+     <section
+       className="store-section"
+       id="store-products"
+     >
+       <div className="store-section-heading">
+         <div>
+           <h2>
+             Our Products
+           </h2>
+
+           <p>
+             Browse our pet care
+             collection.
+           </p>
+         </div>
+       </div>
+
+       {/* SEARCH + FILTER */}
+
+       <div className="store-products-toolbar">
+
+         <div className="store-search">
+
+           <FaSearch />
+
+           <input
+             type="text"
+             placeholder="Search products..."
+             value={search}
+             onChange={(event) =>
+               setSearch(
+                 event.target.value
+               )
+             }
+           />
+
+           {search && (
+             <button
+               type="button"
+               className="store-search-clear"
+               onClick={() =>
+                 setSearch("")
+               }
+             >
+               <FaTimes />
+             </button>
+           )}
+         </div>
+
+         <select
+           className="store-category-select"
+           value={category}
+           onChange={(event) =>
+             setCategory(
+               event.target.value
+             )
+           }
+         >
+           <option>
+             All categories
+           </option>
+
+           {CATEGORY_ITEMS.map(
+             (item) => (
+               <option
+                 key={item.name}
+                 value={item.name}
+               >
+                 {item.name}
+               </option>
+             )
+           )}
+         </select>
+       </div>
+
+       {/* PRODUCT GRID */}
+
+       <div className="store-products-grid">
+
+         {filteredProducts.length ===
+         0 ? (
+           <div className="store-empty-products">
+
+             <FaBoxOpen />
+
+             <h3>
+               No products found
+             </h3>
+
+             <p>
+               Try another search or
+               category.
+             </p>
+           </div>
+         ) : (
+           filteredProducts.map(
+             (product) => {
+               const isFavorite =
+                 favorites.includes(
+                   product.id
+                 );
+
+               return (
+                 <article
+                   className="store-product-card"
+                   key={product.id}
+                 >
+                   <button
+                     type="button"
+                     className={`store-favorite-button ${
+                       isFavorite
+                         ? "active"
+                         : ""
+                     }`}
+                     onClick={() =>
+                       toggleFavorite(
+                         product.id
+                       )
+                     }
+                   >
+                     <FaHeart />
+                   </button>
+
+                   <div className="store-product-image">
+
+                     {product.image ? (
+                       <img
+                         src={
+                           product.image
+                         }
+                         alt={
+                           product.name
+                         }
+                       />
+                     ) : (
+                       <FaPaw />
+                     )}
+                   </div>
+
+                   <div className="store-product-info">
+
+                     <h3 className="store-product-name">
+                       {
+                         product.name
+                       }
+                     </h3>
+
+                     <div className="store-product-category">
+                       {
+                         product.category
+                       }
+                     </div>
+
+                     <div className="store-product-meta">
+
+                       <span className="store-product-price">
+                         $
+                         {product.price.toFixed(
+                           2
+                         )}
+                       </span>
+
+                       <span
+                         className={`store-stock ${
+                           product.stock ===
+                           0
+                             ? "out"
+                             : product.stock <=
+                               5
+                             ? "low"
+                             : ""
+                         }`}
+                       >
+                         {product.stock ===
+                         0
+                           ? "Out of stock"
+                           : `${product.stock} in stock`}
+                       </span>
+                     </div>
+
+                     <button
+                       type="button"
+                       className="store-add-cart"
+                       disabled={
+                         product.stock <=
+                         0
+                       }
+                       onClick={() =>
+                         addToCart(
+                           product
+                         )
+                       }
+                     >
+                       <FaPlus />
+
+                       {product.stock > 0
+                         ? "Add to Cart"
+                         : "Out of Stock"}
+                     </button>
+                   </div>
+                 </article>
+               );
+             }
+           )
+         )}
+       </div>
+     </section>
+
+     {/* Footer comes after Ecommerce in App.jsx */}
+
+     <div id="store-contact-anchor" />
+
+   </main>
+ </div>
+);
 }
 
 export default Ecommerce;

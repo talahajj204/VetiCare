@@ -51,12 +51,34 @@ function Sidebar() {
   const isFinancialPage =
     location.pathname === "/financial";
 
+  // =========================================================
+  // FINANCIAL QUERY PARAM
+  //
+  // /financial
+  //      => null
+  //
+  // /financial?tab=revenue
+  //      => revenue
+  //
+  // /financial?tab=expenses
+  //      => expenses
+  // =========================================================
+
+  const financialTab = new URLSearchParams(
+    location.search
+  ).get("tab");
+
+  const isFinancialOverview =
+    isFinancialPage && !financialTab;
+
+  const isRevenuePage =
+    isFinancialPage && financialTab === "revenue";
+
+  const isExpensesPage =
+    isFinancialPage && financialTab === "expenses";
+
   const [financialOpen, setFinancialOpen] =
     useState(isFinancialPage);
-
-  const financialTab =
-    new URLSearchParams(location.search).get("tab") ||
-    "revenue";
 
   // =========================================================
   // KEEP FINANCIAL OPEN WHEN USER IS INSIDE FINANCIAL
@@ -120,11 +142,31 @@ function Sidebar() {
 
   // =========================================================
   // FINANCIAL PARENT
+  //
+  // Clicking Financial:
+  //      -> /financial
+  //      -> overview only
+  //
+  // If already on /financial overview:
+  //      -> arrow can open / close submenu
   // =========================================================
 
   const handleFinancialParent = () => {
     saveSidebarScroll();
 
+    // If user is NOT on the main Financial overview,
+    // go to /financial.
+    if (!isFinancialOverview) {
+      navigate("/financial");
+
+      setFinancialOpen(true);
+      setMenuOpen(false);
+
+      return;
+    }
+
+    // If already on /financial,
+    // clicking Financial toggles submenu.
     setFinancialOpen((previous) => !previous);
   };
 
@@ -228,7 +270,8 @@ function Sidebar() {
         }
 
         .sidebar.sidebar-pos-collapsed
-          .sidebar-nav a
+          .sidebar-nav
+          a
           .sidebar-icon,
         .sidebar.sidebar-pos-collapsed
           .financial-parent-button
@@ -749,15 +792,10 @@ function Sidebar() {
                   <button
                     type="button"
                     className={`financial-submenu-button ${
-                      isFinancialPage &&
-                      financialTab === "revenue"
-                        ? "active"
-                        : ""
+                      isRevenuePage ? "active" : ""
                     }`}
                     onClick={() =>
-                      handleFinancialNavigation(
-                        "revenue"
-                      )
+                      handleFinancialNavigation("revenue")
                     }
                   >
                     <FaArrowTrendUp />
@@ -768,15 +806,10 @@ function Sidebar() {
                   <button
                     type="button"
                     className={`financial-submenu-button ${
-                      isFinancialPage &&
-                      financialTab === "expenses"
-                        ? "active"
-                        : ""
+                      isExpensesPage ? "active" : ""
                     }`}
                     onClick={() =>
-                      handleFinancialNavigation(
-                        "expenses"
-                      )
+                      handleFinancialNavigation("expenses")
                     }
                   >
                     <FaArrowTrendDown />

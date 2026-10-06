@@ -26,130 +26,273 @@ import AuditLog from "./pages/AuditLog";
 
 import Settings from "./pages/Settings";
 import POS from "./pages/POS";
-import Ecommerce from "./pages/Ecommerce";
+
 import Cart from "./pages/Cart";
 import Orders from "./pages/Orders";
+import Footer from "./pages/Footer";
+import Home from "./pages/Home";
+import Products from "./pages/Products";
+
 import "./App.css";
+
 
 function App() {
   return (
     <BrowserRouter>
+
       <Routes>
-        {/* LOGIN */}
-        <Route path="/" element={<Login />} />
+
+        {/* =====================================
+            LOGIN
+        ===================================== */}
+
+        <Route
+          path="/"
+          element={<Login />}
+        />
+
         <Route
           path="/forgot-password"
           element={<ForgotPassword />}
         />
 
-        {/* DASHBOARD */}
+
+        {/* =====================================
+            DASHBOARD
+        ===================================== */}
+
         <Route
           path="/dashboard"
           element={<AdminDashboard />}
         />
 
-        {/* OWNERS */}
+
+        {/* =====================================
+            OWNERS
+        ===================================== */}
+
         <Route
           path="/owners"
           element={<Owners />}
         />
+
         <Route
           path="/owners/:ownerId"
           element={<OwnerProfile />}
         />
 
-        {/* PETS */}
+
+        {/* =====================================
+            PETS
+        ===================================== */}
+
         <Route
           path="/pets"
           element={<Pets />}
         />
+
         <Route
           path="/pets/:petId"
           element={<PetProfile />}
         />
 
-        {/* APPOINTMENTS */}
+
+        {/* =====================================
+            APPOINTMENTS
+        ===================================== */}
+
         <Route
           path="/appointments"
           element={<Appointments />}
         />
 
-        {/* MEDICAL RECORDS */}
+
+        {/* =====================================
+            MEDICAL RECORDS
+        ===================================== */}
+
         <Route
           path="/medical-records"
           element={<MedicalRecords />}
         />
 
-        {/* VACCINATIONS */}
+
+        {/* =====================================
+            VACCINATIONS
+        ===================================== */}
+
         <Route
           path="/vaccinations"
           element={<Vaccinations />}
         />
 
-        {/* REMINDERS */}
+
+        {/* =====================================
+            REMINDERS
+        ===================================== */}
+
         <Route
           path="/reminders"
           element={<Reminders />}
         />
 
-        {/* MEDICATIONS */}
+
+        {/* =====================================
+            MEDICATIONS
+        ===================================== */}
+
         <Route
           path="/medications"
           element={<Medications />}
         />
 
-        {/* PRESCRIPTIONS */}
+
+        {/* =====================================
+            PRESCRIPTIONS
+        ===================================== */}
+
         <Route
           path="/prescriptions"
           element={<Prescriptions />}
         />
 
-        {/* INVENTORY */}
+
+        {/* =====================================
+            INVENTORY
+        ===================================== */}
+
         <Route
           path="/inventory"
           element={<Inventory />}
         />
 
-        {/* BILLING */}
+
+        {/* =====================================
+            BILLING
+        ===================================== */}
+
         <Route
           path="/billing"
           element={<Billing />}
         />
 
-        {/* FINANCIAL */}
+
+        {/* =====================================
+            FINANCIAL
+        ===================================== */}
+
         <Route
           path="/financial"
           element={<Financial />}
         />
 
-        {/* REPORTS */}
+
+        {/* =====================================
+            REPORTS
+        ===================================== */}
+
         <Route
           path="/reports"
           element={<Reports />}
         />
 
-        {/* USERS */}
+
+        {/* =====================================
+            USERS
+        ===================================== */}
+
         <Route
           path="/users"
           element={<Users />}
         />
 
-        {/* AUDIT LOG */}
+
+        {/* =====================================
+            AUDIT LOG
+        ===================================== */}
+
         <Route
           path="/audit-log"
           element={<AuditLog />}
         />
 
-        {/* SETTINGS */}
+
+        {/* =====================================
+            SETTINGS
+        ===================================== */}
+
         <Route
           path="/settings"
           element={<Settings />}
         />
-        <Route path="/pos" element={<POS />} />
-        <Route path="/store" element={<Ecommerce />} />
-<Route path="/cart" element={<Cart />} />
-<Route path="/orders" element={<Orders />} />
+
+
+        {/* =====================================
+            POS
+        ===================================== */}
+
+        <Route
+          path="/pos"
+          element={<POS />}
+        />
+
+
+        {/* =====================================
+            STORE HOME
+        ===================================== */}
+
+        <Route
+          path="/store"
+          element={
+            <>
+              <Home />
+              <Footer />
+            </>
+          }
+        />
+
+
+        {/* =====================================
+            ALL PRODUCTS
+        ===================================== */}
+
+        <Route
+          path="/products"
+          element={
+            <>
+              <Products />
+              <Footer />
+            </>
+          }
+        />
+
+
+        {/* =====================================
+            CART
+        ===================================== */}
+
+        <Route
+          path="/cart"
+          element={
+            <>
+              <Cart />
+              <Footer />
+            </>
+          }
+        />
+
+
+        {/* =====================================
+            ORDERS
+        ===================================== */}
+
+        <Route
+          path="/orders"
+          element={<Orders />}
+        />
+
       </Routes>
+
     </BrowserRouter>
   );
 }

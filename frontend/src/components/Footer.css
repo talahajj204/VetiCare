@@ -1,0 +1,361 @@
+/* =========================================
+   STORE FOOTER
+   VET CLINIC TEAL / TURQUOISE THEME
+========================================= */
+
+.store-footer {
+  width: 100%;
+  margin-top: 80px;
+
+  /* VET CLINIC COLORS */
+  --footer-color: #1aa6a6;
+  --footer-dark: #11797b;
+  --footer-light: #e8f7f7;
+  --footer-text: #ffffff;
+  --footer-muted: rgba(255, 255, 255, 0.82);
+
+  position: relative;
+}
+
+/* =========================================
+   WAVE
+========================================= */
+
+.footer-wave {
+  width: 100%;
+  height: 110px;
+
+  overflow: hidden;
+
+  margin-bottom: -2px;
+}
+
+.footer-wave svg {
+  display: block;
+
+  width: 100%;
+  height: 100%;
+}
+
+.footer-wave-line {
+  fill: none;
+
+  stroke: var(--footer-color);
+  stroke-width: 2;
+
+  opacity: 0.35;
+}
+
+.footer-wave-line-one {
+  opacity: 0.2;
+}
+
+.footer-wave-line-two {
+  opacity: 0.45;
+}
+
+.footer-wave-fill {
+  fill: var(--footer-color);
+}
+
+/* =========================================
+   MAIN
+========================================= */
+
+.footer-main {
+  background: var(--footer-color);
+
+  color: var(--footer-text);
+
+  padding: 25px 0 55px;
+}
+
+.footer-container {
+  width: min(1180px, calc(100% - 48px));
+
+  margin: 0 auto;
+
+  display: grid;
+
+  grid-template-columns:
+    minmax(260px, 1.7fr)
+    1fr
+    1.2fr
+    1fr;
+
+  gap: 55px;
+}
+
+/* =========================================
+   BRAND
+========================================= */
+
+.footer-brand {
+  min-width: 0;
+}
+
+/* Dynamic banner uploaded from Settings */
+
+.footer-banner {
+  width: 100%;
+  max-width: 270px;
+
+  height: 100px;
+
+  margin-bottom: 20px;
+
+  overflow: hidden;
+
+  border-radius: 12px;
+
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.footer-banner img {
+  width: 100%;
+  height: 100%;
+
+  display: block;
+
+  object-fit: contain;
+  object-position: left center;
+}
+
+.footer-brand h2 {
+  margin: 0 0 10px;
+
+  font-size: 25px;
+  font-weight: 700;
+
+  color: #ffffff;
+}
+
+.footer-brand p {
+  max-width: 320px;
+
+  margin: 0;
+
+  color: var(--footer-muted);
+
+  line-height: 1.7;
+
+  font-size: 14px;
+}
+
+/* =========================================
+   COLUMNS
+========================================= */
+
+.footer-column {
+  display: flex;
+  flex-direction: column;
+
+  align-items: flex-start;
+
+  gap: 12px;
+}
+
+.footer-column h3 {
+  margin: 0 0 8px;
+
+  color: #ffffff;
+
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.footer-column a {
+  color: var(--footer-muted);
+
+  text-decoration: none;
+
+  font-size: 14px;
+
+  transition:
+    color 0.2s ease,
+    transform 0.2s ease;
+}
+
+.footer-column a:hover {
+  color: #ffffff;
+
+  transform: translateX(3px);
+}
+
+/* =========================================
+   CONTACT
+========================================= */
+
+.footer-contact-link {
+  display: flex;
+  align-items: center;
+
+  gap: 10px;
+
+  min-width: 0;
+}
+
+.footer-contact-link svg {
+  flex-shrink: 0;
+
+  font-size: 15px;
+
+  color: #ffffff;
+}
+
+.footer-contact-link span {
+  overflow-wrap: anywhere;
+}
+
+.footer-address {
+  color: var(--footer-muted);
+
+  font-size: 14px;
+
+  line-height: 1.5;
+}
+
+/* =========================================
+   BOTTOM BAR
+========================================= */
+
+.footer-bottom {
+  background: var(--footer-dark);
+
+  color: rgba(255, 255, 255, 0.85);
+
+  padding: 18px 0;
+}
+
+.footer-bottom-container {
+  width: min(1180px, calc(100% - 48px));
+
+  margin: 0 auto;
+
+  position: relative;
+
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+
+  min-height: 24px;
+}
+
+.footer-bottom p {
+  margin: 0;
+
+  font-size: 13px;
+}
+
+/* =========================================
+   POWERED BY DIRAYA - CENTER
+========================================= */
+
+.diraya-link {
+  position: absolute;
+
+  left: 50%;
+  top: 50%;
+
+  transform: translate(-50%, -50%);
+
+  color: #ffffff;
+
+  text-decoration: none;
+
+  font-size: 13px;
+
+  white-space: nowrap;
+
+  transition: opacity 0.2s ease;
+}
+
+.diraya-link:hover {
+  opacity: 0.75;
+}
+
+.diraya-link strong {
+  color: #ffffff;
+
+  font-weight: 700;
+}
+
+/* =========================================
+   TABLET
+========================================= */
+
+@media (max-width: 950px) {
+  .footer-container {
+    grid-template-columns: 1.5fr 1fr;
+
+    gap: 45px;
+  }
+}
+
+/* =========================================
+   MOBILE
+========================================= */
+
+@media (max-width: 600px) {
+  .store-footer {
+    margin-top: 55px;
+  }
+
+  .footer-wave {
+    height: 70px;
+  }
+
+  .footer-main {
+    padding: 20px 0 40px;
+  }
+
+  .footer-container {
+    width: min(100% - 32px, 1180px);
+
+    grid-template-columns: 1fr;
+
+    gap: 35px;
+  }
+
+  .footer-banner {
+    max-width: 240px;
+
+    height: 90px;
+  }
+
+  .footer-bottom {
+    padding: 16px 0;
+  }
+
+  .footer-bottom-container {
+    width: min(100% - 32px, 1180px);
+
+    display: flex;
+    flex-direction: column;
+
+    align-items: center;
+    justify-content: center;
+
+    gap: 8px;
+
+    text-align: center;
+
+    min-height: auto;
+  }
+
+  .footer-bottom p {
+    margin: 0;
+
+    text-align: center;
+  }
+
+  .diraya-link {
+    position: static;
+
+    transform: none;
+
+    text-align: center;
+  }
+}

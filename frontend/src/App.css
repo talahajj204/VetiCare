@@ -20556,3 +20556,263 @@ html body #root
     justify-content: flex-start !important;
   }
 }
+
+/* =====================================================
+   FINANCIAL
+===================================================== */
+
+.financial-sidebar-group {
+  width: 100%;
+}
+
+/* Financial main button */
+.financial-parent-button {
+  width: 100%;
+  min-height: 52px;
+
+  padding: 12px 16px;
+
+  margin: 4px 0;
+
+  border: none;
+  outline: none;
+  border-radius: 9px;
+
+  background: transparent;
+  color: inherit;
+
+  font-family: inherit;
+  font-size: inherit;
+  font-weight: inherit;
+
+  cursor: pointer;
+
+  display: flex;
+  align-items: center;
+
+  gap: 12px;
+
+  box-sizing: border-box;
+
+  text-align: left;
+
+  transition:
+    background 0.18s ease,
+    color 0.18s ease;
+}
+
+.financial-parent-button:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.financial-parent-button.active {
+  background: #2f7f7b;
+  color: #ffffff;
+}
+
+.financial-parent-button .sidebar-icon {
+  width: 18px;
+  min-width: 18px;
+  font-size: 18px;
+}
+
+.financial-parent-arrow {
+  margin-left: auto;
+
+  width: 14px;
+  min-width: 14px;
+
+  font-size: 11px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+
+/* =====================================================
+   REVENUE + EXPENSES
+===================================================== */
+
+.financial-submenu {
+  width: 100%;
+
+  padding: 3px 0 5px 0;
+
+  display: flex;
+  flex-direction: column;
+
+  gap: 3px;
+
+  box-sizing: border-box;
+}
+
+.financial-submenu-button {
+  width: calc(100% - 30px);
+  min-height: 46px;
+
+  margin: 2px 0 2px 30px;
+
+  padding: 10px 16px;
+
+  border: none;
+  outline: none;
+  border-radius: 9px;
+
+  background: transparent;
+  color: inherit;
+
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 500;
+
+  cursor: pointer;
+
+  display: flex;
+  align-items: center;
+
+  gap: 12px;
+
+  box-sizing: border-box;
+
+  text-align: left;
+
+  transition:
+    background 0.18s ease,
+    color 0.18s ease;
+}
+
+.financial-submenu-button svg {
+  width: 16px;
+  min-width: 16px;
+  font-size: 16px;
+}
+
+.financial-submenu-button:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.financial-submenu-button.active {
+  background: #2f7f7b;
+  color: #ffffff;
+  font-weight: 600;
+}
+/* =========================================
+   STORE BANNER
+========================================= */
+
+.store-banner-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.store-banner-upload {
+  position: relative;
+  width: 100%;
+  min-height: 220px;
+
+  border: 2px dashed #d8d8d8;
+  border-radius: 16px;
+
+  overflow: hidden;
+  cursor: pointer;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  background: #fafafa;
+
+  transition: 0.2s ease;
+}
+
+.store-banner-upload:hover {
+  border-color: #999;
+  background: #f7f7f7;
+}
+
+.store-banner-upload.dragging {
+  border-color: #333;
+  background: #f3f3f3;
+}
+
+.store-banner-empty {
+  min-height: 220px;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+
+  gap: 8px;
+
+  text-align: center;
+  padding: 25px;
+}
+
+.store-banner-upload-icon {
+  font-size: 38px;
+  margin-bottom: 5px;
+}
+
+.store-banner-empty span {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.store-banner-empty small {
+  font-size: 12px;
+  opacity: 0.65;
+}
+
+.store-banner-preview {
+  display: block;
+
+  width: 100%;
+  height: 220px;
+
+  object-fit: contain;
+
+  background: #f8f8f8;
+}
+
+.store-banner-remove {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+
+  width: 38px;
+  height: 38px;
+
+  border: none;
+  border-radius: 10px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  cursor: pointer;
+
+  background: #fff;
+  color: #d33;
+
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.14);
+
+  z-index: 5;
+}
+
+.store-banner-remove:hover {
+  transform: scale(1.05);
+}
+
+.form-field label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.form-field textarea {
+  width: 100%;
+  resize: vertical;
+  min-height: 100px;
+}
