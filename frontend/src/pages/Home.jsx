@@ -3,115 +3,7 @@ import { useNavigate } from "react-router-dom";
 
 import StoreHeader from "./StoreHeader";
 
-import {
-  FaPaw,
-  FaBone,
-  FaPumpSoap,
-  FaCapsules,
-  FaDog,
-  FaHeart,
-  FaBasketShopping,
-  FaTooth,
-  FaBed,
-  FaGift,
-} from "react-icons/fa6";
-
-
-/* =========================================================
-   CATEGORIES
-========================================================= */
-
-const CATEGORIES = [
-  {
-    name: "Food",
-    icon: <FaBone />,
-  },
-  {
-    name: "Care",
-    icon: <FaPaw />,
-  },
-  {
-    name: "Hygiene",
-    icon: <FaPumpSoap />,
-  },
-  {
-    name: "Accessories",
-    icon: <FaDog />,
-  },
-  {
-    name: "Supplements",
-    icon: <FaCapsules />,
-  },
-  {
-    name: "Grooming",
-    icon: <FaPumpSoap />,
-  },
-  {
-    name: "Toys",
-    icon: <FaGift />,
-  },
-  {
-    name: "Treats",
-    icon: <FaBone />,
-  },
-  {
-    name: "Beds",
-    icon: <FaBed />,
-  },
-  {
-    name: "Bowls",
-    icon: <FaBasketShopping />,
-  },
-  {
-    name: "Dental Care",
-    icon: <FaTooth />,
-  },
-  {
-    name: "Pet Essentials",
-    icon: <FaPaw />,
-  },
-];
-
-
-/* =========================================================
-   HOME PRODUCTS
-========================================================= */
-
-const HOME_PRODUCTS = [
-  {
-    id: 1,
-    name: "Royal Canin Adult Dog",
-    category: "Food",
-    price: 28.5,
-    stock: 14,
-    image: "",
-  },
-  {
-    id: 2,
-    name: "Royal Canin Kitten",
-    category: "Food",
-    price: 24,
-    stock: 8,
-    image: "",
-  },
-  {
-    id: 3,
-    name: "Dental Care Chews",
-    category: "Care",
-    price: 12.5,
-    stock: 21,
-    image: "",
-  },
-  {
-    id: 4,
-    name: "Pet Shampoo",
-    category: "Grooming",
-    price: 9.75,
-    stock: 12,
-    image: "",
-  },
-];
-
+import { FaPaw } from "react-icons/fa6";
 
 /* =========================================================
    HOME
@@ -119,6 +11,10 @@ const HOME_PRODUCTS = [
 
 function Home() {
   const navigate = useNavigate();
+
+  /* =========================================================
+     STORE SETTINGS
+  ========================================================= */
 
   const [storeSettings, setStoreSettings] = useState({
     storeName: "",
@@ -129,6 +25,17 @@ function Home() {
     homeBannerButtonText: "",
   });
 
+  /* =========================================================
+     DYNAMIC CATEGORIES
+  ========================================================= */
+
+  const [categories, setCategories] = useState([]);
+
+  /* =========================================================
+     DYNAMIC PRODUCTS
+  ========================================================= */
+
+  const [products, setProducts] = useState([]);
 
   /* =========================================================
      LOAD SETTINGS
@@ -186,6 +93,191 @@ function Home() {
     };
   }, []);
 
+  /* =========================================================
+     LOAD CATEGORIES FROM CATEGORIES.JSX
+  ========================================================= */
+
+  useEffect(() => {
+    const sortCategories = (list) => {
+      return [...list].sort((a, b) => {
+        const orderA = Number(a.sortOrder) || 0;
+        const orderB = Number(b.sortOrder) || 0;
+
+        if (orderA !== orderB) {
+          return orderA - orderB;
+        }
+
+        return (a.title || "").localeCompare(
+          b.title || ""
+        );
+      });
+    };
+
+    const loadCategories = () => {
+      try {
+        const saved = localStorage.getItem(
+          "vetClinicCategories"
+        );
+
+        if (!saved) {
+          setCategories([]);
+          return;
+        }
+
+        const parsed = JSON.parse(saved);
+
+        if (!Array.isArray(parsed)) {
+          setCategories([]);
+          return;
+        }
+
+        setCategories(sortCategories(parsed));
+      } catch (error) {
+        console.error(
+          "Could not load store categories:",
+          error
+        );
+
+        setCategories([]);
+      }
+    };
+
+    const handleCategoriesUpdated = (event) => {
+      if (Array.isArray(event.detail)) {
+        setCategories(
+          sortCategories(event.detail)
+        );
+
+        return;
+      }
+
+      loadCategories();
+    };
+
+    loadCategories();
+
+    window.addEventListener(
+      "vetClinicCategoriesUpdated",
+      handleCategoriesUpdated
+    );
+
+    window.addEventListener(
+      "storage",
+      loadCategories
+    );
+
+    return () => {
+      window.removeEventListener(
+        "vetClinicCategoriesUpdated",
+        handleCategoriesUpdated
+      );
+
+      window.removeEventListener(
+        "storage",
+        loadCategories
+      );
+    };
+  }, []);
+
+  /* =========================================================
+     LOAD PRODUCTS FROM INVENTORY.JSX
+  ========================================================= */
+
+  useEffect(() => {
+    const prepareProducts = (list) => {
+      if (!Array.isArray(list)) {
+        return [];
+      }
+
+      /*
+        Only products enabled for the public Store.
+
+        Featured products appear first.
+
+        If fewer than 4 products are marked Featured,
+        the remaining Store products fill the empty spaces.
+      */
+
+      const storeProducts = list.filter(
+        (product) => product.showOnStore === true
+      );
+
+      const featuredProducts = storeProducts.filter(
+        (product) => product.featured === true
+      );
+
+      const otherProducts = storeProducts.filter(
+        (product) => product.featured !== true
+      );
+
+      return [
+        ...featuredProducts,
+        ...otherProducts,
+      ].slice(0, 4);
+    };
+
+    const loadProducts = () => {
+      try {
+        const saved = localStorage.getItem(
+          "vetClinicProducts"
+        );
+
+        if (!saved) {
+          setProducts([]);
+          return;
+        }
+
+        const parsed = JSON.parse(saved);
+
+        setProducts(
+          prepareProducts(parsed)
+        );
+      } catch (error) {
+        console.error(
+          "Could not load store products:",
+          error
+        );
+
+        setProducts([]);
+      }
+    };
+
+    const handleProductsUpdated = (event) => {
+      if (Array.isArray(event.detail)) {
+        setProducts(
+          prepareProducts(event.detail)
+        );
+
+        return;
+      }
+
+      loadProducts();
+    };
+
+    loadProducts();
+
+    window.addEventListener(
+      "vetClinicProductsUpdated",
+      handleProductsUpdated
+    );
+
+    window.addEventListener(
+      "storage",
+      loadProducts
+    );
+
+    return () => {
+      window.removeEventListener(
+        "vetClinicProductsUpdated",
+        handleProductsUpdated
+      );
+
+      window.removeEventListener(
+        "storage",
+        loadProducts
+      );
+    };
+  }, []);
 
   /* =========================================================
      NAVIGATION
@@ -197,10 +289,33 @@ function Home() {
 
   const goToCategory = (category) => {
     navigate(
-      `/products?category=${encodeURIComponent(category)}`
+      `/products?category=${encodeURIComponent(
+        category
+      )}`
     );
   };
 
+  const goToProduct = (product) => {
+    navigate(`/products/${product.id}`);
+  };
+
+  /* =========================================================
+     PRICE
+  ========================================================= */
+
+  const formatPrice = (price) => {
+    const number = Number(price);
+
+    if (Number.isNaN(number)) {
+      return "$0.00";
+    }
+
+    return `$${number.toFixed(2)}`;
+  };
+
+  /* =========================================================
+     RETURN
+  ========================================================= */
 
   return (
     <div className="home-page">
@@ -211,9 +326,7 @@ function Home() {
 
       <StoreHeader />
 
-
       <style>{`
-
         * {
           box-sizing: border-box;
         }
@@ -221,12 +334,17 @@ function Home() {
         .home-page {
           width: 100%;
           min-height: 100vh;
+
           background: #f8fbfa;
           color: #263b4f;
-          font-family: Arial, Helvetica, sans-serif;
+
+          font-family:
+            Arial,
+            Helvetica,
+            sans-serif;
+
           overflow: hidden;
         }
-
 
         /* =====================================================
            HERO
@@ -322,14 +440,16 @@ function Home() {
           font-weight: 800;
         }
 
-        .home-hero.has-image .home-hero-badge {
-          background: rgba(255,255,255,0.15);
+        .home-hero.has-image
+        .home-hero-badge {
+          background:
+            rgba(255, 255, 255, 0.15);
 
           color: white;
 
           border:
             1px solid
-            rgba(255,255,255,0.25);
+            rgba(255, 255, 255, 0.25);
 
           backdrop-filter: blur(8px);
         }
@@ -339,11 +459,12 @@ function Home() {
 
           max-width: 650px;
 
-          font-size: clamp(
-            34px,
-            4vw,
-            58px
-          );
+          font-size:
+            clamp(
+              34px,
+              4vw,
+              58px
+            );
 
           line-height: 1.04;
 
@@ -369,7 +490,13 @@ function Home() {
         }
 
         .home-hero.has-image p {
-          color: rgba(255,255,255,0.90);
+          color:
+            rgba(
+              255,
+              255,
+              255,
+              0.90
+            );
         }
 
         .home-shop-button {
@@ -401,15 +528,16 @@ function Home() {
         .home-shop-button:hover {
           background: #11797b;
 
-          transform: translateY(-2px);
+          transform:
+            translateY(-2px);
         }
 
-        .home-hero.has-image .home-shop-button {
+        .home-hero.has-image
+        .home-shop-button {
           background: white;
 
           color: #11797b;
         }
-
 
         /* =====================================================
            MAIN CONTENT
@@ -422,7 +550,6 @@ function Home() {
 
           margin: 0 auto;
         }
-
 
         /* =====================================================
            SECTION HEADER
@@ -451,7 +578,6 @@ function Home() {
 
           font-size: 13px;
         }
-
 
         /* =====================================================
            CATEGORIES
@@ -491,90 +617,183 @@ function Home() {
 
         @keyframes categoryScroll {
           from {
-            transform: translateX(0);
+            transform:
+              translateX(0);
           }
 
           to {
-            transform: translateX(-50%);
+            transform:
+              translateX(-50%);
           }
         }
-
         .home-category-card {
-          flex: 0 0 210px;
-
-          height: 128px;
-
-          border:
-            1px solid
-            #dcebea;
-
-          border-radius: 16px;
-
+          width: 150px;
+          min-width: 150px;
+          min-height: 150px;
+        
+          padding: 0;
+        
+          border: 1px solid #dfeceb;
+          border-radius: 17px;
+        
           background: white;
-
+        
           display: flex;
-
           flex-direction: column;
-
+        
           align-items: center;
-
-          justify-content: center;
-
-          gap: 12px;
-
+          justify-content: flex-start;
+        
+          gap: 0;
+        
+          text-align: center;
+        
           cursor: pointer;
-
-          transition:
-            transform 0.2s ease,
-            border-color 0.2s ease,
-            box-shadow 0.2s ease;
+        
+          transition: 0.25s ease;
+        
+          overflow: hidden;
+        
+          box-shadow:
+            0 7px 20px
+            rgba(38, 59, 79, 0.04);
         }
 
         .home-category-card:hover {
-          transform: translateY(-4px);
+          transform:
+            translateY(-5px);
 
-          border-color: #1aa6a6;
+          border-color: #9dd9d5;
 
           box-shadow:
-            0 10px 25px
-            rgba(17,121,123,0.10);
+            0 13px 27px
+            rgba(
+              17,
+              121,
+              123,
+              0.11
+            );
         }
 
-        .home-category-icon {
-          width: 50px;
+        /* =====================================================
+           DYNAMIC CATEGORY IMAGE
+        ===================================================== */
+        .home-category-image-wrapper {
+          width: 100%;
+          height: 105px;
+        
+          border-radius: 0;
+        
+          overflow: hidden;
+        
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        
+          background: #eef9f8;
+        
+          border: none;
+        }
 
-          height: 50px;
+        .home-category-image {
+          width: 100%;
+          height: 100%;
 
-          border-radius: 50%;
+          object-fit: cover;
+
+          display: block;
+        }
+
+        .home-category-no-image {
+          width: 100%;
+          height: 100%;
 
           display: flex;
-
           align-items: center;
-
           justify-content: center;
 
-          background: #e8f7f7;
+          color: #55b8b4;
 
-          color: #1aa6a6;
-
-          font-size: 19px;
+          font-size: 29px;
         }
 
         .home-category-name {
-          color: #34455a;
+          width: 100%;
+        
+          padding: 12px 8px;
+        
+          color: #34495e;
+        
+          font-size: 13px;
+          font-weight: 800;
+          line-height: 1.3;
+        }
+
+        /* =====================================================
+           EMPTY CATEGORIES
+        ===================================================== */
+
+        .home-categories-empty {
+          width: 100%;
+
+          padding: 30px;
+
+          border:
+            1px dashed
+            #cfe1df;
+
+          border-radius: 15px;
+
+          background: white;
+
+          color: #8290a3;
 
           font-size: 13px;
 
-          font-weight: 800;
+          text-align: center;
         }
-
 
         /* =====================================================
            PRODUCTS
         ===================================================== */
 
         .home-products-section {
-          padding-bottom: 60px;
+          margin-bottom: 55px;
+        }
+
+        .home-products-header {
+          display: flex;
+
+          align-items: flex-end;
+          justify-content: space-between;
+
+          gap: 20px;
+
+          margin-bottom: 20px;
+        }
+
+        .home-view-all-button {
+          width: fit-content;
+
+          min-width: 0;
+
+          padding: 0;
+
+          border: none;
+
+          background: transparent;
+
+          color: #159f9f;
+
+          font-size: 13px;
+
+          font-weight: 800;
+
+          cursor: pointer;
+        }
+
+        .home-view-all-button:hover {
+          color: #11797b;
         }
 
         .home-products-grid {
@@ -583,7 +802,7 @@ function Home() {
           grid-template-columns:
             repeat(4, 1fr);
 
-          gap: 22px;
+          gap: 18px;
         }
 
         .home-product-card {
@@ -591,124 +810,111 @@ function Home() {
 
           border:
             1px solid
-            #dcebea;
+            #e0eceb;
 
           border-radius: 17px;
 
           background: white;
 
-          transition:
-            transform 0.2s ease,
-            box-shadow 0.2s ease;
-        }
+          transition: 0.25s ease;
 
-        .home-product-card:hover {
-          transform: translateY(-4px);
+          cursor: pointer;
 
           box-shadow:
-            0 12px 30px
-            rgba(17,121,123,0.10);
-        }
-
-        .home-product-image {
-          height: 215px;
-
-          position: relative;
-
-          display: flex;
-
-          align-items: center;
-
-          justify-content: center;
-
-          background:
-            linear-gradient(
-              135deg,
-              #f1fbfa,
-              #e6f7f6
+            0 7px 22px
+            rgba(
+              38,
+              59,
+              79,
+              0.04
             );
         }
 
-        .home-product-image img {
+        .home-product-card:hover {
+          transform:
+            translateY(-4px);
+
+          box-shadow:
+            0 14px 30px
+            rgba(
+              38,
+              59,
+              79,
+              0.09
+            );
+        }
+
+        .home-product-image-area {
           width: 100%;
 
+          height: 190px;
+
+          display: flex;
+          align-items: center;
+          justify-content: center;
+
+          overflow: hidden;
+
+          background:
+            linear-gradient(
+              145deg,
+              #f5fbfa,
+              #eaf7f6
+            );
+        }
+
+        .home-product-image {
+          width: 100%;
           height: 100%;
 
           object-fit: cover;
+
+          display: block;
         }
 
         .home-product-placeholder {
-          color: #75d2ce;
+          color: #7bc9c5;
 
-          font-size: 48px;
+          font-size: 47px;
         }
 
-        .home-favorite {
-          width: 38px;
-
-          height: 38px;
-
-          position: absolute;
-
-          top: 13px;
-
-          right: 13px;
-
-          border: none;
-
-          border-radius: 50%;
-
-          display: flex;
-
-          align-items: center;
-
-          justify-content: center;
-
-          background: white;
-
-          color: #b5c0ce;
-
-          box-shadow:
-            0 4px 12px
-            rgba(0,0,0,0.07);
-
-          cursor: pointer;
+        .home-product-content {
+          padding: 16px;
         }
 
-        .home-product-info {
-          padding: 20px;
+        .home-product-category {
+          margin-bottom: 6px;
+
+          color: #159f9f;
+
+          font-size: 11px;
+
+          font-weight: 800;
+
+          text-transform: uppercase;
+
+          letter-spacing: 0.5px;
         }
 
-        .home-product-info h3 {
-          min-height: 38px;
+        .home-product-name {
+          margin: 0 0 11px;
 
-          margin: 0 0 10px;
-
-          color: #34455a;
+          color: #263b4f;
 
           font-size: 15px;
 
           font-weight: 800;
-        }
 
-        .home-product-category {
-          display: block;
-
-          margin-bottom: 14px;
-
-          color: #91a0b3;
-
-          font-size: 12px;
+          line-height: 1.35;
         }
 
         .home-product-bottom {
           display: flex;
 
           align-items: center;
-
           justify-content: space-between;
 
-          gap: 12px;
+          gap: 10px;
         }
 
         .home-product-price {
@@ -716,76 +922,68 @@ function Home() {
 
           font-size: 16px;
 
-          font-weight: 900;
+          font-weight: 800;
         }
 
         .home-product-stock {
-          padding: 5px 9px;
+          color: #8290a3;
 
-          border-radius: 20px;
-
-          background: #eaf9f3;
-
-          color: #21865d;
-
-          font-size: 10px;
-
-          font-weight: 800;
+          font-size: 11px;
         }
-
 
         /* =====================================================
-           VIEW ALL
+           EMPTY PRODUCTS
         ===================================================== */
 
-        .home-view-all-wrapper {
-          margin-top: 30px;
+        .home-products-empty {
+          grid-column: 1 / -1;
 
-          display: flex;
+          width: 100%;
 
-          justify-content: center;
-        }
+          padding: 45px 25px;
 
-        .home-view-all {
-          min-width: 170px;
+          border:
+            1px dashed
+            #cfe1df;
 
-          height: 44px;
+          border-radius: 17px;
 
-          padding: 0 22px;
+          background: white;
 
-          border: none;
+          color: #8290a3;
 
-          border-radius: 10px;
-
-          background: #1aa6a6;
-
-          color: white;
+          text-align: center;
 
           font-size: 13px;
-
-          font-weight: 800;
-
-          cursor: pointer;
-
-          transition: 0.2s ease;
         }
 
-        .home-view-all:hover {
-          background: #11797b;
+        .home-products-empty-icon {
+          display: flex;
+          align-items: center;
+          justify-content: center;
 
-          transform: translateY(-2px);
+          margin-bottom: 12px;
 
-          box-shadow:
-            0 8px 18px
-            rgba(17,121,123,0.18);
+          color: #7bc9c5;
+
+          font-size: 36px;
         }
 
+        .home-products-empty strong {
+          display: block;
+
+          margin-bottom: 5px;
+
+          color: #34495e;
+
+          font-size: 15px;
+        }
 
         /* =====================================================
            RESPONSIVE
         ===================================================== */
 
-        @media (max-width: 1000px) {
+        @media (max-width: 1050px) {
           .home-products-grid {
             grid-template-columns:
               repeat(2, 1fr);
@@ -796,43 +994,50 @@ function Home() {
           }
         }
 
-        @media (max-width: 600px) {
+        @media (max-width: 700px) {
           .home-hero {
-            width: 92%;
+            width:
+              calc(100% - 28px);
 
-            min-height: 380px;
+            min-height: 370px;
 
-            padding: 35px 25px;
+            margin-top: 18px;
+
+            padding: 38px 25px;
           }
 
           .home-hero-content {
             width: 100%;
           }
 
-          .home-hero h1 {
-            font-size: 35px;
-          }
-
           .home-products-grid {
             grid-template-columns: 1fr;
           }
 
-          .home-category-card {
-            flex-basis: 165px;
+          .home-products-header {
+            align-items: flex-start;
+            flex-direction: column;
+          }
 
-            height: 115px;
+          .home-category-card {
+            width: 135px;
+            min-width: 135px;
+
+            min-height: 140px;
+          }
+
+          .home-category-image-wrapper {
+            width: 72px;
+            height: 72px;
           }
         }
-
       `}</style>
-
 
       {/* =====================================================
           HERO
       ===================================================== */}
 
       <section
-        id="store-about"
         className={`home-hero ${
           storeSettings.homeBanner
             ? "has-image"
@@ -841,9 +1046,10 @@ function Home() {
         style={
           storeSettings.homeBanner
             ? {
-                backgroundImage: `url("${storeSettings.homeBanner}")`,
+                backgroundImage:
+                  `url(${storeSettings.homeBanner})`,
               }
-            : {}
+            : undefined
         }
       >
         {storeSettings.homeBanner && (
@@ -851,186 +1057,216 @@ function Home() {
         )}
 
         <div className="home-hero-content">
+          <div className="home-hero-badge">
+            <FaPaw />
+            Everything your pet needs
+          </div>
 
-          {storeSettings.storeName && (
-            <div className="home-hero-badge">
-              <FaPaw />
+          <h1>
+            {storeSettings.homeBannerTitle ||
+              "Healthy pets. Happy homes."}
+          </h1>
 
-              {storeSettings.storeName}
-            </div>
-          )}
+          <p>
+            {storeSettings.homeBannerDescription ||
+              storeSettings.storeDescription ||
+              "Discover carefully selected food, care products, accessories, and everyday essentials for your pets."}
+          </p>
 
-          {storeSettings.homeBannerTitle && (
-            <h1>
-              {storeSettings.homeBannerTitle}
-            </h1>
-          )}
-
-          {storeSettings.homeBannerDescription && (
-            <p>
-              {storeSettings.homeBannerDescription}
-            </p>
-          )}
-
-          {storeSettings.homeBannerButtonText && (
-            <button
-              type="button"
-              className="home-shop-button"
-              onClick={goToProducts}
-            >
-              {storeSettings.homeBannerButtonText}
-            </button>
-          )}
-
+          <button
+            type="button"
+            className="home-shop-button"
+            onClick={goToProducts}
+          >
+            {storeSettings.homeBannerButtonText ||
+              "Shop Now"}
+          </button>
         </div>
       </section>
 
-
       {/* =====================================================
-          HOME CONTENT
+          MAIN CONTENT
       ===================================================== */}
 
       <main className="home-container">
 
-        {/* ===================================================
-            CATEGORIES
-        =================================================== */}
+        {/* =====================================================
+            SHOP BY CATEGORY
+        ===================================================== */}
 
         <section className="home-categories-section">
-
           <div className="home-section-header">
             <h2>Shop by Category</h2>
 
             <p>
-              Find the right products for your pet.
+              Find exactly what your pet needs.
             </p>
           </div>
 
-          <div className="home-categories-window">
+          {categories.length > 0 ? (
+            <div className="home-categories-window">
+              <div className="home-categories-track">
 
-            <div className="home-categories-track">
+                {/* FIRST SET */}
 
-              {[...CATEGORIES, ...CATEGORIES].map(
-                (item, index) => (
-                  <div
-                    key={`${item.name}-${index}`}
+                {categories.map((category) => (
+                  <button
+                    type="button"
                     className="home-category-card"
+                    key={`category-first-${category.id}`}
                     onClick={() =>
-                      goToCategory(item.name)
+                      goToCategory(category.title)
                     }
                   >
-                    <div className="home-category-icon">
-                      {item.icon}
+                    <div className="home-category-image-wrapper">
+                      {category.image ? (
+                        <img
+                          src={category.image}
+                          alt={category.title}
+                          className="home-category-image"
+                        />
+                      ) : (
+                        <div className="home-category-no-image">
+                          <FaPaw />
+                        </div>
+                      )}
                     </div>
 
                     <span className="home-category-name">
-                      {item.name}
+                      {category.title}
                     </span>
-                  </div>
-                )
-              )}
+                  </button>
+                ))}
 
-            </div>
+                {/* SECOND SET FOR AUTO SCROLL */}
 
-          </div>
-
-        </section>
-
-
-        {/* ===================================================
-            PRODUCTS
-        =================================================== */}
-
-        <section className="home-products-section">
-
-          <div className="home-section-header">
-            <h2>Our Products</h2>
-
-            <p>
-              Discover some of our pet care products.
-            </p>
-          </div>
-
-          <div className="home-products-grid">
-
-            {HOME_PRODUCTS.map((product) => (
-              <div
-                className="home-product-card"
-                key={product.id}
-              >
-
-                <div className="home-product-image">
-
-                  {product.image ? (
-                    <img
-                      src={product.image}
-                      alt={product.name}
-                    />
-                  ) : (
-                    <FaPaw className="home-product-placeholder" />
-                  )}
-
+                {categories.map((category) => (
                   <button
                     type="button"
-                    className="home-favorite"
-                    aria-label={`Favorite ${product.name}`}
+                    className="home-category-card"
+                    key={`category-second-${category.id}`}
+                    onClick={() =>
+                      goToCategory(category.title)
+                    }
+                    aria-hidden="true"
+                    tabIndex={-1}
                   >
-                    <FaHeart />
+                    <div className="home-category-image-wrapper">
+                      {category.image ? (
+                        <img
+                          src={category.image}
+                          alt=""
+                          className="home-category-image"
+                        />
+                      ) : (
+                        <div className="home-category-no-image">
+                          <FaPaw />
+                        </div>
+                      )}
+                    </div>
+
+                    <span className="home-category-name">
+                      {category.title}
+                    </span>
                   </button>
-
-                </div>
-
-                <div className="home-product-info">
-
-                  <h3>
-                    {product.name}
-                  </h3>
-
-                  <span className="home-product-category">
-                    {product.category}
-                  </span>
-
-                  <div className="home-product-bottom">
-
-                    <span className="home-product-price">
-                      ${product.price.toFixed(2)}
-                    </span>
-
-                    <span className="home-product-stock">
-                      {product.stock} in stock
-                    </span>
-
-                  </div>
-
-                </div>
-
+                ))}
               </div>
-            ))}
+            </div>
+          ) : (
+            <div className="home-categories-empty">
+              No categories are available yet.
+            </div>
+          )}
+        </section>
 
-          </div>
+        {/* =====================================================
+            DYNAMIC FEATURED PRODUCTS
+        ===================================================== */}
 
+        <section className="home-products-section">
+          <div className="home-products-header">
+            <div className="home-section-header">
+              <h2>Featured Products</h2>
 
-          <div className="home-view-all-wrapper">
+              <p>
+                Popular products selected for your pets.
+              </p>
+            </div>
 
             <button
               type="button"
-              className="home-view-all"
+              className="home-view-all-button"
               onClick={goToProducts}
             >
-              View All Products →
+              View All →
             </button>
-
           </div>
 
+          <div className="home-products-grid">
+            {products.length > 0 ? (
+              products.map((product) => (
+                <article
+                  className="home-product-card"
+                  key={product.id}
+                  onClick={() =>
+                    goToProduct(product)
+                  }
+                >
+                  <div className="home-product-image-area">
+                    {product.image ? (
+                      <img
+                        src={product.image}
+                        alt={product.name}
+                        className="home-product-image"
+                      />
+                    ) : (
+                      <FaPaw className="home-product-placeholder" />
+                    )}
+                  </div>
+
+                  <div className="home-product-content">
+                    <div className="home-product-category">
+                      {product.category ||
+                        "Uncategorized"}
+                    </div>
+
+                    <h3 className="home-product-name">
+                      {product.name}
+                    </h3>
+
+                    <div className="home-product-bottom">
+                      <span className="home-product-price">
+                        {formatPrice(
+                          product.sellingPrice
+                        )}
+                      </span>
+
+                      <span className="home-product-stock">
+                        {Number(product.quantity) > 0
+                          ? `${product.quantity} in stock`
+                          : "Out of stock"}
+                      </span>
+                    </div>
+                  </div>
+                </article>
+              ))
+            ) : (
+              <div className="home-products-empty">
+                <div className="home-products-empty-icon">
+                  <FaPaw />
+                </div>
+
+                <strong>
+                  No store products yet
+                </strong>
+
+                Products enabled with "Show on Store"
+                from Admin will appear here.
+              </div>
+            )}
+          </div>
         </section>
-
-
-        {/* CONTACT TARGET FOR HEADER */}
-
-        <div id="store-contact-anchor" />
-
       </main>
-
     </div>
   );
 }

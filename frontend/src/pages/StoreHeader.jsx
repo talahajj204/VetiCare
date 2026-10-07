@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+
 import { useNavigate } from "react-router-dom";
 
 import {
@@ -7,10 +8,6 @@ import {
   FaBoxOpen,
   FaChevronDown,
   FaPaw,
-  FaBone,
-  FaPumpSoap,
-  FaCapsules,
-  FaDog,
   FaClipboardList,
   FaSignOutAlt,
   FaCog,
@@ -26,44 +23,141 @@ import {
   setStoreLanguage,
 } from "../translations/storeLanguage";
 
-
 /* =========================================================
-   CATEGORIES
+   DEFAULT CATEGORIES
+   These are used only if localStorage is empty.
+   After that, Categories.jsx controls everything.
 ========================================================= */
 
-const CATEGORY_ITEMS = [
+const DEFAULT_CATEGORIES = [
   {
-    name: "Food",
-    translationKey: "food",
-    icon: <FaBone />,
+    id: 1,
+    title: "Food",
+    description: "",
+    image: null,
+    sortOrder: 1,
   },
   {
-    name: "Care",
-    translationKey: "care",
-    icon: <FaPaw />,
+    id: 2,
+    title: "Care",
+    description: "",
+    image: null,
+    sortOrder: 2,
   },
   {
-    name: "Hygiene",
-    translationKey: "hygiene",
-    icon: <FaPumpSoap />,
+    id: 3,
+    title: "Hygiene",
+    description: "",
+    image: null,
+    sortOrder: 3,
   },
   {
-    name: "Accessories",
-    translationKey: "accessories",
-    icon: <FaDog />,
+    id: 4,
+    title: "Accessories",
+    description: "",
+    image: null,
+    sortOrder: 4,
   },
   {
-    name: "Supplements",
-    translationKey: "supplements",
-    icon: <FaCapsules />,
+    id: 5,
+    title: "Supplements",
+    description: "",
+    image: null,
+    sortOrder: 5,
   },
   {
-    name: "Grooming",
-    translationKey: "grooming",
-    icon: <FaPumpSoap />,
+    id: 6,
+    title: "Grooming",
+    description: "",
+    image: null,
+    sortOrder: 6,
+  },
+  {
+    id: 7,
+    title: "Toys",
+    description: "",
+    image: null,
+    sortOrder: 7,
+  },
+  {
+    id: 8,
+    title: "Treats",
+    description: "",
+    image: null,
+    sortOrder: 8,
+  },
+  {
+    id: 9,
+    title: "Beds",
+    description: "",
+    image: null,
+    sortOrder: 9,
+  },
+  {
+    id: 10,
+    title: "Bowls",
+    description: "",
+    image: null,
+    sortOrder: 10,
+  },
+  {
+    id: 11,
+    title: "Dental Care",
+    description: "",
+    image: null,
+    sortOrder: 11,
+  },
+  {
+    id: 12,
+    title: "Pet Essentials",
+    description: "",
+    image: null,
+    sortOrder: 12,
   },
 ];
 
+/* =========================================================
+   LOAD CATEGORIES
+========================================================= */
+
+const loadStoredCategories = () => {
+  try {
+    const savedCategories =
+      localStorage.getItem(
+        "vetClinicCategories"
+      );
+
+    if (savedCategories) {
+      const parsedCategories =
+        JSON.parse(savedCategories);
+
+      if (
+        Array.isArray(parsedCategories) &&
+        parsedCategories.length > 0
+      ) {
+        return [...parsedCategories].sort(
+          (a, b) =>
+            Number(a.sortOrder || 0) -
+            Number(b.sortOrder || 0)
+        );
+      }
+    }
+
+    localStorage.setItem(
+      "vetClinicCategories",
+      JSON.stringify(DEFAULT_CATEGORIES)
+    );
+
+    return DEFAULT_CATEGORIES;
+  } catch (error) {
+    console.error(
+      "Could not load categories:",
+      error
+    );
+
+    return DEFAULT_CATEGORIES;
+  }
+};
 
 /* =========================================================
    STORE HEADER
@@ -87,6 +181,76 @@ function StoreHeader() {
   const [cartCount, setCartCount] =
     useState(0);
 
+  /*
+    IMPORTANT:
+    Categories are NOT hardcoded anymore.
+
+    They come from:
+
+    Admin
+      → Inventory
+      → Categories
+      → vetClinicCategories
+      → Store Header
+  */
+
+  const [categories, setCategories] =
+    useState(() =>
+      loadStoredCategories()
+    );
+
+  /* =========================================================
+     LOAD CATEGORIES
+  ========================================================= */
+
+  useEffect(() => {
+    const loadCategories = () => {
+      const loadedCategories =
+        loadStoredCategories();
+
+      setCategories(
+        [...loadedCategories].sort(
+          (a, b) =>
+            Number(a.sortOrder || 0) -
+            Number(b.sortOrder || 0)
+        )
+      );
+    };
+
+    loadCategories();
+
+    /*
+      "storage":
+      updates when localStorage changes
+      from another tab/window.
+
+      "vetClinicCategoriesUpdated":
+      updates immediately in the same tab
+      after Add / Edit / Delete.
+    */
+
+    window.addEventListener(
+      "storage",
+      loadCategories
+    );
+
+    window.addEventListener(
+      "vetClinicCategoriesUpdated",
+      loadCategories
+    );
+
+    return () => {
+      window.removeEventListener(
+        "storage",
+        loadCategories
+      );
+
+      window.removeEventListener(
+        "vetClinicCategoriesUpdated",
+        loadCategories
+      );
+    };
+  }, []);
 
   /* =========================================================
      LANGUAGE
@@ -98,7 +262,6 @@ function StoreHeader() {
   const t =
     storeTranslations[language] ||
     storeTranslations.en;
-
 
   useEffect(() => {
     document.documentElement.lang =
@@ -132,7 +295,6 @@ function StoreHeader() {
     };
   }, [language]);
 
-
   const changeLanguage = (
     newLanguage
   ) => {
@@ -141,9 +303,9 @@ function StoreHeader() {
     setStoreLanguage(newLanguage);
 
     setCategoriesOpen(false);
+
     setAccountOpen(false);
   };
-
 
   /* =========================================================
      LOAD STORE SETTINGS
@@ -210,7 +372,6 @@ function StoreHeader() {
     };
   }, []);
 
-
   /* =========================================================
      LOAD CART COUNT
   ========================================================= */
@@ -225,6 +386,7 @@ function StoreHeader() {
 
         if (!savedCart) {
           setCartCount(0);
+
           return;
         }
 
@@ -277,13 +439,13 @@ function StoreHeader() {
     };
   }, []);
 
-
   /* =========================================================
      NAVIGATION
   ========================================================= */
 
   const goHome = () => {
     setCategoriesOpen(false);
+
     setAccountOpen(false);
 
     navigate("/store");
@@ -294,47 +456,45 @@ function StoreHeader() {
     });
   };
 
+  /* =========================================================
+     ABOUT US PAGE
+  ========================================================= */
 
   const goToAbout = () => {
     setCategoriesOpen(false);
+
     setAccountOpen(false);
 
-    navigate("/store");
+    navigate("/about");
 
-    setTimeout(() => {
-      document
-        .getElementById(
-          "store-about"
-        )
-        ?.scrollIntoView({
-          behavior: "smooth",
-        });
-    }, 100);
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth",
+    });
   };
 
+  /* =========================================================
+     CONTACT US PAGE
+  ========================================================= */
 
   const goToContact = () => {
     setCategoriesOpen(false);
+
     setAccountOpen(false);
 
-    navigate("/store");
+    navigate("/contact");
 
-    setTimeout(() => {
-      document
-        .getElementById(
-          "store-contact-anchor"
-        )
-        ?.scrollIntoView({
-          behavior: "smooth",
-        });
-    }, 100);
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth",
+    });
   };
-
 
   const chooseCategory = (
     categoryName
   ) => {
     setCategoriesOpen(false);
+
     setAccountOpen(false);
 
     if (
@@ -342,6 +502,7 @@ function StoreHeader() {
       "All categories"
     ) {
       navigate("/products");
+
       return;
     }
 
@@ -352,27 +513,25 @@ function StoreHeader() {
     );
   };
 
-
   const openCart = () => {
     setCategoriesOpen(false);
+
     setAccountOpen(false);
 
     navigate("/cart");
   };
 
-
   const handleLogout = () => {
     setAccountOpen(false);
+
     setCategoriesOpen(false);
 
     navigate("/");
   };
 
-
   return (
     <>
       <style>{`
-
         /* =====================================================
            HEADER VARIABLES
         ===================================================== */
@@ -417,7 +576,6 @@ function StoreHeader() {
 
           z-index: 1000;
         }
-
 
         /* =====================================================
            LOGO
@@ -486,7 +644,6 @@ function StoreHeader() {
 
           white-space: nowrap;
         }
-
 
         /* =====================================================
            NAVBAR
@@ -589,7 +746,6 @@ function StoreHeader() {
           color: #ffffff;
         }
 
-
         /* =====================================================
            CATEGORY DROPDOWN
         ===================================================== */
@@ -626,7 +782,22 @@ function StoreHeader() {
 
           left: 50%;
 
-          width: 220px;
+          width: 240px;
+
+          /*
+            All categories remain available.
+
+            If the admin adds many categories,
+            the menu becomes scrollable instead
+            of hiding them.
+          */
+
+          max-height:
+            calc(100vh - 110px);
+
+          overflow-y: auto;
+
+          overflow-x: hidden;
 
           padding: 8px;
 
@@ -646,6 +817,29 @@ function StoreHeader() {
             translateX(-50%);
 
           z-index: 1300;
+
+          scrollbar-width: thin;
+
+          scrollbar-color:
+            #b7dcda transparent;
+        }
+
+        .store-category-menu::-webkit-scrollbar {
+          width: 6px;
+        }
+
+        .store-category-menu::-webkit-scrollbar-track {
+          background: transparent;
+        }
+
+        .store-category-menu::-webkit-scrollbar-thumb {
+          background: #b7dcda;
+
+          border-radius: 20px;
+        }
+
+        .store-category-menu::-webkit-scrollbar-thumb:hover {
+          background: #8bc8c5;
         }
 
         .store-category-menu::before {
@@ -688,6 +882,14 @@ function StoreHeader() {
           text-transform: uppercase;
 
           letter-spacing: 0.8px;
+
+          position: sticky;
+
+          top: -8px;
+
+          z-index: 2;
+
+          background: #ffffff;
         }
 
         .store-category-menu button {
@@ -751,8 +953,23 @@ function StoreHeader() {
           flex-shrink: 0;
 
           font-size: 11px;
+
+          overflow: hidden;
         }
 
+        /*
+          If a category has an image uploaded
+          from Categories.jsx, show it here.
+        */
+
+        .store-dropdown-category-image {
+          width: 100%;
+          height: 100%;
+
+          display: block;
+
+          object-fit: cover;
+        }
 
         /* =====================================================
            HEADER RIGHT
@@ -768,7 +985,6 @@ function StoreHeader() {
 
           gap: 10px;
         }
-
 
         /* =====================================================
            LANGUAGE SWITCHER
@@ -841,7 +1057,6 @@ function StoreHeader() {
 
           font-size: 10px;
         }
-
 
         /* =====================================================
            ICON BUTTON
@@ -927,7 +1142,6 @@ function StoreHeader() {
           font-weight: 800;
         }
 
-
         /* =====================================================
            ACCOUNT
         ===================================================== */
@@ -937,16 +1151,16 @@ function StoreHeader() {
         }
 
         .store-account-button {
+          min-width: 135px;
           height: 42px;
 
-          padding:
-            0 14px 0 7px;
+          padding: 0 14px;
 
           border:
             1px solid
             rgba(255,255,255,0.32);
 
-          border-radius: 24px;
+          border-radius: 22px;
 
           background:
             rgba(255,255,255,0.12);
@@ -956,6 +1170,8 @@ function StoreHeader() {
           display: flex;
 
           align-items: center;
+
+          justify-content: center;
 
           gap: 9px;
 
@@ -980,7 +1196,6 @@ function StoreHeader() {
 
         .store-account-avatar {
           width: 29px;
-
           height: 29px;
 
           border-radius: 50%;
@@ -992,82 +1207,65 @@ function StoreHeader() {
           display: flex;
 
           align-items: center;
-
           justify-content: center;
 
-          font-size: 11px;
+          flex-shrink: 0;
+
+          font-size: 12px;
         }
 
-        .store-account-name {
-          font-size: 11px;
+        .store-account-text {
+          font-size: 10px;
 
           font-weight: 750;
+
+          white-space: nowrap;
         }
 
-        .store-account-arrow {
-          font-size: 8px;
+        .store-account-chevron {
+          font-size: 7px;
 
-          opacity: 0.8;
+          transition:
+            transform 0.2s ease;
+        }
+
+        .store-account-chevron.open {
+          transform:
+            rotate(180deg);
         }
 
         .store-account-menu {
           position: absolute;
 
-          top:
-            calc(100% + 12px);
+          top: 51px;
 
           right: 0;
 
-          width: 205px;
+          width: 190px;
 
-          padding: 7px;
+          padding: 8px;
 
           border:
             1px solid
             var(--border);
 
-          border-radius: 14px;
+          border-radius: 13px;
 
           background: #ffffff;
 
           box-shadow:
             0 18px 45px
-            rgba(16,24,40,0.14);
+            rgba(13,102,104,0.16);
 
           z-index: 1300;
-        }
-
-        .store-account-menu-header {
-          padding: 10px;
-
-          border-bottom:
-            1px solid #edf1f1;
-
-          margin-bottom: 5px;
-        }
-
-        .store-account-menu-header strong {
-          display: block;
-
-          color: var(--text);
-
-          font-size: 11px;
-        }
-
-        .store-account-menu-header span {
-          display: block;
-
-          margin-top: 3px;
-
-          color: #98a2b3;
-
-          font-size: 9px;
         }
 
         .store-account-menu button {
           width: 100%;
 
-          padding: 10px;
+          min-height: 40px;
+
+          padding: 7px 10px;
 
           border: none;
 
@@ -1081,13 +1279,27 @@ function StoreHeader() {
 
           align-items: center;
 
-          gap: 9px;
+          gap: 10px;
 
           text-align: left;
 
           font-size: 10px;
 
+          font-weight: 650;
+
           cursor: pointer;
+
+          transition:
+            background 0.18s ease,
+            color 0.18s ease;
+        }
+
+        .store-account-menu button svg {
+          width: 15px;
+
+          color: var(--teal);
+
+          font-size: 12px;
         }
 
         .store-account-menu button:hover {
@@ -1098,590 +1310,704 @@ function StoreHeader() {
             var(--teal-dark);
         }
 
-        .store-account-menu .logout {
+        .store-account-menu button.logout {
+          margin-top: 4px;
+
+          border-top:
+            1px solid #edf2f2;
+
+          border-radius:
+            0 0 8px 8px;
+
           color: #d92d20;
         }
 
+        .store-account-menu button.logout svg {
+          color: #d92d20;
+        }        /* =====================================================
+        RTL
+     ===================================================== */
+
+     html[dir="rtl"] .store-category-menu button,
+     html[dir="rtl"] .store-account-menu button {
+       text-align: right;
+     }
+
+     html[dir="rtl"] .store-nav-chevron {
+       margin-left: 0;
+       margin-right: 2px;
+     }
+
+     html[dir="rtl"] .store-account-menu {
+       right: auto;
+       left: 0;
+     }
+
+     html[dir="rtl"] .store-header-logo-image {
+       object-position: right center;
+     }
+
+     /* =====================================================
+        RESPONSIVE
+     ===================================================== */
 
-        /* =====================================================
-           ARABIC RTL
-        ===================================================== */
+     @media (max-width: 1200px) {
+       .store-header {
+         padding: 0 2.5%;
 
-        html[dir="rtl"] .store-header-logo-image {
-          object-position: right center;
-        }
+         grid-template-columns:
+           minmax(130px, 1fr)
+           auto
+           minmax(220px, 1fr);
 
-        html[dir="rtl"] .store-nav-chevron {
-          margin-left: 0;
-          margin-right: 2px;
-        }
+         gap: 18px;
+       }
 
-        html[dir="rtl"] .store-account-menu {
-          right: auto;
-          left: 0;
-        }
+       .store-nav {
+         gap: 20px;
+       }
 
-        html[dir="rtl"] .store-category-menu button,
-        html[dir="rtl"] .store-account-menu button {
-          text-align: right;
-        }
+       .store-account-button {
+         min-width: 115px;
+         padding: 0 10px;
+       }
+     }
 
-        html[dir="rtl"] .store-cart-count {
-          right: auto;
-          left: -4px;
-        }
+     @media (max-width: 1000px) {
+       .store-header {
+         min-height: auto;
 
+         padding: 12px 20px;
 
-        /* =====================================================
-           RESPONSIVE
-        ===================================================== */
+         grid-template-columns:
+           1fr auto;
 
-        @media (max-width: 1180px) {
+         grid-template-areas:
+           "logo actions"
+           "nav nav";
 
-          .store-header {
-            grid-template-columns:
-              auto 1fr auto;
+         gap: 10px 20px;
+       }
 
-            gap: 18px;
+       .store-logo {
+         grid-area: logo;
+         height: 55px;
+       }
 
-            padding: 0 3%;
-          }
+       .store-header-actions {
+         grid-area: actions;
+       }
 
-          .store-nav {
-            gap: 20px;
-          }
+       .store-nav {
+         grid-area: nav;
 
-          .store-header-actions {
-            gap: 7px;
-          }
+         width: 100%;
+         height: 50px;
 
-          .store-language-switcher {
-            padding: 0 8px;
-          }
-        }
+         gap: 30px;
+       }
 
+       .store-nav-link,
+       .store-category-dropdown {
+         height: 50px;
+       }
 
-        @media (max-width: 960px) {
+       .store-nav-link::after {
+         bottom: 3px;
+       }
 
-          .store-header {
-            min-height: auto;
+       .store-category-menu {
+         top: 47px;
 
-            grid-template-columns:
-              1fr auto;
+         max-height:
+           calc(100vh - 160px);
+       }
+     }
 
-            padding:
-              10px 4% 0;
+     @media (max-width: 720px) {
+       .store-header {
+         padding: 10px 14px;
 
-            gap: 8px 16px;
-          }
+         grid-template-columns:
+           1fr;
 
-          .store-logo {
-            height: 58px;
-          }
+         grid-template-areas:
+           "logo"
+           "actions"
+           "nav";
+       }
 
-          .store-header-logo-image {
-            height: 54px;
+       .store-logo {
+         width: 100%;
 
-            max-height: 54px;
-          }
+         justify-content: center;
+       }
 
-          .store-header-actions {
-            grid-column: 2;
+       .store-header-logo-image {
+         max-width: 160px;
+       }
 
-            grid-row: 1;
-          }
+       .store-header-actions {
+         width: 100%;
 
-          .store-nav {
-            grid-column:
-              1 / -1;
+         justify-content: center;
 
-            width: 100%;
+         flex-wrap: wrap;
+       }
 
-            height: 55px;
+       .store-nav {
+         width: 100%;
 
-            justify-content:
-              center;
+         overflow-x: auto;
 
-            gap: 28px;
+         justify-content:
+           flex-start;
 
-            overflow-x: auto;
-          }
+         gap: 22px;
 
-          .store-nav-link,
-          .store-category-dropdown {
-            height: 55px;
-          }
+         scrollbar-width: none;
+       }
 
-          .store-nav-link::after {
-            bottom: 7px;
-          }
+       .store-nav::-webkit-scrollbar {
+         display: none;
+       }
 
-          .store-category-menu {
-            top: 49px;
-          }
-        }
+       .store-nav-link {
+         flex-shrink: 0;
+       }
 
+       .store-category-dropdown {
+         flex-shrink: 0;
+       }
 
-        @media (max-width: 760px) {
+       .store-category-menu {
+         position: fixed;
 
-          .store-account-name,
-          .store-account-arrow {
-            display: none;
-          }
+         top: auto;
 
-          .store-account-button {
-            width: 42px;
+         left: 50%;
 
-            padding: 0;
+         width:
+           min(
+             92vw,
+             340px
+           );
 
-            justify-content:
-              center;
-          }
+         max-height: 65vh;
 
-          .store-account-avatar {
-            width: 30px;
+         transform:
+           translateX(-50%);
+       }
 
-            height: 30px;
-          }
+       .store-category-menu::before {
+         display: none;
+       }
+     }
+
+     @media (max-width: 480px) {
+       .store-language-switcher {
+         height: 34px;
+       }
+
+       .store-icon-button {
+         width: 38px;
+         height: 38px;
+       }
 
-          .store-language-switcher {
-            height: 34px;
-
-            padding: 0 7px;
-          }
-
-          .store-language-switcher button {
-            font-size: 9px;
-          }
-        }
-
-
-        @media (max-width: 560px) {
-
-          .store-header {
-            padding:
-              8px 3% 0;
-          }
-
-          .store-logo {
-            min-width: 0;
-          }
-
-          .store-header-logo-image {
-            max-width: 130px;
-
-            height: 48px;
-          }
-
-          .store-logo-text {
-            font-size: 16px;
-          }
-
-          .store-header-actions {
-            gap: 5px;
-          }
-
-          .store-icon-button,
-          .store-account-button {
-            width: 37px;
-
-            height: 37px;
-          }
-
-          .store-account-avatar {
-            width: 27px;
-
-            height: 27px;
-          }
-
-          .store-language-switcher {
-            height: 32px;
-
-            padding: 0 6px;
-
-            gap: 4px;
-          }
-
-          .store-language-switcher button {
-            font-size: 8px;
-          }
-
-          .store-nav {
-            justify-content:
-              flex-start;
-
-            gap: 24px;
-
-            padding: 0 4px;
-          }
-
-          .store-nav-link {
-            font-size: 11px;
-          }
-        }
-
-      `}</style>
-
-
-      {/* =====================================================
-          HEADER
-      ===================================================== */}
-
-      <header className="store-header">
-
-
-        {/* LOGO */}
-
-        <div
-          className="store-logo"
-          onClick={goHome}
-        >
-          {storeSettings.storeBanner ? (
-            <img
-              src={
-                storeSettings.storeBanner
-              }
-              alt={
-                storeSettings.storeName ||
-                "Store Logo"
-              }
-              className="store-header-logo-image"
-            />
-          ) : (
-            <div className="store-logo-fallback">
-
-              <FaPaw className="store-logo-icon" />
-
-              {storeSettings.storeName && (
-                <h2 className="store-logo-text">
-                  {
-                    storeSettings.storeName
-                  }
-                </h2>
-              )}
-
-            </div>
-          )}
-        </div>
-
-
-        {/* NAVIGATION */}
-
-        <nav className="store-nav">
-
-          <button
-            type="button"
-            className="store-nav-link home"
-            onClick={goHome}
-          >
-            <FaHome />
-
-            <span>
-              {t.home}
-            </span>
-          </button>
-
-
-          <button
-            type="button"
-            className="store-nav-link"
-            onClick={goToAbout}
-          >
-            <FaInfoCircle />
-
-            <span>
-              {t.about}
-            </span>
-          </button>
-
-
-          {/* CATEGORIES */}
-
-          <div className="store-category-dropdown">
-
-            <button
-              type="button"
-              className="store-nav-link"
-              onClick={() => {
-                setCategoriesOpen(
-                  (current) =>
-                    !current
-                );
-
-                setAccountOpen(false);
-              }}
-            >
-              <FaBoxOpen />
-
-              <span>
-                {t.categories}
-              </span>
-
-              <FaChevronDown
-                className={`store-nav-chevron ${
-                  categoriesOpen
-                    ? "open"
-                    : ""
-                }`}
-              />
-            </button>
-
-
-            {categoriesOpen && (
-              <div className="store-category-menu">
-
-                <div className="store-category-menu-title">
-                  {t.shopByCategory}
-                </div>
-
-
-                <button
-                  type="button"
-                  onClick={() =>
-                    chooseCategory(
-                      "All categories"
-                    )
-                  }
-                >
-                  <span className="store-dropdown-icon">
-                    <FaBoxOpen />
-                  </span>
-
-                  {t.allProducts}
-                </button>
-
-
-                {CATEGORY_ITEMS.map(
-                  (item) => (
-                    <button
-                      type="button"
-                      key={item.name}
-                      onClick={() =>
-                        chooseCategory(
-                          item.name
-                        )
-                      }
-                    >
-                      <span className="store-dropdown-icon">
-                        {item.icon}
-                      </span>
-
-                      {
-                        t[
-                          item.translationKey
-                        ]
-                      }
-                    </button>
-                  )
-                )}
-
-              </div>
-            )}
-
-          </div>
-
-
-          <button
-            type="button"
-            className="store-nav-link"
-            onClick={goToContact}
-          >
-            <FaEnvelope />
-
-            <span>
-              {t.contact}
-            </span>
-          </button>
-
-        </nav>
-
-
-        {/* HEADER ACTIONS */}
-
-        <div className="store-header-actions">
-
-
-          {/* LANGUAGE */}
-
-          <div className="store-language-switcher">
-
-            <button
-              type="button"
-              className={
-                language === "en"
-                  ? "active"
-                  : ""
-              }
-              onClick={() =>
-                changeLanguage("en")
-              }
-            >
-              EN
-            </button>
-
-            <span>|</span>
-
-            <button
-              type="button"
-              className={
-                language === "ar"
-                  ? "active"
-                  : ""
-              }
-              onClick={() =>
-                changeLanguage("ar")
-              }
-            >
-              عربي
-            </button>
-
-          </div>
-
-
-          {/* ORDERS */}
-
-          <button
-            type="button"
-            className="store-icon-button"
-            title={t.myOrders}
-            onClick={() =>
-              navigate("/orders")
-            }
-          >
-            <FaClipboardList />
-          </button>
-
-
-          {/* CART */}
-
-          <button
-            type="button"
-            className="store-icon-button"
-            title={t.cart}
-            onClick={openCart}
-          >
-            <FaShoppingCart />
-
-            {cartCount > 0 && (
-              <span className="store-cart-count">
-                {cartCount}
-              </span>
-            )}
-          </button>
-
-
-          {/* ACCOUNT */}
-
-          <div className="store-account-wrapper">
-
-            <button
-              type="button"
-              className="store-account-button"
-              onClick={() => {
-                setAccountOpen(
-                  (current) =>
-                    !current
-                );
-
-                setCategoriesOpen(false);
-              }}
-            >
-              <span className="store-account-avatar">
-                <FaUser />
-              </span>
-
-              <span className="store-account-name">
-                {t.myAccount}
-              </span>
-
-              <FaChevronDown className="store-account-arrow" />
-            </button>
-
-
-            {accountOpen && (
-              <div className="store-account-menu">
-
-                <div className="store-account-menu-header">
-
-                  <strong>
-                    {t.myAccount}
-                  </strong>
-
-                  <span>
-                    {language === "ar"
-                      ? "إدارة حساب المتجر"
-                      : "Manage your store account"}
-                  </span>
-
-                </div>
-
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    setAccountOpen(false);
-
-                    navigate("/orders");
-                  }}
-                >
-                  <FaClipboardList />
-
-                  {t.myOrders}
-                </button>
-
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    setAccountOpen(false);
-
-                    navigate("/owners");
-                  }}
-                >
-                  <FaUser />
-
-                  {language === "ar"
-                    ? "المالكون"
-                    : "Owners"}
-                </button>
-
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    setAccountOpen(false);
-
-                    navigate(
-                      "/settings"
-                    );
-                  }}
-                >
-                  <FaCog />
-
-                  {t.settings}
-                </button>
-
-
-                <button
-                  type="button"
-                  className="logout"
-                  onClick={handleLogout}
-                >
-                  <FaSignOutAlt />
-
-                  {t.logout}
-                </button>
-
-              </div>
-            )}
-
-          </div>
-
-        </div>
-
-      </header>
-    </>
-  );
+       .store-account-button {
+         min-width: auto;
+
+         width: 42px;
+         height: 42px;
+
+         padding: 0;
+
+         border-radius: 50%;
+       }
+
+       .store-account-text,
+       .store-account-chevron {
+         display: none;
+       }
+
+       .store-account-avatar {
+         width: auto;
+         height: auto;
+
+         background: transparent;
+
+         color: #ffffff;
+       }
+
+       .store-account-menu {
+         position: fixed;
+
+         top: auto;
+
+         right: 4%;
+
+         width: 190px;
+       }
+
+       html[dir="rtl"] .store-account-menu {
+         right: auto;
+         left: 4%;
+       }
+     }
+   `}</style>
+
+   {/* =====================================================
+       HEADER
+   ===================================================== */}
+
+   <header className="store-header">
+
+     {/* =================================================
+         LOGO
+     ================================================== */}
+
+     <div
+       className="store-logo"
+       onClick={goHome}
+       role="button"
+       tabIndex={0}
+       onKeyDown={(event) => {
+         if (
+           event.key === "Enter" ||
+           event.key === " "
+         ) {
+           goHome();
+         }
+       }}
+     >
+       {storeSettings.storeBanner ? (
+         <img
+           src={
+             storeSettings.storeBanner
+           }
+           alt={
+             storeSettings.storeName ||
+             "Store"
+           }
+           className="store-header-logo-image"
+         />
+       ) : (
+         <div className="store-logo-fallback">
+           <FaPaw className="store-logo-icon" />
+
+           <span className="store-logo-text">
+             {storeSettings.storeName ||
+               "Pet Store"}
+           </span>
+         </div>
+       )}
+     </div>
+
+     {/* =================================================
+         NAVIGATION
+     ================================================== */}
+
+     <nav className="store-nav">
+
+       {/* HOME */}
+
+       <button
+         type="button"
+         className="store-nav-link home"
+         onClick={goHome}
+       >
+         <FaHome />
+
+         <span>
+           {t.home || "Home"}
+         </span>
+       </button>
+
+       {/* ABOUT */}
+
+       <button
+         type="button"
+         className="store-nav-link"
+         onClick={goToAbout}
+       >
+         <FaInfoCircle />
+
+         <span>
+           {t.aboutUs ||
+             "About Us"}
+         </span>
+       </button>
+
+       {/* =============================================
+           DYNAMIC CATEGORIES
+       ============================================== */}
+
+       <div className="store-category-dropdown">
+
+         <button
+           type="button"
+           className="store-nav-link"
+           onClick={() => {
+             setCategoriesOpen(
+               (current) =>
+                 !current
+             );
+
+             setAccountOpen(false);
+           }}
+         >
+           <FaBoxOpen />
+
+           <span>
+             {t.categories ||
+               "Categories"}
+           </span>
+
+           <FaChevronDown
+             className={`store-nav-chevron ${
+               categoriesOpen
+                 ? "open"
+                 : ""
+             }`}
+           />
+         </button>
+
+         {categoriesOpen && (
+           <div className="store-category-menu">
+
+             <div className="store-category-menu-title">
+               {language === "ar"
+                 ? "تسوق حسب الفئة"
+                 : "Shop by Category"}
+             </div>
+
+             {/* ALL PRODUCTS */}
+
+             <button
+               type="button"
+               onClick={() =>
+                 chooseCategory(
+                   "All categories"
+                 )
+               }
+             >
+               <span className="store-dropdown-icon">
+                 <FaBoxOpen />
+               </span>
+
+               <span>
+                 {language === "ar"
+                   ? "كل المنتجات"
+                   : "All Products"}
+               </span>
+             </button>
+
+             {/* =========================================
+                 CATEGORIES FROM Categories.jsx
+
+                 No hardcoded category names here.
+
+                 Add Category:
+                 appears automatically.
+
+                 Edit Category:
+                 updates automatically.
+
+                 Delete Category:
+                 disappears automatically.
+             ========================================== */}
+
+             {categories.map(
+               (category) => {
+                 const categoryName =
+                   String(
+                     category.title ||
+                       category.name ||
+                       ""
+                   ).trim();
+
+                 if (!categoryName) {
+                   return null;
+                 }
+
+                 return (
+                   <button
+                     type="button"
+                     key={
+                       category.id ||
+                       categoryName
+                     }
+                     onClick={() =>
+                       chooseCategory(
+                         categoryName
+                       )
+                     }
+                   >
+                     <span className="store-dropdown-icon">
+                       {category.image ? (
+                         <img
+                           src={
+                             category.image
+                           }
+                           alt={
+                             categoryName
+                           }
+                           className="store-dropdown-category-image"
+                         />
+                       ) : (
+                         <FaPaw />
+                       )}
+                     </span>
+
+                     <span>
+                       {categoryName}
+                     </span>
+                   </button>
+                 );
+               }
+             )}
+           </div>
+         )}
+       </div>
+
+       {/* CONTACT */}
+
+       <button
+         type="button"
+         className="store-nav-link"
+         onClick={goToContact}
+       >
+         <FaEnvelope />
+
+         <span>
+           {t.contactUs ||
+             "Contact Us"}
+         </span>
+       </button>
+     </nav>
+
+     {/* =================================================
+         RIGHT SIDE
+     ================================================== */}
+
+     <div className="store-header-actions">
+
+       {/* ===============================================
+           LANGUAGE
+       ================================================ */}
+
+       <div className="store-language-switcher">
+
+         <button
+           type="button"
+           className={
+             language === "en"
+               ? "active"
+               : ""
+           }
+           onClick={() =>
+             changeLanguage("en")
+           }
+         >
+           EN
+         </button>
+
+         <span>|</span>
+
+         <button
+           type="button"
+           className={
+             language === "ar"
+               ? "active"
+               : ""
+           }
+           onClick={() =>
+             changeLanguage("ar")
+           }
+         >
+           عربي
+         </button>
+       </div>
+
+       {/* ===============================================
+           ORDERS
+       ================================================ */}
+
+       <button
+         type="button"
+         className="store-icon-button"
+         title={
+           language === "ar"
+             ? "طلباتي"
+             : "My Orders"
+         }
+         onClick={() => {
+           setCategoriesOpen(false);
+
+           setAccountOpen(false);
+
+           navigate("/orders");
+         }}
+       >
+         <FaClipboardList />
+       </button>
+
+       {/* ===============================================
+           CART
+       ================================================ */}
+
+       <button
+         type="button"
+         className="store-icon-button"
+         title={
+           t.cart || "Cart"
+         }
+         onClick={openCart}
+       >
+         <FaShoppingCart />
+
+         {cartCount > 0 && (
+           <span className="store-cart-count">
+             {cartCount > 99
+               ? "99+"
+               : cartCount}
+           </span>
+         )}
+       </button>
+
+       {/* ===============================================
+           ACCOUNT
+       ================================================ */}
+
+       <div className="store-account-wrapper">
+
+         <button
+           type="button"
+           className="store-account-button"
+           onClick={() => {
+             setAccountOpen(
+               (current) =>
+                 !current
+             );
+
+             setCategoriesOpen(false);
+           }}
+         >
+           <span className="store-account-avatar">
+             <FaUser />
+           </span>
+
+           <span className="store-account-text">
+             {language === "ar"
+               ? "حسابي"
+               : "My Account"}
+           </span>
+
+           <FaChevronDown
+             className={`store-account-chevron ${
+               accountOpen
+                 ? "open"
+                 : ""
+             }`}
+           />
+         </button>
+
+         {accountOpen && (
+           <div className="store-account-menu">
+
+             {/* MY ORDERS */}
+
+             <button
+               type="button"
+               onClick={() => {
+                 setAccountOpen(
+                   false
+                 );
+
+                 navigate(
+                   "/orders"
+                 );
+               }}
+             >
+               <FaClipboardList />
+
+               <span>
+                 {language === "ar"
+                   ? "طلباتي"
+                   : "My Orders"}
+               </span>
+             </button>
+
+             {/* MY ACCOUNT */}
+
+             <button
+               type="button"
+               onClick={() => {
+                 setAccountOpen(
+                   false
+                 );
+
+                 navigate(
+                   "/account"
+                 );
+               }}
+             >
+               <FaUser />
+
+               <span>
+                 {language === "ar"
+                   ? "حسابي"
+                   : "My Account"}
+               </span>
+             </button>
+
+             {/* ACCOUNT SETTINGS */}
+
+             <button
+               type="button"
+               onClick={() => {
+                 setAccountOpen(
+                   false
+                 );
+
+                 navigate(
+                   "/account/settings"
+                 );
+               }}
+             >
+               <FaCog />
+
+               <span>
+                 {language === "ar"
+                   ? "الإعدادات"
+                   : "Settings"}
+               </span>
+             </button>
+
+             {/* LOGOUT */}
+
+             <button
+               type="button"
+               className="logout"
+               onClick={
+                 handleLogout
+               }
+             >
+               <FaSignOutAlt />
+
+               <span>
+                 {language === "ar"
+                   ? "تسجيل الخروج"
+                   : "Logout"}
+               </span>
+             </button>
+           </div>
+         )}
+       </div>
+     </div>
+   </header>
+ </>
+);
 }
 
 export default StoreHeader;

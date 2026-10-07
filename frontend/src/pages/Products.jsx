@@ -1,5 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+
+import {
+  useNavigate,
+  useSearchParams,
+} from "react-router-dom";
 
 import StoreHeader from "./StoreHeader";
 
@@ -7,157 +11,38 @@ import {
   FaSearch,
   FaHeart,
   FaPaw,
-  FaPlus,
   FaTimes,
   FaBoxOpen,
+  FaCartPlus,
 } from "react-icons/fa";
-
-
-/* =========================================================
-   PRODUCTS
-========================================================= */
-
-const PRODUCTS = [
-  {
-    id: 1,
-    name: "Royal Canin Adult Dog",
-    category: "Food",
-    price: 28.5,
-    stock: 14,
-    image: "",
-    showOnStore: true,
-  },
-  {
-    id: 2,
-    name: "Royal Canin Kitten",
-    category: "Food",
-    price: 24,
-    stock: 8,
-    image: "",
-    showOnStore: true,
-  },
-  {
-    id: 3,
-    name: "Dental Care Chews",
-    category: "Care",
-    price: 12.5,
-    stock: 21,
-    image: "",
-    showOnStore: true,
-  },
-  {
-    id: 4,
-    name: "Pet Shampoo",
-    category: "Grooming",
-    price: 9.75,
-    stock: 12,
-    image: "",
-    showOnStore: true,
-  },
-  {
-    id: 5,
-    name: "Flea & Tick Collar",
-    category: "Accessories",
-    price: 18,
-    stock: 7,
-    image: "",
-    showOnStore: true,
-  },
-  {
-    id: 6,
-    name: "Vitamin Supplement",
-    category: "Supplements",
-    price: 16.25,
-    stock: 5,
-    image: "",
-    showOnStore: true,
-  },
-  {
-    id: 7,
-    name: "Cat Litter",
-    category: "Hygiene",
-    price: 11,
-    stock: 18,
-    image: "",
-    showOnStore: true,
-  },
-  {
-    id: 8,
-    name: "Ear Cleaning Solution",
-    category: "Care",
-    price: 8.5,
-    stock: 9,
-    image: "",
-    showOnStore: true,
-  },
-  {
-    id: 9,
-    name: "Pet Travel Bowl",
-    category: "Accessories",
-    price: 7.25,
-    stock: 3,
-    image: "",
-    showOnStore: true,
-  },
-  {
-    id: 10,
-    name: "Puppy Training Pads",
-    category: "Hygiene",
-    price: 14,
-    stock: 22,
-    image: "",
-    showOnStore: true,
-  },
-  {
-    id: 11,
-    name: "Dog Toy Ball",
-    category: "Accessories",
-    price: 6.5,
-    stock: 15,
-    image: "",
-    showOnStore: true,
-  },
-  {
-    id: 12,
-    name: "Eye Drops",
-    category: "Care",
-    price: 10,
-    stock: 11,
-    image: "",
-    showOnStore: true,
-  },
-];
-
-
-/* =========================================================
-   CATEGORIES
-========================================================= */
-
-const CATEGORIES = [
-  "Food",
-  "Care",
-  "Hygiene",
-  "Accessories",
-  "Supplements",
-  "Grooming",
-  "Toys",
-  "Treats",
-  "Beds",
-  "Bowls",
-  "Dental Care",
-  "Pet Essentials",
-];
-
 
 /* =========================================================
    PRODUCTS PAGE
 ========================================================= */
 
 function Products() {
+  const navigate = useNavigate();
+
   const [searchParams] = useSearchParams();
 
   const categoryFromUrl =
     searchParams.get("category");
+
+  /* =========================================================
+     PRODUCTS
+  ========================================================= */
+
+  const [products, setProducts] = useState([]);
+
+  /* =========================================================
+     CATEGORIES
+  ========================================================= */
+
+  const [categories, setCategories] = useState([]);
+
+  /* =========================================================
+     SEARCH + FILTER
+  ========================================================= */
 
   const [search, setSearch] = useState("");
 
@@ -165,7 +50,15 @@ function Products() {
     categoryFromUrl || "All categories"
   );
 
+  /* =========================================================
+     FAVORITES
+  ========================================================= */
+
   const [favorites, setFavorites] = useState([]);
+
+  /* =========================================================
+     CART
+  ========================================================= */
 
   const [cart, setCart] = useState(() => {
     try {
@@ -180,6 +73,169 @@ function Products() {
     }
   });
 
+  /* =========================================================
+     LOAD PRODUCTS FROM INVENTORY
+  ========================================================= */
+
+  useEffect(() => {
+    const loadProducts = () => {
+      try {
+        const saved =
+          localStorage.getItem(
+            "vetClinicProducts"
+          );
+
+        if (!saved) {
+          setProducts([]);
+          return;
+        }
+
+        const parsed = JSON.parse(saved);
+
+        if (!Array.isArray(parsed)) {
+          setProducts([]);
+          return;
+        }
+
+        setProducts(parsed);
+      } catch (error) {
+        console.error(
+          "Could not load store products:",
+          error
+        );
+
+        setProducts([]);
+      }
+    };
+
+    const handleProductsUpdated = (event) => {
+      if (Array.isArray(event.detail)) {
+        setProducts(event.detail);
+        return;
+      }
+
+      loadProducts();
+    };
+
+    loadProducts();
+
+    window.addEventListener(
+      "vetClinicProductsUpdated",
+      handleProductsUpdated
+    );
+
+    window.addEventListener(
+      "storage",
+      loadProducts
+    );
+
+    return () => {
+      window.removeEventListener(
+        "vetClinicProductsUpdated",
+        handleProductsUpdated
+      );
+
+      window.removeEventListener(
+        "storage",
+        loadProducts
+      );
+    };
+  }, []);
+
+  /* =========================================================
+     LOAD CATEGORIES FROM CATEGORIES.JSX
+  ========================================================= */
+
+  useEffect(() => {
+    const sortCategories = (list) => {
+      return [...list].sort((a, b) => {
+        const orderA =
+          Number(a.sortOrder) || 0;
+
+        const orderB =
+          Number(b.sortOrder) || 0;
+
+        if (orderA !== orderB) {
+          return orderA - orderB;
+        }
+
+        return String(a.title || "")
+          .localeCompare(
+            String(b.title || "")
+          );
+      });
+    };
+
+    const loadCategories = () => {
+      try {
+        const saved =
+          localStorage.getItem(
+            "vetClinicCategories"
+          );
+
+        if (!saved) {
+          setCategories([]);
+          return;
+        }
+
+        const parsed = JSON.parse(saved);
+
+        if (!Array.isArray(parsed)) {
+          setCategories([]);
+          return;
+        }
+
+        setCategories(
+          sortCategories(parsed)
+        );
+      } catch (error) {
+        console.error(
+          "Could not load categories:",
+          error
+        );
+
+        setCategories([]);
+      }
+    };
+
+    const handleCategoriesUpdated = (
+      event
+    ) => {
+      if (Array.isArray(event.detail)) {
+        setCategories(
+          sortCategories(event.detail)
+        );
+
+        return;
+      }
+
+      loadCategories();
+    };
+
+    loadCategories();
+
+    window.addEventListener(
+      "vetClinicCategoriesUpdated",
+      handleCategoriesUpdated
+    );
+
+    window.addEventListener(
+      "storage",
+      loadCategories
+    );
+
+    return () => {
+      window.removeEventListener(
+        "vetClinicCategoriesUpdated",
+        handleCategoriesUpdated
+      );
+
+      window.removeEventListener(
+        "storage",
+        loadCategories
+      );
+    };
+  }, []);
 
   /* =========================================================
      CATEGORY FROM URL
@@ -187,10 +243,10 @@ function Products() {
 
   useEffect(() => {
     setCategory(
-      categoryFromUrl || "All categories"
+      categoryFromUrl ||
+        "All categories"
     );
   }, [categoryFromUrl]);
-
 
   /* =========================================================
      SAVE CART
@@ -207,49 +263,81 @@ function Products() {
     );
   }, [cart]);
 
+  /* =========================================================
+     PUBLIC STORE PRODUCTS
+  ========================================================= */
+
+  const storeProducts = useMemo(() => {
+    return products.filter(
+      (product) =>
+        product.showOnStore === true
+    );
+  }, [products]);
 
   /* =========================================================
      FILTER PRODUCTS
   ========================================================= */
 
-  const products = useMemo(() => {
-    return PRODUCTS.filter(
-      (product) => product.showOnStore
-    );
-  }, []);
-
-
   const filteredProducts = useMemo(() => {
     const searchValue =
       search.toLowerCase().trim();
 
-    return products.filter((product) => {
-      const matchesSearch =
-        !searchValue ||
-        product.name
-          .toLowerCase()
-          .includes(searchValue) ||
-        product.category
-          .toLowerCase()
-          .includes(searchValue);
+    return storeProducts.filter(
+      (product) => {
+        const productName =
+          String(
+            product.name || ""
+          ).toLowerCase();
 
-      const matchesCategory =
-        category === "All categories" ||
-        product.category === category;
+        const productCategory =
+          String(
+            product.category || ""
+          ).toLowerCase();
 
-      return (
-        matchesSearch &&
-        matchesCategory
-      );
-    });
-  }, [products, search, category]);
+        const productDescription =
+          String(
+            product.description || ""
+          ).toLowerCase();
 
+        const matchesSearch =
+          !searchValue ||
+          productName.includes(
+            searchValue
+          ) ||
+          productCategory.includes(
+            searchValue
+          ) ||
+          productDescription.includes(
+            searchValue
+          );
+
+        const matchesCategory =
+          category ===
+            "All categories" ||
+          product.category === category;
+
+        return (
+          matchesSearch &&
+          matchesCategory
+        );
+      }
+    );
+  }, [
+    storeProducts,
+    search,
+    category,
+  ]);
 
   /* =========================================================
      FAVORITES
   ========================================================= */
 
-  const toggleFavorite = (productId) => {
+  const toggleFavorite = (
+    event,
+    productId
+  ) => {
+    event.stopPropagation();
+
     setFavorites((current) =>
       current.includes(productId)
         ? current.filter(
@@ -259,50 +347,138 @@ function Products() {
     );
   };
 
+  /* =========================================================
+     PRODUCT STOCK
+  ========================================================= */
+
+  const getProductStock = (
+    product
+  ) => {
+    return Number(product.quantity) || 0;
+  };
+
+  /* =========================================================
+     PRODUCT PRICE
+  ========================================================= */
+
+  const getProductPrice = (
+    product
+  ) => {
+    return (
+      Number(
+        product.sellingPrice
+      ) || 0
+    );
+  };
+
+  /* =========================================================
+     OPEN PRODUCT DETAILS
+  ========================================================= */
+
+  const openProduct = (
+    product
+  ) => {
+    navigate(
+      `/products/${product.id}`
+    );
+  };
 
   /* =========================================================
      ADD TO CART
   ========================================================= */
 
-  const addToCart = (product) => {
-    if (product.stock <= 0) return;
+  const addToCart = (
+    event,
+    product
+  ) => {
+    event.stopPropagation();
 
-    setCart((currentCart) => {
-      const existingItem =
-        currentCart.find(
-          (item) =>
-            item.id === product.id
-        );
+    const stock =
+      getProductStock(product);
 
-      if (existingItem) {
-        if (
-          existingItem.quantity >=
-          product.stock
-        ) {
-          return currentCart;
+    if (stock <= 0) {
+      return;
+    }
+
+    const price =
+      getProductPrice(product);
+
+    setCart(
+      (currentCart) => {
+        const existingItem =
+          currentCart.find(
+            (item) =>
+              String(item.id) ===
+              String(product.id)
+          );
+
+        if (existingItem) {
+          if (
+            Number(
+              existingItem.quantity
+            ) >= stock
+          ) {
+            return currentCart;
+          }
+
+          return currentCart.map(
+            (item) =>
+              String(item.id) ===
+              String(product.id)
+                ? {
+                    ...item,
+
+                    quantity:
+                      Number(
+                        item.quantity
+                      ) + 1,
+
+                    stock,
+
+                    price,
+                  }
+                : item
+          );
         }
 
-        return currentCart.map((item) =>
-          item.id === product.id
-            ? {
-                ...item,
-                quantity:
-                  item.quantity + 1,
-              }
-            : item
-        );
-      }
+        return [
+          ...currentCart,
 
-      return [
-        ...currentCart,
-        {
-          ...product,
-          quantity: 1,
-        },
-      ];
-    });
+          {
+            ...product,
+
+            price,
+
+            stock,
+
+            quantity: 1,
+          },
+        ];
+      }
+    );
   };
 
+  /* =========================================================
+     KEYBOARD OPEN PRODUCT
+  ========================================================= */
+
+  const handleProductKeyDown = (
+    event,
+    product
+  ) => {
+    if (
+      event.key === "Enter" ||
+      event.key === " "
+    ) {
+      event.preventDefault();
+
+      openProduct(product);
+    }
+  };
+
+  /* =========================================================
+     RETURN
+  ========================================================= */
 
   return (
     <div className="products-page">
@@ -310,7 +486,6 @@ function Products() {
       <StoreHeader />
 
       <style>{`
-
         * {
           box-sizing: border-box;
         }
@@ -345,7 +520,6 @@ function Products() {
             Helvetica,
             sans-serif;
         }
-
 
         /* ==========================================
            PAGE HEADER
@@ -420,7 +594,6 @@ function Products() {
           line-height: 1.7;
         }
 
-
         /* ==========================================
            TOOLBAR
         ========================================== */
@@ -454,7 +627,6 @@ function Products() {
               0.05
             );
         }
-
 
         /* SEARCH */
 
@@ -572,7 +744,6 @@ function Products() {
             var(--teal-dark);
         }
 
-
         /* CATEGORY SELECT */
 
         .products-category-select {
@@ -614,7 +785,6 @@ function Products() {
               0.08
             );
         }
-
 
         /* ==========================================
            RESULTS
@@ -662,7 +832,6 @@ function Products() {
           font-weight: 800;
         }
 
-
         /* ==========================================
            PRODUCT GRID
         ========================================== */
@@ -688,6 +857,10 @@ function Products() {
           border-radius: 17px;
 
           background: white;
+
+          cursor: pointer;
+
+          outline: none;
 
           transition:
             transform 0.2s ease,
@@ -717,6 +890,19 @@ function Products() {
             );
         }
 
+        .product-card:focus-visible {
+          border-color:
+            var(--teal);
+
+          box-shadow:
+            0 0 0 3px
+            rgba(
+              26,
+              166,
+              166,
+              0.12
+            );
+        }
 
         /* IMAGE */
 
@@ -747,6 +933,17 @@ function Products() {
           height: 100%;
 
           object-fit: cover;
+
+          display: block;
+
+          transition:
+            transform 0.3s ease;
+        }
+
+        .product-card:hover
+        .product-image img {
+          transform:
+            scale(1.025);
         }
 
         .product-image-placeholder {
@@ -754,7 +951,6 @@ function Products() {
 
           font-size: 55px;
         }
-
 
         /* FAVORITE */
 
@@ -814,18 +1010,19 @@ function Products() {
           color: #e4576b;
         }
 
-
-        /* INFO */
+        /* ==========================================
+           PRODUCT INFO
+        ========================================== */
 
         .product-info {
-          padding: 20px;
+          padding: 18px 20px 20px;
         }
 
         .product-name {
-          min-height: 38px;
+          min-height: 0;
 
           margin:
-            0 0 8px;
+            0 0 7px;
 
           color:
             #34455a;
@@ -838,7 +1035,7 @@ function Products() {
         }
 
         .product-category {
-          margin-bottom: 15px;
+          margin-bottom: 12px;
 
           color:
             #91a0b3;
@@ -846,17 +1043,26 @@ function Products() {
           font-size: 11px;
         }
 
-        .product-meta {
-          margin-bottom: 17px;
+        /*
+          NEW:
+          price + stock + cart are all in one row.
+          This removes the large empty space that
+          was under the price/stock.
+        */
 
-          display: flex;
+        .product-action-row {
+          width: 100%;
+
+          display: grid;
+
+          grid-template-columns:
+            auto 1fr auto;
 
           align-items: center;
 
-          justify-content:
-            space-between;
-
           gap: 10px;
+
+          margin-top: 4px;
         }
 
         .product-price {
@@ -866,9 +1072,13 @@ function Products() {
           font-size: 17px;
 
           font-weight: 900;
+
+          white-space: nowrap;
         }
 
         .product-stock {
+          justify-self: end;
+
           padding:
             5px 9px;
 
@@ -883,6 +1093,8 @@ function Products() {
           font-size: 9px;
 
           font-weight: 800;
+
+          white-space: nowrap;
         }
 
         .product-stock.low {
@@ -901,17 +1113,22 @@ function Products() {
             #d92d20;
         }
 
-
-        /* ADD TO CART */
+        /* ==========================================
+           CART ICON
+        ========================================== */
 
         .product-add-cart {
-          width: 100%;
+          width: 42px;
 
           height: 42px;
 
+          flex-shrink: 0;
+
+          padding: 0;
+
           border: none;
 
-          border-radius: 10px;
+          border-radius: 50%;
 
           background:
             var(--teal);
@@ -924,13 +1141,18 @@ function Products() {
 
           justify-content: center;
 
-          gap: 8px;
-
-          font-size: 11px;
-
-          font-weight: 800;
+          font-size: 15px;
 
           cursor: pointer;
+
+          box-shadow:
+            0 6px 14px
+            rgba(
+              17,
+              121,
+              123,
+              0.16
+            );
 
           transition:
             background 0.2s ease,
@@ -943,15 +1165,16 @@ function Products() {
             var(--teal-dark);
 
           transform:
-            translateY(-1px);
+            translateY(-2px)
+            scale(1.04);
 
           box-shadow:
-            0 7px 16px
+            0 8px 18px
             rgba(
               17,
               121,
               123,
-              0.17
+              0.22
             );
         }
 
@@ -962,380 +1185,434 @@ function Products() {
 
           cursor:
             not-allowed;
-        }
 
+          box-shadow: none;
+        }        /* ==========================================
+        EMPTY
+     ========================================== */
 
-        /* ==========================================
-           EMPTY
-        ========================================== */
+     .products-empty {
+       grid-column: 1 / -1;
 
-        .products-empty {
-          grid-column: 1 / -1;
+       min-height: 300px;
 
-          min-height: 300px;
+       padding: 50px 20px;
 
-          padding: 50px 20px;
+       border:
+         1px dashed
+         #cfdfde;
 
-          border:
-            1px dashed
-            #cfdfde;
+       border-radius: 18px;
 
-          border-radius: 18px;
+       background: white;
 
-          background: white;
+       display: flex;
 
-          display: flex;
+       flex-direction: column;
 
-          flex-direction: column;
+       align-items: center;
 
-          align-items: center;
+       justify-content: center;
 
-          justify-content: center;
+       text-align: center;
+     }
 
-          text-align: center;
-        }
+     .products-empty > svg {
+       margin-bottom: 15px;
 
-        .products-empty > svg {
-          margin-bottom: 15px;
+       color:
+         #8ed8d4;
 
-          color:
-            #8ed8d4;
+       font-size: 48px;
+     }
 
-          font-size: 48px;
-        }
+     .products-empty h3 {
+       margin:
+         0 0 7px;
 
-        .products-empty h3 {
-          margin:
-            0 0 7px;
+       color:
+         var(--text);
 
-          color:
-            var(--text);
+       font-size: 18px;
+     }
 
-          font-size: 18px;
-        }
+     .products-empty p {
+       margin: 0;
 
-        .products-empty p {
-          margin: 0;
+       color:
+         var(--muted);
 
-          color:
-            var(--muted);
+       font-size: 12px;
+     }
 
-          font-size: 12px;
-        }
+     /* ==========================================
+        RESPONSIVE
+     ========================================== */
 
+     @media (max-width: 1100px) {
+       .products-grid {
+         grid-template-columns:
+           repeat(3, 1fr);
+       }
+     }
 
-        /* ==========================================
-           RESPONSIVE
-        ========================================== */
+     @media (max-width: 850px) {
+       .products-toolbar {
+         grid-template-columns:
+           1fr;
+       }
 
-        @media (max-width: 1100px) {
+       .products-grid {
+         grid-template-columns:
+           repeat(2, 1fr);
+       }
+     }
 
-          .products-grid {
-            grid-template-columns:
-              repeat(3, 1fr);
-          }
+     @media (max-width: 560px) {
+       .products-container {
+         width: 92%;
 
-        }
+         padding-top: 35px;
+       }
 
+       .products-heading h1 {
+         font-size: 32px;
+       }
 
-        @media (max-width: 850px) {
+       .products-grid {
+         grid-template-columns:
+           1fr;
+       }
 
-          .products-toolbar {
-            grid-template-columns:
-              1fr;
-          }
-
-          .products-grid {
-            grid-template-columns:
-              repeat(2, 1fr);
-          }
-
-        }
-
-
-        @media (max-width: 560px) {
-
-          .products-container {
-            width: 92%;
-
-            padding-top: 35px;
-          }
-
-          .products-heading h1 {
-            font-size: 32px;
-          }
-
-          .products-grid {
-            grid-template-columns:
-              1fr;
-          }
-
-          .products-results-row {
-            align-items:
-              flex-start;
-
-            flex-direction:
-              column;
-          }
-
-        }
-
-      `}</style>
-
-
-      {/* =====================================================
-          CONTENT
-      ===================================================== */}
-
-      <main className="products-container">
-
-        <div className="products-heading">
-
-          <div className="products-heading-badge">
-            <FaPaw />
-            Pet Store
-          </div>
-
-          <h1>All Products</h1>
-
-          <p>
-            Browse our complete collection of
-            pet care products.
-          </p>
-
-        </div>
-
-
-        {/* ===================================================
-            SEARCH + FILTER
-        =================================================== */}
-
-        <div className="products-toolbar">
-
-          <div className="products-search">
-
-            <FaSearch />
-
-            <input
-              type="text"
-              placeholder="Search products..."
-              value={search}
-              onChange={(event) =>
-                setSearch(
-                  event.target.value
-                )
-              }
-            />
-
-            {search && (
-              <button
-                type="button"
-                className="products-search-clear"
-                onClick={() =>
-                  setSearch("")
-                }
-                aria-label="Clear search"
-              >
-                <FaTimes />
-              </button>
-            )}
-
-          </div>
-
-
-          <select
-            className="products-category-select"
-            value={category}
-            onChange={(event) =>
-              setCategory(
-                event.target.value
-              )
-            }
-          >
-
-            <option value="All categories">
-              All categories
-            </option>
-
-            {CATEGORIES.map(
-              (categoryName) => (
-                <option
-                  key={categoryName}
-                  value={categoryName}
-                >
-                  {categoryName}
-                </option>
-              )
-            )}
-
-          </select>
-
-        </div>
-
-
-        {/* ===================================================
-            RESULTS INFO
-        =================================================== */}
-
-        <div className="products-results-row">
-
-          <div className="products-results-count">
-            Showing{" "}
-            <strong>
-              {filteredProducts.length}
-            </strong>{" "}
-            product
-            {filteredProducts.length !== 1
-              ? "s"
-              : ""}
-          </div>
-
-          {category !== "All categories" && (
-            <div className="products-active-category">
-              {category}
-            </div>
-          )}
-
-        </div>
-
-
-        {/* ===================================================
-            PRODUCTS
-        =================================================== */}
-
-        <div className="products-grid">
-
-          {filteredProducts.length === 0 ? (
-
-            <div className="products-empty">
-
-              <FaBoxOpen />
-
-              <h3>No products found</h3>
-
-              <p>
-                Try another search or category.
-              </p>
-
-            </div>
-
-          ) : (
-
-            filteredProducts.map(
-              (product) => {
-
-                const isFavorite =
-                  favorites.includes(
-                    product.id
-                  );
-
-                return (
-                  <article
-                    className="product-card"
-                    key={product.id}
-                  >
-
-                    <button
-                      type="button"
-                      className={`product-favorite ${
-                        isFavorite
-                          ? "active"
-                          : ""
-                      }`}
-                      onClick={() =>
-                        toggleFavorite(
-                          product.id
-                        )
-                      }
-                      aria-label={`Favorite ${product.name}`}
-                    >
-                      <FaHeart />
-                    </button>
-
-
-                    <div className="product-image">
-
-                      {product.image ? (
-                        <img
-                          src={product.image}
-                          alt={product.name}
-                        />
-                      ) : (
-                        <FaPaw className="product-image-placeholder" />
-                      )}
-
-                    </div>
-
-
-                    <div className="product-info">
-
-                      <h3 className="product-name">
-                        {product.name}
-                      </h3>
-
-                      <div className="product-category">
-                        {product.category}
-                      </div>
-
-
-                      <div className="product-meta">
-
-                        <span className="product-price">
-                          $
-                          {product.price.toFixed(
-                            2
-                          )}
-                        </span>
-
-                        <span
-                          className={`product-stock ${
-                            product.stock === 0
-                              ? "out"
-                              : product.stock <= 5
-                              ? "low"
-                              : ""
-                          }`}
-                        >
-                          {product.stock === 0
-                            ? "Out of stock"
-                            : `${product.stock} in stock`}
-                        </span>
-
-                      </div>
-
-
-                      <button
-                        type="button"
-                        className="product-add-cart"
-                        disabled={
-                          product.stock <= 0
-                        }
-                        onClick={() =>
-                          addToCart(product)
-                        }
-                      >
-                        <FaPlus />
-
-                        {product.stock > 0
-                          ? "Add to Cart"
-                          : "Out of Stock"}
-                      </button>
-
-                    </div>
-
-                  </article>
-                );
-              }
-            )
-
-          )}
-
-        </div>
-
-      </main>
-
-    </div>
-  );
+       .products-results-row {
+         align-items:
+           flex-start;
+
+         flex-direction:
+           column;
+       }
+
+       .product-action-row {
+         grid-template-columns:
+           auto 1fr auto;
+
+         gap: 8px;
+       }
+
+       .product-stock {
+         justify-self: end;
+       }
+     }
+   `}</style>
+
+   {/* =====================================================
+       CONTENT
+   ===================================================== */}
+
+   <main className="products-container">
+
+     <div className="products-heading">
+
+       <div className="products-heading-badge">
+         <FaPaw />
+         Pet Store
+       </div>
+
+       <h1>All Products</h1>
+
+       <p>
+         Browse our complete collection of
+         pet care products.
+       </p>
+
+     </div>
+
+     {/* ===================================================
+         SEARCH + FILTER
+     =================================================== */}
+
+     <div className="products-toolbar">
+
+       <div className="products-search">
+
+         <FaSearch />
+
+         <input
+           type="text"
+           placeholder="Search products..."
+           value={search}
+           onChange={(event) =>
+             setSearch(
+               event.target.value
+             )
+           }
+         />
+
+         {search && (
+           <button
+             type="button"
+             className="products-search-clear"
+             onClick={() =>
+               setSearch("")
+             }
+             aria-label="Clear search"
+           >
+             <FaTimes />
+           </button>
+         )}
+
+       </div>
+
+       <select
+         className="products-category-select"
+         value={category}
+         onChange={(event) =>
+           setCategory(
+             event.target.value
+           )
+         }
+       >
+
+         <option value="All categories">
+           All categories
+         </option>
+
+         {categories.map(
+           (categoryItem) => (
+             <option
+               key={categoryItem.id}
+               value={
+                 categoryItem.title
+               }
+             >
+               {categoryItem.title}
+             </option>
+           )
+         )}
+
+       </select>
+
+     </div>
+
+     {/* ===================================================
+         RESULTS INFO
+     =================================================== */}
+
+     <div className="products-results-row">
+
+       <div className="products-results-count">
+         Showing{" "}
+         <strong>
+           {filteredProducts.length}
+         </strong>{" "}
+         product
+         {filteredProducts.length !== 1
+           ? "s"
+           : ""}
+       </div>
+
+       {category !==
+         "All categories" && (
+         <div className="products-active-category">
+           {category}
+         </div>
+       )}
+
+     </div>
+
+     {/* ===================================================
+         PRODUCTS
+     =================================================== */}
+
+     <div className="products-grid">
+
+       {filteredProducts.length ===
+       0 ? (
+
+         <div className="products-empty">
+
+           <FaBoxOpen />
+
+           <h3>
+             No products found
+           </h3>
+
+           <p>
+             {storeProducts.length ===
+             0
+               ? "Products enabled for the Store from Admin will appear here."
+               : "Try another search or category."}
+           </p>
+
+         </div>
+
+       ) : (
+
+         filteredProducts.map(
+           (product) => {
+
+             const isFavorite =
+               favorites.includes(
+                 product.id
+               );
+
+             const stock =
+               getProductStock(
+                 product
+               );
+
+             const price =
+               getProductPrice(
+                 product
+               );
+
+             return (
+               <article
+                 className="product-card"
+                 key={product.id}
+                 role="button"
+                 tabIndex={0}
+                 onClick={() =>
+                   openProduct(
+                     product
+                   )
+                 }
+                 onKeyDown={(
+                   event
+                 ) =>
+                   handleProductKeyDown(
+                     event,
+                     product
+                   )
+                 }
+                 aria-label={`View ${product.name}`}
+               >
+
+                 {/* FAVORITE */}
+
+                 <button
+                   type="button"
+                   className={`product-favorite ${
+                     isFavorite
+                       ? "active"
+                       : ""
+                   }`}
+                   onClick={(
+                     event
+                   ) =>
+                     toggleFavorite(
+                       event,
+                       product.id
+                     )
+                   }
+                   aria-label={`Favorite ${product.name}`}
+                 >
+                   <FaHeart />
+                 </button>
+
+                 {/* IMAGE */}
+
+                 <div className="product-image">
+
+                   {product.image ? (
+                     <img
+                       src={
+                         product.image
+                       }
+                       alt={
+                         product.name
+                       }
+                     />
+                   ) : (
+                     <FaPaw className="product-image-placeholder" />
+                   )}
+
+                 </div>
+
+                 {/* INFO */}
+
+                 <div className="product-info">
+
+                   <h3 className="product-name">
+                     {product.name}
+                   </h3>
+
+                   <div className="product-category">
+                     {product.category ||
+                       "Uncategorized"}
+                   </div>
+
+                   {/* PRICE + STOCK + CART
+                       ALL ON SAME LEVEL */}
+
+                   <div className="product-action-row">
+
+                     <span className="product-price">
+                       $
+                       {price.toFixed(
+                         2
+                       )}
+                     </span>
+
+                     <span
+                       className={`product-stock ${
+                         stock <= 0
+                           ? "out"
+                           : stock <= 5
+                           ? "low"
+                           : ""
+                       }`}
+                     >
+                       {stock <= 0
+                         ? "Out of stock"
+                         : `${stock} in stock`}
+                     </span>
+
+                     <button
+                       type="button"
+                       className="product-add-cart"
+                       disabled={
+                         stock <= 0
+                       }
+                       onClick={(
+                         event
+                       ) =>
+                         addToCart(
+                           event,
+                           product
+                         )
+                       }
+                       aria-label={
+                         stock > 0
+                           ? `Add ${product.name} to cart`
+                           : `${product.name} is out of stock`
+                       }
+                       title={
+                         stock > 0
+                           ? "Add to Cart"
+                           : "Out of Stock"
+                       }
+                     >
+                       <FaCartPlus />
+                     </button>
+
+                   </div>
+
+                 </div>
+
+               </article>
+             );
+           }
+         )
+
+       )}
+
+     </div>
+
+   </main>
+
+ </div>
+);
 }
 
 export default Products;

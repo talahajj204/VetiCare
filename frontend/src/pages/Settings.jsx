@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+
 import Sidebar from "../components/Sidebar";
 
 import {
@@ -9,6 +10,7 @@ import {
   FaCog,
   FaTimes,
   FaInstagram,
+  FaFacebookF,
   FaWhatsapp,
   FaImage,
 } from "react-icons/fa";
@@ -22,13 +24,15 @@ function Settings() {
 
   const logoInputRef = useRef(null);
   const homeBannerInputRef = useRef(null);
+  const aboutImageInputRef = useRef(null);
 
   // =====================================================
   // STORE INFORMATION
   // =====================================================
 
   const [storeName, setStoreName] = useState("");
-  const [storeDescription, setStoreDescription] = useState("");
+  const [storeDescription, setStoreDescription] =
+    useState("");
 
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
@@ -37,14 +41,44 @@ function Settings() {
 
   const [instagram, setInstagram] = useState("");
   const [tiktok, setTiktok] = useState("");
+  const [facebook, setFacebook] = useState("");
+
+  // =====================================================
+  // ABOUT US PAGE
+  // =====================================================
+
+  const [aboutTitle, setAboutTitle] = useState("");
+  const [aboutDescription, setAboutDescription] =
+    useState("");
+  const [aboutImage, setAboutImage] = useState(null);
+  const [
+    isAboutImageDragging,
+    setIsAboutImageDragging,
+  ] = useState(false);
+
+  // =====================================================
+  // CONTACT US PAGE
+  // =====================================================
+
+  const [contactTitle, setContactTitle] =
+    useState("");
+  const [
+    contactDescription,
+    setContactDescription,
+  ] = useState("");
 
   // =====================================================
   // STORE LOGO
   // storeBanner stays for Header + Footer compatibility
   // =====================================================
 
-  const [storeBanner, setStoreBanner] = useState(null);
-  const [isLogoDragging, setIsLogoDragging] = useState(false);
+  const [storeBanner, setStoreBanner] =
+    useState(null);
+
+  const [
+    isLogoDragging,
+    setIsLogoDragging,
+  ] = useState(false);
 
   // =====================================================
   // HOME BANNER
@@ -52,10 +86,13 @@ function Settings() {
   // NO predefined banner content.
   // =====================================================
 
-  const [homeBanner, setHomeBanner] = useState(null);
+  const [homeBanner, setHomeBanner] =
+    useState(null);
 
-  const [homeBannerTitle, setHomeBannerTitle] =
-    useState("");
+  const [
+    homeBannerTitle,
+    setHomeBannerTitle,
+  ] = useState("");
 
   const [
     homeBannerDescription,
@@ -84,7 +121,8 @@ function Settings() {
     "Cancelled",
   ]);
 
-  const [newStatus, setNewStatus] = useState("");
+  const [newStatus, setNewStatus] =
+    useState("");
 
   const [
     showStatusModal,
@@ -104,9 +142,12 @@ function Settings() {
 
       if (!savedSettings) return;
 
-      const settings = JSON.parse(savedSettings);
+      const settings =
+        JSON.parse(savedSettings);
 
-      setStoreName(settings.storeName || "");
+      setStoreName(
+        settings.storeName || ""
+      );
 
       setStoreDescription(
         settings.storeDescription || ""
@@ -117,21 +158,57 @@ function Settings() {
       setWhatsapp(settings.whatsapp || "");
       setAddress(settings.address || "");
 
-      setInstagram(settings.instagram || "");
-      setTiktok(settings.tiktok || "");
+      setInstagram(
+        settings.instagram || ""
+      );
+
+      setTiktok(
+        settings.tiktok || ""
+      );
+
+      setFacebook(
+        settings.facebook || ""
+      );
+
+      // About Us Page
+
+      setAboutTitle(
+        settings.aboutTitle || ""
+      );
+
+      setAboutDescription(
+        settings.aboutDescription || ""
+      );
+
+      setAboutImage(
+        settings.aboutImage || null
+      );
+
+      // Contact Us Page
+
+      setContactTitle(
+        settings.contactTitle || ""
+      );
+
+      setContactDescription(
+        settings.contactDescription || ""
+      );
 
       // Store Logo
+
       setStoreBanner(
         settings.storeBanner || null
       );
 
       // Home Banner Image
+
       setHomeBanner(
         settings.homeBanner || null
       );
 
       // Home Banner Content
       // No fallback/default text.
+
       setHomeBannerTitle(
         settings.homeBannerTitle || ""
       );
@@ -167,10 +244,13 @@ function Settings() {
       let currentSettings = {};
 
       const existing =
-        localStorage.getItem("storeSettings");
+        localStorage.getItem(
+          "storeSettings"
+        );
 
       if (existing) {
-        currentSettings = JSON.parse(existing);
+        currentSettings =
+          JSON.parse(existing);
       }
 
       const updatedSettings = {
@@ -180,11 +260,15 @@ function Settings() {
 
       localStorage.setItem(
         "storeSettings",
-        JSON.stringify(updatedSettings)
+        JSON.stringify(
+          updatedSettings
+        )
       );
 
       window.dispatchEvent(
-        new Event("storeSettingsUpdated")
+        new Event(
+          "storeSettingsUpdated"
+        )
       );
     } catch (error) {
       console.error(
@@ -208,30 +292,44 @@ function Settings() {
   ) => {
     if (!file) return;
 
-    if (!file.type.startsWith("image/")) {
-      alert("Please select an image file.");
+    if (
+      !file.type.startsWith("image/")
+    ) {
+      alert(
+        "Please select an image file."
+      );
+
       return;
     }
 
     // Images are temporarily stored as base64
     // inside localStorage.
-    if (file.size > 2 * 1024 * 1024) {
+
+    if (
+      file.size >
+      2 * 1024 * 1024
+    ) {
       alert(
         "Please choose an image smaller than 2 MB."
       );
+
       return;
     }
 
     const reader = new FileReader();
 
     reader.onload = () => {
-      const imageData = reader.result;
+      const imageData =
+        reader.result;
 
       if (
         !imageData ||
         typeof imageData !== "string"
       ) {
-        alert("Could not read the image.");
+        alert(
+          "Could not read the image."
+        );
+
         return;
       }
 
@@ -256,18 +354,22 @@ function Settings() {
   // =====================================================
 
   const handleLogoFile = (file) => {
-    readImageFile(file, (imageData) => {
-      setStoreBanner(imageData);
+    readImageFile(
+      file,
+      (imageData) => {
+        setStoreBanner(imageData);
 
-      saveImageImmediately(
-        "storeBanner",
-        imageData
-      );
-    });
+        saveImageImmediately(
+          "storeBanner",
+          imageData
+        );
+      }
+    );
   };
 
   const handleLogoChange = (e) => {
-    const file = e.target.files?.[0];
+    const file =
+      e.target.files?.[0];
 
     if (file) {
       handleLogoFile(file);
@@ -276,11 +378,13 @@ function Settings() {
 
   const handleLogoDragOver = (e) => {
     e.preventDefault();
+
     setIsLogoDragging(true);
   };
 
   const handleLogoDragLeave = (e) => {
     e.preventDefault();
+
     setIsLogoDragging(false);
   };
 
@@ -303,7 +407,8 @@ function Settings() {
     setStoreBanner(null);
 
     if (logoInputRef.current) {
-      logoInputRef.current.value = "";
+      logoInputRef.current.value =
+        "";
     }
 
     saveImageImmediately(
@@ -317,32 +422,46 @@ function Settings() {
   // Completely separate from Store Logo
   // =====================================================
 
-  const handleHomeBannerFile = (file) => {
-    readImageFile(file, (imageData) => {
-      setHomeBanner(imageData);
+  const handleHomeBannerFile = (
+    file
+  ) => {
+    readImageFile(
+      file,
+      (imageData) => {
+        setHomeBanner(imageData);
 
-      saveImageImmediately(
-        "homeBanner",
-        imageData
-      );
-    });
+        saveImageImmediately(
+          "homeBanner",
+          imageData
+        );
+      }
+    );
   };
 
-  const handleHomeBannerChange = (e) => {
-    const file = e.target.files?.[0];
+  const handleHomeBannerChange = (
+    e
+  ) => {
+    const file =
+      e.target.files?.[0];
 
     if (file) {
       handleHomeBannerFile(file);
     }
   };
 
-  const handleHomeBannerDragOver = (e) => {
+  const handleHomeBannerDragOver = (
+    e
+  ) => {
     e.preventDefault();
+
     setIsHomeBannerDragging(true);
   };
 
-  const handleHomeBannerDragLeave = (e) => {
+  const handleHomeBannerDragLeave = (
+    e
+  ) => {
     e.preventDefault();
+
     setIsHomeBannerDragging(false);
   };
 
@@ -359,13 +478,18 @@ function Settings() {
     }
   };
 
-  const handleRemoveHomeBanner = (e) => {
+  const handleRemoveHomeBanner = (
+    e
+  ) => {
     e.stopPropagation();
 
     setHomeBanner(null);
 
-    if (homeBannerInputRef.current) {
-      homeBannerInputRef.current.value = "";
+    if (
+      homeBannerInputRef.current
+    ) {
+      homeBannerInputRef.current.value =
+        "";
     }
 
     saveImageImmediately(
@@ -375,22 +499,93 @@ function Settings() {
   };
 
   // =====================================================
+  // ABOUT US IMAGE
+  // =====================================================
+
+  const handleAboutImageFile = (file) => {
+    readImageFile(
+      file,
+      (imageData) => {
+        setAboutImage(imageData);
+
+        saveImageImmediately(
+          "aboutImage",
+          imageData
+        );
+      }
+    );
+  };
+
+  const handleAboutImageChange = (e) => {
+    const file = e.target.files?.[0];
+
+    if (file) {
+      handleAboutImageFile(file);
+    }
+  };
+
+  const handleAboutImageDragOver = (e) => {
+    e.preventDefault();
+
+    setIsAboutImageDragging(true);
+  };
+
+  const handleAboutImageDragLeave = (e) => {
+    e.preventDefault();
+
+    setIsAboutImageDragging(false);
+  };
+
+  const handleAboutImageDrop = (e) => {
+    e.preventDefault();
+
+    setIsAboutImageDragging(false);
+
+    const file =
+      e.dataTransfer.files?.[0];
+
+    if (file) {
+      handleAboutImageFile(file);
+    }
+  };
+
+  const handleRemoveAboutImage = (e) => {
+    e.stopPropagation();
+
+    setAboutImage(null);
+
+    if (aboutImageInputRef.current) {
+      aboutImageInputRef.current.value = "";
+    }
+
+    saveImageImmediately(
+      "aboutImage",
+      null
+    );
+  };
+
+  // =====================================================
   // STATUS OPTIONS
   // =====================================================
 
   const handleAddStatus = () => {
-    const status = newStatus.trim();
+    const status =
+      newStatus.trim();
 
     if (!status) return;
 
-    const exists = statuses.some(
-      (item) =>
-        item.toLowerCase() ===
-        status.toLowerCase()
-    );
+    const exists =
+      statuses.some(
+        (item) =>
+          item.toLowerCase() ===
+          status.toLowerCase()
+      );
 
     if (exists) {
-      alert("This status already exists.");
+      alert(
+        "This status already exists."
+      );
+
       return;
     }
 
@@ -402,9 +597,12 @@ function Settings() {
     setNewStatus("");
   };
 
-  const handleStatusKeyDown = (e) => {
+  const handleStatusKeyDown = (
+    e
+  ) => {
     if (e.key === "Enter") {
       e.preventDefault();
+
       handleAddStatus();
     }
   };
@@ -415,15 +613,18 @@ function Settings() {
     setStatuses((current) =>
       current.filter(
         (status) =>
-          status !== statusToDelete
+          status !==
+          statusToDelete
       )
     );
   };
 
-  const handleCloseStatusModal = () => {
-    setShowStatusModal(false);
-    setNewStatus("");
-  };
+  const handleCloseStatusModal =
+    () => {
+      setShowStatusModal(false);
+
+      setNewStatus("");
+    };
 
   // =====================================================
   // SAVE ALL SETTINGS
@@ -433,31 +634,50 @@ function Settings() {
     e.preventDefault();
 
     /*
-      Keep both images separate:
+      Keep images separate:
 
       storeBanner = Header + Footer Logo
       homeBanner  = Ecommerce Home Banner
+      aboutImage  = About Us Page Image
     */
 
     let savedLogo = storeBanner;
-    let savedHomeBanner = homeBanner;
+
+    let savedHomeBanner =
+      homeBanner;
+
+    let savedAboutImage =
+      aboutImage;
 
     try {
       const existing =
-        localStorage.getItem("storeSettings");
+        localStorage.getItem(
+          "storeSettings"
+        );
 
       if (existing) {
         const oldSettings =
           JSON.parse(existing);
 
-        if (oldSettings.storeBanner) {
+        if (
+          oldSettings.storeBanner
+        ) {
           savedLogo =
             oldSettings.storeBanner;
         }
 
-        if (oldSettings.homeBanner) {
+        if (
+          oldSettings.homeBanner
+        ) {
           savedHomeBanner =
             oldSettings.homeBanner;
+        }
+
+        if (
+          oldSettings.aboutImage
+        ) {
+          savedAboutImage =
+            oldSettings.aboutImage;
         }
       }
     } catch (error) {
@@ -478,14 +698,19 @@ function Settings() {
 
       instagram,
       tiktok,
+      facebook,
 
       // Header + Footer Logo
+
       storeBanner: savedLogo,
 
       // Ecommerce Home Banner
-      homeBanner: savedHomeBanner,
+
+      homeBanner:
+        savedHomeBanner,
 
       // Banner content comes ONLY from Settings
+
       homeBannerTitle:
         homeBannerTitle.trim(),
 
@@ -494,6 +719,25 @@ function Settings() {
 
       homeBannerButtonText:
         homeBannerButtonText.trim(),
+
+      // About Us Page
+
+      aboutTitle:
+        aboutTitle.trim(),
+
+      aboutDescription:
+        aboutDescription.trim(),
+
+      aboutImage:
+        savedAboutImage,
+
+      // Contact Us Page
+
+      contactTitle:
+        contactTitle.trim(),
+
+      contactDescription:
+        contactDescription.trim(),
 
       statuses,
     };
@@ -505,10 +749,19 @@ function Settings() {
       );
 
       setStoreBanner(savedLogo);
-      setHomeBanner(savedHomeBanner);
+
+      setHomeBanner(
+        savedHomeBanner
+      );
+
+      setAboutImage(
+        savedAboutImage
+      );
 
       window.dispatchEvent(
-        new Event("storeSettingsUpdated")
+        new Event(
+          "storeSettingsUpdated"
+        )
       );
 
       setSaved(true);
@@ -547,8 +800,9 @@ function Settings() {
             <h1>Settings</h1>
 
             <p>
-              Customize your store information,
-              branding and homepage
+              Customize your store
+              information, branding and
+              homepage
             </p>
           </div>
         </div>
@@ -563,33 +817,43 @@ function Settings() {
 
           <div className="settings-card">
             <div className="settings-card-header">
-              <h2>Store Information</h2>
+              <h2>
+                Store Information
+              </h2>
 
               <p>
-                Customize the information displayed
-                on your store
+                Customize the information
+                displayed on your store
               </p>
             </div>
 
             <div className="form-field">
-              <label>Store Name</label>
+              <label>
+                Store Name
+              </label>
 
               <input
                 type="text"
                 placeholder="Enter store name"
                 value={storeName}
                 onChange={(e) =>
-                  setStoreName(e.target.value)
+                  setStoreName(
+                    e.target.value
+                  )
                 }
               />
             </div>
 
             <div className="form-field">
-              <label>Store Description</label>
+              <label>
+                Store Description
+              </label>
 
               <textarea
                 placeholder="Write a short description about your store"
-                value={storeDescription}
+                value={
+                  storeDescription
+                }
                 onChange={(e) =>
                   setStoreDescription(
                     e.target.value
@@ -608,20 +872,26 @@ function Settings() {
                   placeholder="Enter store email"
                   value={email}
                   onChange={(e) =>
-                    setEmail(e.target.value)
+                    setEmail(
+                      e.target.value
+                    )
                   }
                 />
               </div>
 
               <div className="form-field">
-                <label>Phone Number</label>
+                <label>
+                  Phone Number
+                </label>
 
                 <input
                   type="tel"
                   placeholder="Enter phone number"
                   value={phone}
                   onChange={(e) =>
-                    setPhone(e.target.value)
+                    setPhone(
+                      e.target.value
+                    )
                   }
                 />
               </div>
@@ -639,20 +909,26 @@ function Settings() {
                   placeholder="Example: +961 3 123 456"
                   value={whatsapp}
                   onChange={(e) =>
-                    setWhatsapp(e.target.value)
+                    setWhatsapp(
+                      e.target.value
+                    )
                   }
                 />
               </div>
 
               <div className="form-field">
-                <label>Address</label>
+                <label>
+                  Address
+                </label>
 
                 <input
                   type="text"
                   placeholder="Enter store address"
                   value={address}
                   onChange={(e) =>
-                    setAddress(e.target.value)
+                    setAddress(
+                      e.target.value
+                    )
                   }
                 />
               </div>
@@ -665,16 +941,21 @@ function Settings() {
 
           <div className="settings-card">
             <div className="settings-card-header">
-              <h2>Store Branding</h2>
+              <h2>
+                Store Branding
+              </h2>
 
               <p>
-                Upload your store logo. This logo
-                appears in the store header and footer.
+                Upload your store logo.
+                This logo appears in the
+                store header and footer.
               </p>
             </div>
 
             <div className="form-field">
-              <label>Store Logo</label>
+              <label>
+                Store Logo
+              </label>
 
               <div className="store-banner-wrapper">
                 <div
@@ -683,9 +964,15 @@ function Settings() {
                       ? "dragging"
                       : ""
                   }`}
-                  onDragOver={handleLogoDragOver}
-                  onDragLeave={handleLogoDragLeave}
-                  onDrop={handleLogoDrop}
+                  onDragOver={
+                    handleLogoDragOver
+                  }
+                  onDragLeave={
+                    handleLogoDragLeave
+                  }
+                  onDrop={
+                    handleLogoDrop
+                  }
                   onClick={() =>
                     logoInputRef.current?.click()
                   }
@@ -705,8 +992,8 @@ function Settings() {
                       </span>
 
                       <small>
-                        PNG, JPG, JPEG or WEBP •
-                        Max 2 MB
+                        PNG, JPG, JPEG or
+                        WEBP • Max 2 MB
                       </small>
                     </div>
                   )}
@@ -716,7 +1003,9 @@ function Settings() {
                   <button
                     type="button"
                     className="store-banner-remove"
-                    onClick={handleRemoveLogo}
+                    onClick={
+                      handleRemoveLogo
+                    }
                     title="Remove logo"
                   >
                     <FaTrash />
@@ -727,7 +1016,9 @@ function Settings() {
                   ref={logoInputRef}
                   type="file"
                   accept="image/png,image/jpeg,image/jpg,image/webp"
-                  onChange={handleLogoChange}
+                  onChange={
+                    handleLogoChange
+                  }
                   hidden
                 />
               </div>
@@ -740,16 +1031,21 @@ function Settings() {
 
           <div className="settings-card">
             <div className="settings-card-header">
-              <h2>Home Banner</h2>
+              <h2>
+                Home Banner
+              </h2>
 
               <p>
-                Customize the image and all content
-                displayed in the main store banner.
+                Customize the image and
+                all content displayed in
+                the main store banner.
               </p>
             </div>
 
             <div className="form-field">
-              <label>Banner Image</label>
+              <label>
+                Banner Image
+              </label>
 
               <div className="store-banner-wrapper">
                 <div
@@ -764,7 +1060,9 @@ function Settings() {
                   onDragLeave={
                     handleHomeBannerDragLeave
                   }
-                  onDrop={handleHomeBannerDrop}
+                  onDrop={
+                    handleHomeBannerDrop
+                  }
                   onClick={() =>
                     homeBannerInputRef.current?.click()
                   }
@@ -784,12 +1082,13 @@ function Settings() {
                       </span>
 
                       <small>
-                        PNG, JPG, JPEG or WEBP •
-                        Max 2 MB
+                        PNG, JPG, JPEG or
+                        WEBP • Max 2 MB
                       </small>
 
                       <small>
-                        Recommended: 1600 × 600 px
+                        Recommended:
+                        1600 × 600 px
                       </small>
                     </div>
                   )}
@@ -809,7 +1108,9 @@ function Settings() {
                 )}
 
                 <input
-                  ref={homeBannerInputRef}
+                  ref={
+                    homeBannerInputRef
+                  }
                   type="file"
                   accept="image/png,image/jpeg,image/jpg,image/webp"
                   onChange={
@@ -820,15 +1121,17 @@ function Settings() {
               </div>
             </div>
 
-            {/* Banner text is completely user-defined */}
-
             <div className="form-field">
-              <label>Banner Title</label>
+              <label>
+                Banner Title
+              </label>
 
               <input
                 type="text"
                 placeholder="Enter banner title"
-                value={homeBannerTitle}
+                value={
+                  homeBannerTitle
+                }
                 onChange={(e) =>
                   setHomeBannerTitle(
                     e.target.value
@@ -857,7 +1160,9 @@ function Settings() {
             </div>
 
             <div className="form-field">
-              <label>Button Text</label>
+              <label>
+                Button Text
+              </label>
 
               <input
                 type="text"
@@ -874,18 +1179,253 @@ function Settings() {
             </div>
           </div>
 
-          {/* PART 2 CONTINUES HERE */}
-                    {/* =========================================
+          {/* =========================================
+              ABOUT US PAGE
+          ========================================== */}
+
+          <div className="settings-card">
+            <div className="settings-card-header">
+              <h2>
+                About Us Page
+              </h2>
+
+              <p>
+                Customize the title,
+                description and image
+                displayed on your About
+                Us page.
+              </p>
+            </div>
+
+            <div className="form-field">
+              <label>
+                About Title
+              </label>
+
+              <input
+                type="text"
+                placeholder="Example: Caring for pets like family"
+                value={aboutTitle}
+                onChange={(e) =>
+                  setAboutTitle(
+                    e.target.value
+                  )
+                }
+              />
+            </div>
+
+            <div className="form-field">
+              <label>
+                About Description
+              </label>
+
+              <textarea
+                placeholder="Write your clinic or store story..."
+                value={
+                  aboutDescription
+                }
+                onChange={(e) =>
+                  setAboutDescription(
+                    e.target.value
+                  )
+                }
+                rows="5"
+              />
+            </div>
+
+            <div className="form-field">
+              <label>
+                About Image
+              </label>
+
+              <div className="store-banner-wrapper">
+                <div
+                  className={`store-banner-upload about-image-upload ${
+                    isAboutImageDragging
+                      ? "dragging"
+                      : ""
+                  }`}
+                  onDragOver={
+                    handleAboutImageDragOver
+                  }
+                  onDragLeave={
+                    handleAboutImageDragLeave
+                  }
+                  onDrop={
+                    handleAboutImageDrop
+                  }
+                  onClick={() =>
+                    aboutImageInputRef.current?.click()
+                  }
+                >
+                  {aboutImage ? (
+                    <img
+                      src={aboutImage}
+                      alt="About Us"
+                      className="store-banner-preview about-image-preview"
+                    />
+                  ) : (
+                    <div className="store-banner-empty">
+                      <FaImage className="store-banner-upload-icon" />
+
+                      <span>
+                        Upload About Us
+                        Image
+                      </span>
+
+                      <small>
+                        PNG, JPG, JPEG or
+                        WEBP • Max 2 MB
+                      </small>
+
+                      <small>
+                        Recommended:
+                        1200 × 900 px
+                      </small>
+                    </div>
+                  )}
+                </div>
+
+                {aboutImage && (
+                  <button
+                    type="button"
+                    className="store-banner-remove"
+                    onClick={
+                      handleRemoveAboutImage
+                    }
+                    title="Remove about image"
+                  >
+                    <FaTrash />
+                  </button>
+                )}
+
+                <input
+                  ref={
+                    aboutImageInputRef
+                  }
+                  type="file"
+                  accept="image/png,image/jpeg,image/jpg,image/webp"
+                  onChange={
+                    handleAboutImageChange
+                  }
+                  hidden
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* =========================================
+              CONTACT US PAGE
+          ========================================== */}
+
+          <div className="settings-card">
+            <div className="settings-card-header">
+              <h2>
+                Contact Us Page
+              </h2>
+
+              <p>
+                Customize your Contact Us
+                page. Email, location and
+                social media are connected
+                automatically.
+              </p>
+            </div>
+
+            <div className="form-field">
+              <label>
+                Contact Page Title
+              </label>
+
+              <input
+                type="text"
+                placeholder="Example: Contact Us"
+                value={contactTitle}
+                onChange={(e) =>
+                  setContactTitle(
+                    e.target.value
+                  )
+                }
+              />
+            </div>
+
+            <div className="form-field">
+              <label>
+                Contact Page Description
+              </label>
+
+              <textarea
+                placeholder="Example: Have a question? We are always happy to help."
+                value={
+                  contactDescription
+                }
+                onChange={(e) =>
+                  setContactDescription(
+                    e.target.value
+                  )
+                }
+                rows="4"
+              />
+            </div>
+
+            <div className="form-row">
+              <div className="form-field">
+                <label>
+                  Contact Email
+                </label>
+
+                <input
+                  type="email"
+                  placeholder="Enter contact email"
+                  value={email}
+                  onChange={(e) =>
+                    setEmail(
+                      e.target.value
+                    )
+                  }
+                />
+              </div>
+
+              <div className="form-field">
+                <label>
+                  Location
+                </label>
+
+                <input
+                  type="text"
+                  placeholder="Enter clinic or store location"
+                  value={address}
+                  onChange={(e) =>
+                    setAddress(
+                      e.target.value
+                    )
+                  }
+                />
+              </div>
+            </div>
+
+            <div className="contact-settings-note">
+              Social media links for the
+              Contact Us page are managed
+              in the Social Media section
+              below.
+            </div>
+          </div>
+
+          {/* =========================================
               SOCIAL MEDIA
           ========================================== */}
 
-<div className="settings-card">
+          <div className="settings-card">
             <div className="settings-card-header">
-              <h2>Social Media</h2>
+              <h2>
+                Social Media
+              </h2>
 
               <p>
-                Add your social media accounts so
-                customers can easily reach your store.
+                Add your social media
+                accounts so customers can
+                easily reach your store.
               </p>
             </div>
 
@@ -901,7 +1441,9 @@ function Settings() {
                   placeholder="Instagram username or link"
                   value={instagram}
                   onChange={(e) =>
-                    setInstagram(e.target.value)
+                    setInstagram(
+                      e.target.value
+                    )
                   }
                 />
               </div>
@@ -917,18 +1459,39 @@ function Settings() {
                   placeholder="TikTok username or link"
                   value={tiktok}
                   onChange={(e) =>
-                    setTiktok(e.target.value)
+                    setTiktok(
+                      e.target.value
+                    )
+                  }
+                />
+              </div>
+            </div>
+
+            <div className="form-row">
+              <div className="form-field">
+                <label>
+                  <FaFacebookF />
+                  Facebook
+                </label>
+
+                <input
+                  type="text"
+                  placeholder="Facebook username or link"
+                  value={facebook}
+                  onChange={(e) =>
+                    setFacebook(
+                      e.target.value
+                    )
                   }
                 />
               </div>
             </div>
           </div>
-
-          {/* =========================================
+                    {/* =========================================
               STATUS MANAGEMENT
           ========================================== */}
 
-          <div className="settings-card">
+<div className="settings-card">
             <div className="settings-card-header settings-card-header-row">
               <div>
                 <h2>Status Management</h2>
@@ -1318,6 +1881,32 @@ function Settings() {
         }
 
         /* =====================================
+           CONTACT SETTINGS NOTE
+        ====================================== */
+
+        .contact-settings-note {
+          display: flex;
+          align-items: center;
+
+          min-height: 46px;
+
+          margin-top: 3px;
+          padding: 12px 15px;
+
+          border:
+            1px solid #d9eeee;
+
+          border-radius: 9px;
+
+          background: #f4fbfb;
+
+          color: #668180;
+
+          font-size: 10px;
+          line-height: 1.6;
+        }
+
+        /* =====================================
            IMAGE UPLOAD
         ====================================== */
 
@@ -1362,30 +1951,29 @@ function Settings() {
         }
 
         .store-banner-upload:hover {
-          border-color:
-            rgba(
-              21,
-              159,
-              159,
-              0.7
+          border-color: #159f9f;
+
+          background:
+            linear-gradient(
+              135deg,
+              #f8fdfd,
+              #edf9f8
             );
 
-          background: #f2fbfa;
-
           box-shadow:
-            0 7px 20px
+            0 5px 18px
             rgba(
               21,
               159,
               159,
-              0.06
+              0.08
             );
         }
 
         .store-banner-upload.dragging {
           border-color: #159f9f;
 
-          background: #eaf8f7;
+          background: #edf9f8;
 
           box-shadow:
             0 0 0 4px
@@ -1398,6 +1986,8 @@ function Settings() {
         }
 
         .store-banner-empty {
+          min-height: 145px;
+
           padding: 25px;
 
           display: flex;
@@ -1406,15 +1996,11 @@ function Settings() {
           align-items: center;
           justify-content: center;
 
+          gap: 8px;
+
           text-align: center;
-        }
 
-        .store-banner-upload-icon {
-          margin-bottom: 10px;
-
-          color: #159f9f;
-
-          font-size: 27px;
+          color: #98a2b3;
         }
 
         .store-banner-empty span {
@@ -1425,89 +2011,96 @@ function Settings() {
         }
 
         .store-banner-empty small {
-          margin-top: 6px;
+          color: #a5afb9;
 
-          display: block;
-
-          color: #98a2b3;
-
-          font-size: 8px;
-          line-height: 1.5;
+          font-size: 9px;
+          line-height: 1.4;
         }
 
-        /* =====================================
-           STORE LOGO PREVIEW
-        ====================================== */
+        .store-banner-upload-icon {
+          margin-bottom: 3px;
+
+          color: #159f9f;
+
+          font-size: 28px;
+        }
 
         .store-banner-preview {
           display: block;
 
           width: 100%;
-          height: 150px;
-
-          padding: 13px;
+          height: 180px;
 
           object-fit: contain;
+
+          padding: 12px;
 
           background: #ffffff;
         }
 
-        /* =====================================
-           HOME BANNER PREVIEW
-        ====================================== */
-
         .home-banner-upload {
-          min-height: 270px;
-
-          border-style: solid;
-
-          background:
-            linear-gradient(
-              135deg,
-              #f7fcfb,
-              #eaf7f6
-            );
+          min-height: 230px;
         }
 
         .home-banner-preview {
-          width: 100%;
           height: 270px;
 
           padding: 0;
 
           object-fit: cover;
-          object-position: center;
-
-          background: #edf7f6;
         }
 
         /* =====================================
-           REMOVE IMAGE
+           ABOUT US IMAGE
         ====================================== */
 
-        .store-banner-remove {
-          width: 35px;
-          height: 35px;
+        .about-image-upload {
+          min-height: 260px;
+
+          background:
+            linear-gradient(
+              135deg,
+              #f9fdfd,
+              #eef9f8
+            );
+        }
+
+        .about-image-upload
+        .store-banner-empty {
+          min-height: 255px;
+        }
+
+        .about-image-preview {
+          width: 100%;
+          height: 300px;
 
           padding: 0;
 
-          border:
-            1px solid
-            rgba(
-              217,
-              45,
-              32,
-              0.14
-            );
+          object-fit: cover;
+        }
 
-          border-radius: 50%;
+        .store-banner-remove {
+          width: 34px;
+          height: 34px;
+
+          padding: 0;
+
+          position: absolute;
+
+          top: 10px;
+          right: 10px;
+
+          z-index: 5;
+
+          border: none;
+          border-radius: 9px;
 
           background:
             rgba(
               255,
               255,
               255,
-              0.96
+              0.95
             );
 
           color: #d92d20;
@@ -1516,92 +2109,99 @@ function Settings() {
           align-items: center;
           justify-content: center;
 
-          position: absolute;
-
-          top: 12px;
-          right: 12px;
-
-          z-index: 5;
-
           cursor: pointer;
 
           box-shadow:
-            0 5px 15px
+            0 4px 12px
             rgba(
               16,
               24,
               40,
-              0.09
+              0.12
             );
 
           transition:
+            transform 0.2s ease,
             background 0.2s ease,
-            color 0.2s ease,
-            transform 0.2s ease;
+            color 0.2s ease;
         }
 
         .store-banner-remove:hover {
-          background: #d92d20;
-          color: #ffffff;
+          transform: translateY(-1px);
 
-          transform: scale(1.05);
+          background: #d92d20;
+
+          color: #ffffff;
         }
 
         /* =====================================
-           STATUS
+           STATUS MANAGEMENT
         ====================================== */
 
         .settings-secondary-button {
           min-height: 38px;
 
-          padding: 0 14px;
+          padding: 0 15px;
 
           border:
-            1px solid #cfe4e2;
+            1px solid #d8e6e5;
 
-          border-radius: 8px;
+          border-radius: 9px;
 
-          background: #f4fbfa;
-          color: #11797b;
+          background: #ffffff;
 
-          display: flex;
+          color: #475467;
+
+          display: inline-flex;
           align-items: center;
           justify-content: center;
 
           gap: 7px;
 
-          font-size: 9px;
-          font-weight: 750;
-
           cursor: pointer;
+
+          font-size: 10px;
+          font-weight: 750;
 
           white-space: nowrap;
 
-          transition: 0.2s ease;
+          transition:
+            border-color 0.2s ease,
+            background 0.2s ease,
+            color 0.2s ease;
+        }
+
+        .settings-secondary-button svg {
+          color: #159f9f;
         }
 
         .settings-secondary-button:hover {
           border-color: #159f9f;
 
-          background: #e9f8f6;
+          background: #f2fbfa;
+
+          color: #159f9f;
         }
 
         .status-preview-list {
           display: flex;
           flex-wrap: wrap;
 
-          gap: 8px;
+          gap: 9px;
         }
 
         .status-preview-item {
-          padding: 7px 10px;
+          min-height: 32px;
+
+          padding: 0 12px;
 
           border:
-            1px solid #d9ebe9;
+            1px solid #d8ebe9;
 
           border-radius: 20px;
 
-          background: #f2faf9;
+          background: #f4fbfa;
+
           color: #52706e;
 
           display: inline-flex;
@@ -1610,13 +2210,13 @@ function Settings() {
           gap: 6px;
 
           font-size: 9px;
-          font-weight: 650;
+          font-weight: 700;
         }
 
         .status-preview-item svg {
           color: #159f9f;
 
-          font-size: 9px;
+          font-size: 10px;
         }
 
         .status-empty-text {
@@ -1628,23 +2228,25 @@ function Settings() {
         }
 
         /* =====================================
-           SAVE
+           SAVE SECTION
         ====================================== */
 
         .settings-save-section {
-          min-height: 60px;
+          width: 100%;
+
+          margin-top: 3px;
+
+          padding: 18px 0 0;
 
           display: flex;
-
           align-items: center;
-          justify-content:
-            space-between;
+          justify-content: space-between;
 
           gap: 20px;
         }
 
         .settings-save-message {
-          min-height: 30px;
+          min-height: 35px;
 
           color: #159f9f;
 
@@ -1654,34 +2256,35 @@ function Settings() {
           gap: 7px;
 
           font-size: 10px;
-          font-weight: 700;
+          font-weight: 750;
         }
 
         .settings-save-button {
-          min-width: 145px;
-          height: 42px;
+          min-width: 150px;
+          height: 43px;
 
-          padding: 0 18px;
+          padding: 0 20px;
 
           border: none;
           border-radius: 9px;
 
           background: #159f9f;
+
           color: #ffffff;
 
-          display: flex;
+          display: inline-flex;
           align-items: center;
           justify-content: center;
 
-          gap: 8px;
+          gap: 7px;
+
+          cursor: pointer;
 
           font-size: 10px;
           font-weight: 800;
 
-          cursor: pointer;
-
           box-shadow:
-            0 7px 16px
+            0 5px 14px
             rgba(
               21,
               159,
@@ -1690,35 +2293,40 @@ function Settings() {
             );
 
           transition:
-            background 0.2s ease,
             transform 0.2s ease,
+            background 0.2s ease,
             box-shadow 0.2s ease;
         }
 
         .settings-save-button:hover {
-          background: #11797b;
+          transform: translateY(-1px);
 
-          transform:
-            translateY(-1px);
+          background: #118f8f;
 
           box-shadow:
-            0 9px 20px
+            0 7px 18px
             rgba(
-              17,
-              121,
-              123,
+              21,
+              159,
+              159,
               0.2
             );
         }
 
+        .settings-save-button:active {
+          transform: translateY(0);
+        }
+
         /* =====================================
-           MODAL
+           STATUS MODAL
         ====================================== */
 
         .settings-modal-overlay {
           position: fixed;
 
           inset: 0;
+
+          z-index: 9999;
 
           padding: 20px;
 
@@ -1734,26 +2342,25 @@ function Settings() {
           align-items: center;
           justify-content: center;
 
-          z-index: 9999;
-
           backdrop-filter:
             blur(3px);
         }
 
         .settings-modal {
-          width:
-            min(500px, 100%);
+          width: 100%;
+          max-width: 520px;
 
-          max-height: 80vh;
-
-          border:
-            1px solid #e2e9e8;
-
-          border-radius: 15px;
-
-          background: #ffffff;
+          max-height:
+            calc(100vh - 40px);
 
           overflow: hidden;
+
+          border:
+            1px solid #e3ebea;
+
+          border-radius: 16px;
+
+          background: #ffffff;
 
           box-shadow:
             0 24px 60px
@@ -1769,14 +2376,14 @@ function Settings() {
           padding: 20px 22px;
 
           border-bottom:
-            1px solid #edf1f1;
+            1px solid #edf1f0;
 
           display: flex;
           align-items: flex-start;
           justify-content:
             space-between;
 
-          gap: 20px;
+          gap: 15px;
         }
 
         .settings-modal-header h2 {
@@ -1784,7 +2391,8 @@ function Settings() {
 
           color: #344054;
 
-          font-size: 15px;
+          font-size: 16px;
+          font-weight: 800;
         }
 
         .settings-modal-header p {
@@ -1792,19 +2400,23 @@ function Settings() {
 
           color: #98a2b3;
 
-          font-size: 9px;
+          font-size: 10px;
+          line-height: 1.5;
         }
 
         .settings-modal-close {
-          width: 31px;
-          height: 31px;
+          width: 32px;
+          height: 32px;
 
           padding: 0;
 
-          border: none;
-          border-radius: 50%;
+          border:
+            1px solid #e1e8e7;
 
-          background: #f3f6f6;
+          border-radius: 8px;
+
+          background: #ffffff;
+
           color: #667085;
 
           display: flex;
@@ -1812,47 +2424,60 @@ function Settings() {
           justify-content: center;
 
           cursor: pointer;
+
+          flex-shrink: 0;
+
+          transition:
+            background 0.2s ease,
+            color 0.2s ease;
         }
 
         .settings-modal-close:hover {
-          background: #e8f7f7;
-          color: #159f9f;
+          background: #f5f7f7;
+
+          color: #d92d20;
         }
 
         .settings-modal-body {
-          max-height: 60vh;
-
-          padding: 20px 22px;
+          max-height:
+            calc(100vh - 160px);
 
           overflow-y: auto;
+
+          padding: 22px;
         }
 
         .status-add-row {
           display: grid;
 
           grid-template-columns:
-            1fr auto;
+            minmax(0, 1fr)
+            auto;
 
-          gap: 9px;
+          gap: 10px;
 
-          margin-bottom: 17px;
+          margin-bottom: 20px;
         }
 
         .status-add-row input {
-          height: 41px;
+          width: 100%;
+          height: 42px;
 
-          padding: 0 12px;
+          padding: 0 13px;
 
           border:
             1px solid #dce5e4;
 
-          border-radius: 8px;
+          border-radius: 9px;
 
           outline: none;
 
+          background: #ffffff;
+
           color: #344054;
 
-          font-size: 10px;
+          font-family: inherit;
+          font-size: 11px;
         }
 
         .status-add-row input:focus {
@@ -1869,60 +2494,64 @@ function Settings() {
         }
 
         .status-add-row button {
-          height: 41px;
+          min-width: 90px;
+          height: 42px;
 
-          padding: 0 15px;
+          padding: 0 16px;
 
           border: none;
-          border-radius: 8px;
+          border-radius: 9px;
 
           background: #159f9f;
+
           color: #ffffff;
 
-          display: flex;
+          display: inline-flex;
           align-items: center;
+          justify-content: center;
 
           gap: 6px;
 
-          font-size: 9px;
-          font-weight: 750;
-
           cursor: pointer;
+
+          font-size: 10px;
+          font-weight: 750;
         }
 
         .status-add-row button:hover {
-          background: #11797b;
+          background: #118f8f;
         }
 
         .status-modal-list {
           display: flex;
           flex-direction: column;
 
-          gap: 7px;
+          gap: 8px;
         }
 
         .status-modal-item {
           min-height: 45px;
 
-          padding:
-            8px 10px 8px 13px;
+          padding: 8px 10px 8px 13px;
 
           border:
-            1px solid #e4eceb;
+            1px solid #e3ebea;
 
           border-radius: 9px;
 
-          background: #fafcfc;
+          background: #fbfdfd;
 
           display: flex;
           align-items: center;
           justify-content:
             space-between;
 
-          gap: 15px;
+          gap: 12px;
         }
 
         .status-modal-item > div {
+          min-width: 0;
+
           display: flex;
           align-items: center;
 
@@ -1931,25 +2560,26 @@ function Settings() {
           color: #475467;
 
           font-size: 10px;
-          font-weight: 650;
+          font-weight: 700;
         }
 
         .status-modal-item > div svg {
           color: #159f9f;
 
-          font-size: 11px;
+          flex-shrink: 0;
         }
 
-        .status-modal-item > button {
-          width: 29px;
-          height: 29px;
+        .status-modal-item button {
+          width: 31px;
+          height: 31px;
 
           padding: 0;
 
           border: none;
-          border-radius: 50%;
+          border-radius: 7px;
 
-          background: #fff0ef;
+          background: #fff2f0;
+
           color: #d92d20;
 
           display: flex;
@@ -1957,15 +2587,27 @@ function Settings() {
           justify-content: center;
 
           cursor: pointer;
+
+          flex-shrink: 0;
+
+          transition:
+            background 0.2s ease,
+            color 0.2s ease;
         }
 
-        .status-modal-item > button:hover {
+        .status-modal-item button:hover {
           background: #d92d20;
+
           color: #ffffff;
         }
 
         .status-modal-empty {
-          padding: 30px;
+          padding: 30px 15px;
+
+          border:
+            1px dashed #dce5e4;
+
+          border-radius: 10px;
 
           color: #98a2b3;
 
@@ -1975,48 +2617,73 @@ function Settings() {
         }
 
         /* =====================================
+           SCROLLBAR
+        ====================================== */
+
+        .settings-modal-body::-webkit-scrollbar {
+          width: 6px;
+        }
+
+        .settings-modal-body::-webkit-scrollbar-track {
+          background: transparent;
+        }
+
+        .settings-modal-body::-webkit-scrollbar-thumb {
+          border-radius: 20px;
+
+          background: #d8e4e3;
+        }
+
+        /* =====================================
            RESPONSIVE
         ====================================== */
 
         @media (max-width: 1100px) {
           .dashboard-main {
             padding:
-              28px 25px 50px;
+              30px 28px 50px;
+          }
+
+          .settings-form {
+            max-width: 100%;
           }
         }
 
-        @media (max-width: 850px) {
+        @media (max-width: 900px) {
           .dashboard-main {
             margin-left: 0;
 
             padding:
-              25px 18px 45px;
+              80px 20px 45px;
           }
 
-          .settings-form {
-            max-width: none;
-          }
-
-          .settings-card {
-            padding: 22px 20px;
-          }
-
-          .home-banner-upload,
-          .home-banner-preview {
-            min-height: 220px;
-            height: 220px;
-          }
-        }
-
-        @media (max-width: 650px) {
           .form-row {
             grid-template-columns: 1fr;
-
             gap: 0;
           }
 
           .settings-card-header-row {
             align-items: flex-start;
+          }
+        }
+
+        @media (max-width: 650px) {
+          .dashboard-main {
+            padding:
+              75px 14px 35px;
+          }
+
+          .page-header h1 {
+            font-size: 23px;
+          }
+
+          .settings-card {
+            padding: 20px 17px;
+
+            border-radius: 12px;
+          }
+
+          .settings-card-header-row {
             flex-direction: column;
           }
 
@@ -2025,18 +2692,51 @@ function Settings() {
           }
 
           .settings-save-section {
-            align-items: stretch;
             flex-direction: column;
+
+            align-items: stretch;
+          }
+
+          .settings-save-message {
+            justify-content: center;
           }
 
           .settings-save-button {
             width: 100%;
           }
 
-          .home-banner-upload,
+          .store-banner-preview {
+            height: 150px;
+          }
+
+          .home-banner-upload {
+            min-height: 190px;
+          }
+
           .home-banner-preview {
-            min-height: 180px;
-            height: 180px;
+            height: 210px;
+          }
+
+          .about-image-upload {
+            min-height: 210px;
+          }
+
+          .about-image-upload
+          .store-banner-empty {
+            min-height: 205px;
+          }
+
+          .about-image-preview {
+            height: 230px;
+          }
+
+          .settings-modal-overlay {
+            padding: 12px;
+          }
+
+          .settings-modal-header,
+          .settings-modal-body {
+            padding: 17px;
           }
 
           .status-add-row {
@@ -2044,7 +2744,44 @@ function Settings() {
           }
 
           .status-add-row button {
-            justify-content: center;
+            width: 100%;
+          }
+        }
+
+        @media (max-width: 430px) {
+          .dashboard-main {
+            padding-left: 11px;
+            padding-right: 11px;
+          }
+
+          .settings-card {
+            padding: 18px 14px;
+          }
+
+          .store-banner-upload,
+          .store-banner-empty {
+            min-height: 130px;
+          }
+
+          .home-banner-upload {
+            min-height: 165px;
+          }
+
+          .home-banner-preview {
+            height: 180px;
+          }
+
+          .about-image-upload {
+            min-height: 185px;
+          }
+
+          .about-image-upload
+          .store-banner-empty {
+            min-height: 180px;
+          }
+
+          .about-image-preview {
+            height: 200px;
           }
         }
       `}</style>

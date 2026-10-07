@@ -15,14 +15,26 @@ import * as XLSX from "xlsx";
 
 function Inventory() {
   // =====================================================
-  // DATA
+  // STORAGE KEYS
   // =====================================================
 
-  const [items, setItems] = useState([
+  const PRODUCTS_STORAGE_KEY = "vetClinicProducts";
+  const CATEGORIES_STORAGE_KEY = "vetClinicCategories";
+
+  // =====================================================
+  // DEFAULT PRODUCTS
+  //
+  // These are only initial sample products.
+  // After they are saved in localStorage, the Admin
+  // controls everything from Inventory -> Products.
+  // =====================================================
+
+  const defaultProducts = [
     {
       id: 1,
       name: "Syringes",
-      category: "Medical Supplies",
+      category: "Pet Essentials",
+      description: "Disposable syringes for clinic and pet care use.",
       quantity: 120,
       minimumStock: 20,
       purchasePrice: 0.25,
@@ -31,11 +43,13 @@ function Inventory() {
       image: "",
       showOnStore: true,
       showOnPOS: true,
+      featured: false,
     },
     {
       id: 2,
       name: "Disposable Gloves",
-      category: "Medical Supplies",
+      category: "Pet Essentials",
+      description: "Disposable gloves for safe and hygienic pet care.",
       quantity: 15,
       minimumStock: 20,
       purchasePrice: 5,
@@ -44,11 +58,13 @@ function Inventory() {
       image: "",
       showOnStore: false,
       showOnPOS: true,
+      featured: false,
     },
     {
       id: 3,
       name: "Rabies Vaccine",
-      category: "Vaccines",
+      category: "Care",
+      description: "Rabies vaccine for veterinary use.",
       quantity: 25,
       minimumStock: 10,
       purchasePrice: 12,
@@ -57,16 +73,78 @@ function Inventory() {
       image: "",
       showOnStore: false,
       showOnPOS: true,
+      featured: false,
     },
-  ]);
+  ];
 
   // =====================================================
-  // EMPTY ITEM
+  // LOAD PRODUCTS
+  // =====================================================
+
+  const loadProducts = () => {
+    try {
+      const savedProducts =
+        localStorage.getItem(PRODUCTS_STORAGE_KEY);
+
+      if (savedProducts) {
+        const parsedProducts =
+          JSON.parse(savedProducts);
+
+        if (Array.isArray(parsedProducts)) {
+          return parsedProducts;
+        }
+      }
+    } catch (error) {
+      console.error(
+        "Could not load products:",
+        error
+      );
+    }
+
+    localStorage.setItem(
+      PRODUCTS_STORAGE_KEY,
+      JSON.stringify(defaultProducts)
+    );
+
+    return defaultProducts;
+  };
+
+  // =====================================================
+  // PRODUCTS STATE
+  // =====================================================
+
+  const [items, setItems] = useState(loadProducts);
+
+  // =====================================================
+  // SAVE PRODUCTS
+  //
+  // Products.jsx + Home.jsx will read this same data.
+  // =====================================================
+
+  useEffect(() => {
+    localStorage.setItem(
+      PRODUCTS_STORAGE_KEY,
+      JSON.stringify(items)
+    );
+
+    window.dispatchEvent(
+      new CustomEvent(
+        "vetClinicProductsUpdated",
+        {
+          detail: items,
+        }
+      )
+    );
+  }, [items]);
+
+  // =====================================================
+  // EMPTY PRODUCT
   // =====================================================
 
   const getEmptyItem = () => ({
     name: "",
     category: "",
+    description: "",
     quantity: "",
     minimumStock: "",
     purchasePrice: "",
@@ -75,6 +153,7 @@ function Inventory() {
     image: "",
     showOnStore: false,
     showOnPOS: false,
+    featured: false,
   });
 
   // =====================================================
@@ -82,8 +161,10 @@ function Inventory() {
   // =====================================================
 
   const [search, setSearch] = useState("");
+
   const [categoryFilter, setCategoryFilter] =
     useState("All");
+
   const [statusFilter, setStatusFilter] =
     useState("All");
 
@@ -91,8 +172,11 @@ function Inventory() {
   // PAGINATION
   // =====================================================
 
-  const [rowsPerPage, setRowsPerPage] = useState(5);
-  const [currentPage, setCurrentPage] = useState(1);
+  const [rowsPerPage, setRowsPerPage] =
+    useState(5);
+
+  const [currentPage, setCurrentPage] =
+    useState(1);
 
   // =====================================================
   // MODALS
@@ -117,33 +201,139 @@ function Inventory() {
     useState(null);
 
   // =====================================================
-  // NEW ITEM
+  // NEW PRODUCT
   // =====================================================
 
-  const [newItem, setNewItem] = useState(
-    getEmptyItem()
-  );
+  const [newItem, setNewItem] =
+    useState(getEmptyItem());
 
   // =====================================================
-  // CATEGORIES
+  // DYNAMIC CATEGORIES
+  //
+  // Categories now come from Categories.jsx.
+  // Nothing is hardcoded here.
   // =====================================================
 
-  const categories = [
-    "Medical Supplies",
-    "Vaccines",
-    "Medications",
-    "Equipment",
-    "Pet Food",
-    "Pet Accessories",
-    "Other",
-  ];
+  const [categories, setCategories] =
+    useState([]);
+
+  useEffect(() => {
+    const loadCategories = () => {
+      try {
+        const savedCategories =
+          localStorage.getItem(
+            CATEGORIES_STORAGE_KEY
+          );
+
+        if (!savedCategories) {
+          setCategories([]);
+          return;
+        }
+
+        const parsedCategories =
+          JSON.parse(savedCategories);
+
+        if (!Array.isArray(parsedCategories)) {
+          setCategories([]);
+          return;
+        }
+
+        const sortedCategories = [
+          ...parsedCategories,
+        ].sort((a, b) => {
+          const orderA =
+            Number(a.sortOrder) || 0;
+
+          const orderB =
+            Number(b.sortOrder) || 0;
+
+          if (orderA !== orderB) {
+            return orderA - orderB;
+          }
+
+          return String(
+            a.title || ""
+          ).localeCompare(
+            String(b.title || "")
+          );
+        });
+
+        setCategories(sortedCategories);
+      } catch (error) {
+        console.error(
+          "Could not load categories:",
+          error
+        );
+
+        setCategories([]);
+      }
+    };
+
+    const handleCategoriesUpdated = (
+      event
+    ) => {
+      if (Array.isArray(event.detail)) {
+        const sortedCategories = [
+          ...event.detail,
+        ].sort((a, b) => {
+          const orderA =
+            Number(a.sortOrder) || 0;
+
+          const orderB =
+            Number(b.sortOrder) || 0;
+
+          if (orderA !== orderB) {
+            return orderA - orderB;
+          }
+
+          return String(
+            a.title || ""
+          ).localeCompare(
+            String(b.title || "")
+          );
+        });
+
+        setCategories(sortedCategories);
+
+        return;
+      }
+
+      loadCategories();
+    };
+
+    loadCategories();
+
+    window.addEventListener(
+      "vetClinicCategoriesUpdated",
+      handleCategoriesUpdated
+    );
+
+    window.addEventListener(
+      "storage",
+      loadCategories
+    );
+
+    return () => {
+      window.removeEventListener(
+        "vetClinicCategoriesUpdated",
+        handleCategoriesUpdated
+      );
+
+      window.removeEventListener(
+        "storage",
+        loadCategories
+      );
+    };
+  }, []);
 
   // =====================================================
   // AUTOMATIC STOCK STATUS
   // =====================================================
 
   const getStockStatus = (item) => {
-    const quantity = Number(item.quantity) || 0;
+    const quantity =
+      Number(item.quantity) || 0;
+
     const minimumStock =
       Number(item.minimumStock) || 0;
 
@@ -163,7 +353,9 @@ function Inventory() {
   // =====================================================
 
   const isLowStock = (item) => {
-    const quantity = Number(item.quantity) || 0;
+    const quantity =
+      Number(item.quantity) || 0;
+
     const minimumStock =
       Number(item.minimumStock) || 0;
 
@@ -172,7 +364,6 @@ function Inventory() {
 
   // =====================================================
   // EXPIRY HELPERS
-  // Close to expiry = today through next 30 days
   // =====================================================
 
   const getExpiryInfo = (expiryDate) => {
@@ -193,15 +384,18 @@ function Inventory() {
     today.setHours(0, 0, 0, 0);
 
     const difference =
-      expiry.getTime() - today.getTime();
+      expiry.getTime() -
+      today.getTime();
 
     const daysLeft = Math.ceil(
-      difference / (1000 * 60 * 60 * 24)
+      difference /
+        (1000 * 60 * 60 * 24)
     );
 
     return {
       closeToExpiry:
-        daysLeft >= 0 && daysLeft <= 30,
+        daysLeft >= 0 &&
+        daysLeft <= 30,
 
       expired: daysLeft < 0,
 
@@ -210,10 +404,14 @@ function Inventory() {
   };
 
   const isCloseToExpiry = (item) =>
-    getExpiryInfo(item.expiryDate).closeToExpiry;
+    getExpiryInfo(
+      item.expiryDate
+    ).closeToExpiry;
 
   const isExpired = (item) =>
-    getExpiryInfo(item.expiryDate).expired;
+    getExpiryInfo(
+      item.expiryDate
+    ).expired;
 
   const needsAttention = (item) =>
     isLowStock(item) ||
@@ -221,41 +419,54 @@ function Inventory() {
     isExpired(item);
 
   // =====================================================
-  // FILTERED ITEMS
+  // FILTERED PRODUCTS
   // =====================================================
 
   const filteredItems = useMemo(() => {
-    const searchText = search
-      .trim()
-      .toLowerCase();
+    const searchText =
+      search.trim().toLowerCase();
 
     return items.filter((item) => {
-      const status = getStockStatus(item);
+      const status =
+        getStockStatus(item);
 
       const searchableValues = [
         item.name,
         item.category,
+        item.description,
         item.quantity,
         item.minimumStock,
         item.purchasePrice,
         item.sellingPrice,
         item.expiryDate,
         status,
-        item.showOnStore ? "store yes" : "store no",
-        item.showOnPOS ? "pos yes" : "pos no",
+
+        item.showOnStore
+          ? "store yes"
+          : "store no",
+
+        item.showOnPOS
+          ? "pos yes"
+          : "pos no",
+
+        item.featured
+          ? "featured yes"
+          : "featured no",
       ];
 
       const matchesSearch =
         !searchText ||
-        searchableValues.some((value) =>
-          String(value ?? "")
-            .toLowerCase()
-            .includes(searchText)
+        searchableValues.some(
+          (value) =>
+            String(value ?? "")
+              .toLowerCase()
+              .includes(searchText)
         );
 
       const matchesCategory =
         categoryFilter === "All" ||
-        item.category === categoryFilter;
+        item.category ===
+          categoryFilter;
 
       const matchesStatus =
         statusFilter === "All" ||
@@ -281,7 +492,8 @@ function Inventory() {
   const totalPages = Math.max(
     1,
     Math.ceil(
-      filteredItems.length / rowsPerPage
+      filteredItems.length /
+        rowsPerPage
     )
   );
 
@@ -295,18 +507,29 @@ function Inventory() {
   ]);
 
   useEffect(() => {
-    if (currentPage > totalPages) {
-      setCurrentPage(totalPages);
+    if (
+      currentPage >
+      totalPages
+    ) {
+      setCurrentPage(
+        totalPages
+      );
     }
-  }, [currentPage, totalPages]);
+  }, [
+    currentPage,
+    totalPages,
+  ]);
 
   const startIndex =
-    (currentPage - 1) * rowsPerPage;
+    (currentPage - 1) *
+    rowsPerPage;
 
-  const paginatedItems = filteredItems.slice(
-    startIndex,
-    startIndex + rowsPerPage
-  );
+  const paginatedItems =
+    filteredItems.slice(
+      startIndex,
+      startIndex +
+        rowsPerPage
+    );
 
   // =====================================================
   // CLEAR FILTERS
@@ -314,8 +537,15 @@ function Inventory() {
 
   const clearFilters = () => {
     setSearch("");
-    setCategoryFilter("All");
-    setStatusFilter("All");
+
+    setCategoryFilter(
+      "All"
+    );
+
+    setStatusFilter(
+      "All"
+    );
+
     setCurrentPage(1);
   };
 
@@ -328,7 +558,9 @@ function Inventory() {
   // INPUT CHANGE
   // =====================================================
 
-  const handleNewItemChange = (e) => {
+  const handleNewItemChange = (
+    e
+  ) => {
     const {
       name,
       value,
@@ -336,16 +568,21 @@ function Inventory() {
       checked,
     } = e.target;
 
-    setNewItem((previous) => ({
-      ...previous,
-      [name]:
-        type === "checkbox"
-          ? checked
-          : value,
-    }));
+    setNewItem(
+      (previous) => ({
+        ...previous,
+
+        [name]:
+          type === "checkbox"
+            ? checked
+            : value,
+      })
+    );
   };
 
-  const handleEditChange = (e) => {
+  const handleEditChange = (
+    e
+  ) => {
     const {
       name,
       value,
@@ -353,17 +590,23 @@ function Inventory() {
       checked,
     } = e.target;
 
-    setSelectedItem((previous) => ({
-      ...previous,
-      [name]:
-        type === "checkbox"
-          ? checked
-          : value,
-    }));
+    setSelectedItem(
+      (previous) => ({
+        ...previous,
+
+        [name]:
+          type === "checkbox"
+            ? checked
+            : value,
+      })
+    );
   };
 
   // =====================================================
   // IMAGE HANDLING
+  //
+  // The uploaded image is saved with the product.
+  // Store Products and Product Details will use it.
   // =====================================================
 
   const readImageFile = (
@@ -372,57 +615,92 @@ function Inventory() {
   ) => {
     if (!file) return;
 
-    if (!file.type.startsWith("image/")) {
-      alert("Please select an image file.");
+    if (
+      !file.type.startsWith(
+        "image/"
+      )
+    ) {
+      alert(
+        "Please select an image file."
+      );
+
       return;
     }
 
-    const reader = new FileReader();
+    const reader =
+      new FileReader();
 
     reader.onload = () => {
-      setStateFunction((previous) => ({
-        ...previous,
-        image: reader.result,
-      }));
+      setStateFunction(
+        (previous) => ({
+          ...previous,
+          image: reader.result,
+        })
+      );
+    };
+
+    reader.onerror = () => {
+      alert(
+        "Could not read this image."
+      );
     };
 
     reader.readAsDataURL(file);
   };
 
-  const handleNewImageChange = (e) => {
-    const file = e.target.files?.[0];
+  const handleNewImageChange = (
+    e
+  ) => {
+    const file =
+      e.target.files?.[0];
 
-    readImageFile(file, setNewItem);
+    readImageFile(
+      file,
+      setNewItem
+    );
+
+    e.target.value = "";
   };
 
-  const handleEditImageChange = (e) => {
-    const file = e.target.files?.[0];
+  const handleEditImageChange = (
+    e
+  ) => {
+    const file =
+      e.target.files?.[0];
 
     readImageFile(
       file,
       setSelectedItem
     );
+
+    e.target.value = "";
   };
 
   const removeNewImage = () => {
-    setNewItem((previous) => ({
-      ...previous,
-      image: "",
-    }));
+    setNewItem(
+      (previous) => ({
+        ...previous,
+        image: "",
+      })
+    );
   };
 
   const removeEditImage = () => {
-    setSelectedItem((previous) => ({
-      ...previous,
-      image: "",
-    }));
+    setSelectedItem(
+      (previous) => ({
+        ...previous,
+        image: "",
+      })
+    );
   };
 
   // =====================================================
-  // ADD ITEM
+  // ADD PRODUCT
   // =====================================================
 
-  const handleAddItem = (e) => {
+  const handleAddItem = (
+    e
+  ) => {
     e.preventDefault();
 
     const item = {
@@ -430,120 +708,253 @@ function Inventory() {
 
       ...newItem,
 
+      name:
+        newItem.name.trim(),
+
+      category:
+        newItem.category,
+
+      description:
+        newItem.description.trim(),
+
       quantity:
-        Number(newItem.quantity) || 0,
+        Number(
+          newItem.quantity
+        ) || 0,
 
       minimumStock:
-        Number(newItem.minimumStock) || 0,
+        Number(
+          newItem.minimumStock
+        ) || 0,
 
       purchasePrice:
-        Number(newItem.purchasePrice) || 0,
+        Number(
+          newItem.purchasePrice
+        ) || 0,
 
       sellingPrice:
-        Number(newItem.sellingPrice) || 0,
+        Number(
+          newItem.sellingPrice
+        ) || 0,
+
+      image:
+        newItem.image || "",
+
+      showOnStore:
+        Boolean(
+          newItem.showOnStore
+        ),
+
+      showOnPOS:
+        Boolean(
+          newItem.showOnPOS
+        ),
+
+      featured:
+        Boolean(
+          newItem.featured
+        ),
     };
 
-    setItems((previous) => [
-      ...previous,
-      item,
-    ]);
+    setItems(
+      (previous) => [
+        ...previous,
+        item,
+      ]
+    );
 
-    setNewItem(getEmptyItem());
+    setNewItem(
+      getEmptyItem()
+    );
 
-    setShowAddModal(false);
+    setShowAddModal(
+      false
+    );
   };
 
   // =====================================================
   // VIEW
   // =====================================================
 
-  const handleViewItem = (item) => {
-    setSelectedItem(item);
-    setShowViewModal(true);
+  const handleViewItem = (
+    item
+  ) => {
+    setSelectedItem(
+      item
+    );
+
+    setShowViewModal(
+      true
+    );
   };
 
   // =====================================================
   // EDIT
   // =====================================================
 
-  const handleOpenEdit = (item) => {
+  const handleOpenEdit = (
+    item
+  ) => {
     setSelectedItem({
       ...item,
+
+      description:
+        item.description ||
+        "",
+
+      featured:
+        Boolean(
+          item.featured
+        ),
     });
 
-    setShowEditModal(true);
+    setShowEditModal(
+      true
+    );
   };
 
-  const handleUpdateItem = (e) => {
+  const handleUpdateItem = (
+    e
+  ) => {
     e.preventDefault();
+
+    if (!selectedItem) {
+      return;
+    }
 
     const updatedItem = {
       ...selectedItem,
 
+      name:
+        selectedItem.name.trim(),
+
+      description:
+        (
+          selectedItem.description ||
+          ""
+        ).trim(),
+
       quantity:
-        Number(selectedItem.quantity) || 0,
+        Number(
+          selectedItem.quantity
+        ) || 0,
 
       minimumStock:
-        Number(selectedItem.minimumStock) ||
-        0,
+        Number(
+          selectedItem.minimumStock
+        ) || 0,
 
       purchasePrice:
-        Number(selectedItem.purchasePrice) ||
-        0,
+        Number(
+          selectedItem.purchasePrice
+        ) || 0,
 
       sellingPrice:
-        Number(selectedItem.sellingPrice) ||
-        0,
+        Number(
+          selectedItem.sellingPrice
+        ) || 0,
+
+      image:
+        selectedItem.image ||
+        "",
+
+      showOnStore:
+        Boolean(
+          selectedItem.showOnStore
+        ),
+
+      showOnPOS:
+        Boolean(
+          selectedItem.showOnPOS
+        ),
+
+      featured:
+        Boolean(
+          selectedItem.featured
+        ),
     };
 
-    setItems((previous) =>
-      previous.map((item) =>
-        item.id === updatedItem.id
-          ? updatedItem
-          : item
-      )
+    setItems(
+      (previous) =>
+        previous.map(
+          (item) =>
+            item.id ===
+            updatedItem.id
+              ? updatedItem
+              : item
+        )
     );
 
-    setShowEditModal(false);
-    setSelectedItem(null);
+    setShowEditModal(
+      false
+    );
+
+    setSelectedItem(
+      null
+    );
   };
 
   // =====================================================
   // DELETE
   // =====================================================
 
-  const handleDeleteItem = (item) => {
-    setItemToDelete(item);
-    setShowDeleteModal(true);
-  };
-
-  const closeDeleteModal = () => {
-    setShowDeleteModal(false);
-    setItemToDelete(null);
-  };
-
-  const confirmDeleteItem = () => {
-    if (!itemToDelete) return;
-
-    setItems((previous) =>
-      previous.filter(
-        (item) =>
-          item.id !== itemToDelete.id
-      )
+  const handleDeleteItem = (
+    item
+  ) => {
+    setItemToDelete(
+      item
     );
 
-    closeDeleteModal();
+    setShowDeleteModal(
+      true
+    );
   };
+
+  const closeDeleteModal =
+    () => {
+      setShowDeleteModal(
+        false
+      );
+
+      setItemToDelete(
+        null
+      );
+    };
+
+  const confirmDeleteItem =
+    () => {
+      if (!itemToDelete) {
+        return;
+      }
+
+      setItems(
+        (previous) =>
+          previous.filter(
+            (item) =>
+              item.id !==
+              itemToDelete.id
+          )
+      );
+
+      closeDeleteModal();
+    };
 
   // =====================================================
   // DATE FORMAT
   // =====================================================
 
-  const formatDate = (date) => {
-    if (!date) return "—";
+  const formatDate = (
+    date
+  ) => {
+    if (!date) {
+      return "—";
+    }
 
-    const [year, month, day] =
-      date.split("-");
+    const [
+      year,
+      month,
+      day,
+    ] = date.split("-");
 
     return `${day}/${month}/${year}`;
   };
@@ -552,26 +963,39 @@ function Inventory() {
   // PRICE FORMAT
   // =====================================================
 
-  const formatPrice = (price) => {
-    const number = Number(price);
+  const formatPrice = (
+    price
+  ) => {
+    const number =
+      Number(price);
 
-    if (Number.isNaN(number)) {
+    if (
+      Number.isNaN(number)
+    ) {
       return "$0.00";
     }
 
-    return `$${number.toFixed(2)}`;
+    return `$${number.toFixed(
+      2
+    )}`;
   };
 
   // =====================================================
   // STATUS CLASS
   // =====================================================
 
-  const getStatusClass = (status) => {
-    if (status === "In Stock") {
+  const getStatusClass = (
+    status
+  ) => {
+    if (
+      status === "In Stock"
+    ) {
       return "status confirmed";
     }
 
-    if (status === "Low Stock") {
+    if (
+      status === "Low Stock"
+    ) {
       return "status pending";
     }
 
@@ -584,51 +1008,73 @@ function Inventory() {
 
   const exportToExcel = () => {
     const excelData =
-      filteredItems.map((item) => ({
-        "Item Name": item.name,
-        Category: item.category,
-        Quantity: item.quantity,
+      filteredItems.map(
+        (item) => ({
+          "Product Name":
+            item.name,
 
-        "Minimum Stock":
-          item.minimumStock,
+          Category:
+            item.category,
 
-        "Purchase Price":
-          item.purchasePrice,
+          Description:
+            item.description ||
+            "",
 
-        "Selling Price":
-          item.sellingPrice,
+          Quantity:
+            item.quantity,
 
-        "Expiry Date":
-          formatDate(item.expiryDate),
+          "Minimum Stock":
+            item.minimumStock,
 
-        Status:
-          getStockStatus(item),
+          "Purchase Price":
+            item.purchasePrice,
 
-        "Show on Store":
-          item.showOnStore
-            ? "Yes"
-            : "No",
+          "Selling Price":
+            item.sellingPrice,
 
-        "Show on POS":
-          item.showOnPOS
-            ? "Yes"
-            : "No",
+          "Expiry Date":
+            formatDate(
+              item.expiryDate
+            ),
 
-        "Low Stock":
-          isLowStock(item)
-            ? "Yes"
-            : "No",
+          Status:
+            getStockStatus(
+              item
+            ),
 
-        "Close to Expiry":
-          isCloseToExpiry(item)
-            ? "Yes"
-            : "No",
+          "Show on Store":
+            item.showOnStore
+              ? "Yes"
+              : "No",
 
-        Expired:
-          isExpired(item)
-            ? "Yes"
-            : "No",
-      }));
+          "Show on POS":
+            item.showOnPOS
+              ? "Yes"
+              : "No",
+
+          Featured:
+            item.featured
+              ? "Yes"
+              : "No",
+
+          "Low Stock":
+            isLowStock(item)
+              ? "Yes"
+              : "No",
+
+          "Close to Expiry":
+            isCloseToExpiry(
+              item
+            )
+              ? "Yes"
+              : "No",
+
+          Expired:
+            isExpired(item)
+              ? "Yes"
+              : "No",
+        })
+      );
 
     const worksheet =
       XLSX.utils.json_to_sheet(
@@ -638,6 +1084,7 @@ function Inventory() {
     worksheet["!cols"] = [
       { wch: 25 },
       { wch: 22 },
+      { wch: 40 },
       { wch: 12 },
       { wch: 16 },
       { wch: 16 },
@@ -645,6 +1092,7 @@ function Inventory() {
       { wch: 18 },
       { wch: 18 },
       { wch: 16 },
+      { wch: 14 },
       { wch: 14 },
       { wch: 14 },
       { wch: 18 },
@@ -657,12 +1105,12 @@ function Inventory() {
     XLSX.utils.book_append_sheet(
       workbook,
       worksheet,
-      "Inventory"
+      "Products"
     );
 
     XLSX.writeFile(
       workbook,
-      "vet-clinic-inventory.xlsx"
+      "vet-clinic-products.xlsx"
     );
   };
 
@@ -675,13 +1123,18 @@ function Inventory() {
     minWidth: "30px",
     height: "30px",
     padding: "0",
-    border: "1px solid #d9e1e7",
+    border:
+      "1px solid #d9e1e7",
     borderRadius: "6px",
-    backgroundColor: "#ffffff",
+    backgroundColor:
+      "#ffffff",
     color: "#667085",
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
+    display:
+      "inline-flex",
+    alignItems:
+      "center",
+    justifyContent:
+      "center",
     fontSize: "16px",
     fontWeight: "600",
     lineHeight: "1",
@@ -691,19 +1144,26 @@ function Inventory() {
 
   const activePageStyle = {
     ...paginationControlStyle,
-    border: "1px solid #159f9f",
-    backgroundColor: "#159f9f",
+
+    border:
+      "1px solid #159f9f",
+
+    backgroundColor:
+      "#159f9f",
+
     color: "#ffffff",
+
     fontSize: "13px",
   };
 
   const normalPageStyle = {
     ...paginationControlStyle,
+
     fontSize: "13px",
   };
 
   // =====================================================
-  // ITEM FORM
+  // PRODUCT FORM
   // =====================================================
 
   const renderItemForm = (
@@ -715,25 +1175,38 @@ function Inventory() {
     <>
       <div className="form-row">
         <div className="form-field">
-          <label>Item Name</label>
+          <label>
+            Product Name
+          </label>
 
           <input
             type="text"
             name="name"
-            placeholder="Enter item name"
-            value={data.name || ""}
-            onChange={onChange}
+            placeholder="Enter product name"
+            value={
+              data.name || ""
+            }
+            onChange={
+              onChange
+            }
             required
           />
         </div>
 
         <div className="form-field">
-          <label>Category</label>
+          <label>
+            Category
+          </label>
 
           <select
             name="category"
-            value={data.category || ""}
-            onChange={onChange}
+            value={
+              data.category ||
+              ""
+            }
+            onChange={
+              onChange
+            }
             required
           >
             <option value="">
@@ -743,10 +1216,16 @@ function Inventory() {
             {categories.map(
               (category) => (
                 <option
-                  key={category}
-                  value={category}
+                  key={
+                    category.id
+                  }
+                  value={
+                    category.title
+                  }
                 >
-                  {category}
+                  {
+                    category.title
+                  }
                 </option>
               )
             )}
@@ -754,18 +1233,61 @@ function Inventory() {
         </div>
       </div>
 
+      {/* DESCRIPTION */}
+
+      <div className="form-field">
+        <label>
+          Product Description
+        </label>
+
+        <textarea
+          name="description"
+          placeholder="Enter product description shown on the store"
+          value={
+            data.description ||
+            ""
+          }
+          onChange={
+            onChange
+          }
+          rows="4"
+          style={{
+            width: "100%",
+            minHeight: "100px",
+            resize: "vertical",
+            padding: "12px",
+            border:
+              "1px solid #d0d5dd",
+            borderRadius:
+              "8px",
+            fontFamily:
+              "inherit",
+            fontSize:
+              "14px",
+            outline: "none",
+            boxSizing:
+              "border-box",
+          }}
+        />
+      </div>
+
       <div className="form-row">
         <div className="form-field">
-          <label>Quantity</label>
+          <label>
+            Quantity
+          </label>
 
           <input
             type="number"
             name="quantity"
             min="0"
-            step="1"
-            placeholder="Enter quantity"
-            value={data.quantity ?? ""}
-            onChange={onChange}
+            placeholder="0"
+            value={
+              data.quantity
+            }
+            onChange={
+              onChange
+            }
             required
           />
         </div>
@@ -779,12 +1301,13 @@ function Inventory() {
             type="number"
             name="minimumStock"
             min="0"
-            step="1"
-            placeholder="Minimum stock level"
+            placeholder="0"
             value={
-              data.minimumStock ?? ""
+              data.minimumStock
             }
-            onChange={onChange}
+            onChange={
+              onChange
+            }
             required
           />
         </div>
@@ -796,22 +1319,20 @@ function Inventory() {
             Purchase Price
           </label>
 
-          <div className="inventory-price-input">
-            <span>$</span>
-
-            <input
-              type="number"
-              name="purchasePrice"
-              min="0"
-              step="0.01"
-              placeholder="0.00"
-              value={
-                data.purchasePrice ?? ""
-              }
-              onChange={onChange}
-              required
-            />
-          </div>
+          <input
+            type="number"
+            name="purchasePrice"
+            min="0"
+            step="0.01"
+            placeholder="0.00"
+            value={
+              data.purchasePrice
+            }
+            onChange={
+              onChange
+            }
+            required
+          />
         </div>
 
         <div className="form-field">
@@ -819,22 +1340,20 @@ function Inventory() {
             Selling Price
           </label>
 
-          <div className="inventory-price-input">
-            <span>$</span>
-
-            <input
-              type="number"
-              name="sellingPrice"
-              min="0"
-              step="0.01"
-              placeholder="0.00"
-              value={
-                data.sellingPrice ?? ""
-              }
-              onChange={onChange}
-              required
-            />
-          </div>
+          <input
+            type="number"
+            name="sellingPrice"
+            min="0"
+            step="0.01"
+            placeholder="0.00"
+            value={
+              data.sellingPrice
+            }
+            onChange={
+              onChange
+            }
+            required
+          />
         </div>
       </div>
 
@@ -848,68 +1367,61 @@ function Inventory() {
             type="date"
             name="expiryDate"
             value={
-              data.expiryDate || ""
+              data.expiryDate ||
+              ""
             }
-            onChange={onChange}
+            onChange={
+              onChange
+            }
           />
-
-          <small className="inventory-field-help">
-            Optional. Items expiring
-            within 30 days are
-            highlighted.
-          </small>
         </div>
 
         <div className="form-field">
           <label>
-            Image (Optional)
+            Product Image
           </label>
 
-          <label className="inventory-image-upload">
-            <FaImage />
-
-            <span>
-              {data.image
-                ? "Change image"
-                : "Choose image"}
-            </span>
-
-            <input
-              type="file"
-              accept="image/*"
-              onChange={
-                onImageChange
-              }
-            />
-          </label>
+          <input
+            type="file"
+            accept="image/*"
+            onChange={
+              onImageChange
+            }
+          />
         </div>
       </div>
 
       {data.image && (
-        <div className="inventory-image-preview-container">
-          <img
-            src={data.image}
-            alt="Item preview"
-            className="inventory-image-preview"
-          />
+        <div className="inventory-image-preview-section">
+          <div className="inventory-image-preview-wrapper">
+            <img
+              src={
+                data.image
+              }
+              alt={
+                data.name ||
+                "Product"
+              }
+              className="inventory-image-preview"
+            />
 
-          <button
-            type="button"
-            className="inventory-remove-image"
-            onClick={removeImage}
-          >
-            <FaTrash />
-            Remove Image
-          </button>
+            <button
+              type="button"
+              className="inventory-remove-image"
+              onClick={
+                removeImage
+              }
+            >
+              <FaTimes />
+            </button>
+          </div>
         </div>
       )}
 
-      <div className="inventory-visibility-section">
-        <div className="inventory-visibility-title">
-          Visibility
-        </div>
+      {/* STORE / POS / FEATURED */}
 
-        <label className="inventory-checkbox-card">
+      <div className="inventory-visibility-section">
+        <label className="inventory-checkbox-row">
           <input
             type="checkbox"
             name="showOnStore"
@@ -918,383 +1430,1246 @@ function Inventory() {
                 data.showOnStore
               )
             }
-            onChange={onChange}
+            onChange={
+              onChange
+            }
           />
 
-          <div>
-            <strong>
-              Show on Store
-            </strong>
-
-            <span>
-              Make this item visible
-              in the online store
-            </span>
-          </div>
+          <span>
+            Show on Store
+          </span>
         </label>
 
-        <label className="inventory-checkbox-card">
+        <label className="inventory-checkbox-row">
           <input
             type="checkbox"
             name="showOnPOS"
             checked={
-              Boolean(data.showOnPOS)
+              Boolean(
+                data.showOnPOS
+              )
             }
-            onChange={onChange}
+            onChange={
+              onChange
+            }
           />
 
-          <div>
-            <strong>
-              Show on POS
-            </strong>
+          <span>
+            Show on POS
+          </span>
+        </label>
 
-            <span>
-              Make this item available
-              in the point of sale
-            </span>
-          </div>
+        <label className="inventory-checkbox-row">
+          <input
+            type="checkbox"
+            name="featured"
+            checked={
+              Boolean(
+                data.featured
+              )
+            }
+            onChange={
+              onChange
+            }
+          />
+
+          <span>
+            Featured Product
+          </span>
         </label>
       </div>
     </>
-  );
-
-  // =====================================================
-  // RETURN
+  );  // =====================================================
+  // MAIN PAGE
   // =====================================================
 
   return (
-    <div className="dashboard-layout">
+    <div className="page">
       <Sidebar />
 
-      <main className="dashboard-main inventory-page">
-        {/* =================================================
-            EXTRA INVENTORY STYLES
-        ================================================= */}
+      <main className="main">
+      <style>{`
+  /* =====================================================
+     MAIN LAYOUT - FIXED SIDEBAR OVERLAP
+  ===================================================== */
 
-        <style>{`
-          .inventory-table {
-            min-width: 1500px;
-          }
+  .page {
+    min-height: 100vh;
+    background: #f5fafa;
+  }
 
-          .inventory-table th,
-          .inventory-table td {
-            white-space: nowrap;
-          }
+  .main {
+    margin-left: 280px;
+    width: calc(100% - 280px);
+    min-height: 100vh;
+    padding: 30px;
+    box-sizing: border-box;
+    overflow-x: hidden;
+  }
 
-          .inventory-item-name-cell {
-            min-width: 210px;
-          }
+  /* =====================================================
+     PRODUCTS PAGE HEADER
+  ===================================================== */
 
-          .inventory-item-name-wrapper {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-          }
+  .inventory-page-header {
+    width: 100%;
+    box-sizing: border-box;
 
-          .inventory-table-image,
-          .inventory-table-image-placeholder {
-            width: 38px;
-            height: 38px;
-            min-width: 38px;
-            border-radius: 8px;
-            object-fit: cover;
-          }
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 20px;
 
-          .inventory-table-image {
-            border: 1px solid #e1ebea;
-          }
+    margin-bottom: 24px;
+  }
 
-          .inventory-table-image-placeholder {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: #f2f7f7;
-            color: #9aafad;
-            border: 1px solid #e1ebea;
-          }
+  .inventory-title {
+    min-width: 0;
+  }
 
-          .inventory-name-content {
-            display: flex;
-            align-items: center;
-            gap: 7px;
-          }
+  .inventory-title h1 {
+    margin: 0 0 6px;
+    color: #344054;
+    font-size: 28px;
+    font-weight: 700;
+  }
 
-          .inventory-alert-dot {
-            width: 9px;
-            height: 9px;
-            min-width: 9px;
-            border-radius: 50%;
-            background: #e53935;
-            display: inline-block;
-            box-shadow: 0 0 0 3px rgba(229,57,53,.10);
-          }
+  .inventory-title p {
+    margin: 0;
+    color: #667085;
+    font-size: 14px;
+    line-height: 1.5;
+  }
 
-          .inventory-alert-dot.large {
-            width: 11px;
-            height: 11px;
-            min-width: 11px;
-          }
+  .inventory-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    flex-shrink: 0;
+  }
 
-          .inventory-alert-text {
-            color: #d92d20;
-            font-size: 11px;
-            font-weight: 600;
-            margin-top: 3px;
-          }
+  .inventory-export-button,
+  .inventory-add-button {
+    height: 42px;
+    padding: 0 16px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
 
-          .inventory-expiry-cell {
-            display: flex;
-            align-items: center;
-            gap: 7px;
-          }
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
 
-          .inventory-expiry-warning {
-            color: #d92d20;
-            font-weight: 600;
-          }
+    transition: 0.2s ease;
+  }
 
-          .inventory-visibility-badge {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            min-width: 46px;
-            height: 25px;
-            padding: 0 9px;
-            border-radius: 20px;
-            font-size: 11px;
-            font-weight: 600;
-          }
+  .inventory-export-button {
+    border: 1px solid #159f9f;
+    background: white;
+    color: #159f9f;
+  }
 
-          .inventory-visibility-badge.yes {
-            background: #e7f8f3;
-            color: #16856f;
-          }
+  .inventory-export-button:hover {
+    background: #f0fbfb;
+  }
 
-          .inventory-visibility-badge.no {
-            background: #f2f4f7;
-            color: #667085;
-          }
+  .inventory-add-button {
+    border: 1px solid #159f9f;
+    background: #159f9f;
+    color: white;
+  }
 
-          .inventory-price-input {
-            position: relative;
-            width: 100%;
-          }
+  .inventory-add-button:hover {
+    background: #118b8b;
+  }
 
-          .inventory-price-input > span {
-            position: absolute;
-            left: 13px;
-            top: 50%;
-            transform: translateY(-50%);
-            color: #667085;
-            font-size: 14px;
-            z-index: 2;
-          }
+  /* =====================================================
+     FILTERS
+  ===================================================== */
 
-          .inventory-price-input input {
-            width: 100%;
-            padding-left: 29px !important;
-            box-sizing: border-box;
-          }
+  .inventory-filters {
+    width: 100%;
+    box-sizing: border-box;
 
-          .inventory-field-help {
-            display: block;
-            margin-top: 6px;
-            color: #98a2b3;
-            font-size: 11px;
-            line-height: 1.4;
-          }
+    display: grid;
+    grid-template-columns:
+      minmax(250px, 1fr)
+      minmax(160px, 190px)
+      minmax(160px, 190px)
+      auto;
 
-          .inventory-image-upload {
-            min-height: 43px;
-            border: 1px dashed #b9cfcd;
-            border-radius: 7px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            color: #52706e;
-            cursor: pointer;
-            background: #fbfdfd;
-            box-sizing: border-box;
-          }
+    gap: 12px;
+    align-items: center;
 
-          .inventory-image-upload:hover {
-            border-color: #159f9f;
-            color: #159f9f;
-            background: #f5fbfb;
-          }
+    padding: 18px;
+    margin-bottom: 20px;
 
-          .inventory-image-upload input {
-            display: none;
-          }
+    background: white;
+    border: 1px solid #e4e7ec;
+    border-radius: 12px;
+  }
 
-          .inventory-image-preview-container {
-            display: flex;
-            align-items: center;
-            gap: 14px;
-            padding: 12px;
-            margin-bottom: 15px;
-            border: 1px solid #e3eceb;
-            border-radius: 9px;
-            background: #fbfdfd;
-          }
+  .inventory-search-box {
+    position: relative;
+    width: 100%;
+    min-width: 0;
+  }
 
-          .inventory-image-preview {
-            width: 70px;
-            height: 70px;
-            border-radius: 9px;
-            object-fit: cover;
-            border: 1px solid #dfe9e8;
-          }
+  .inventory-search-icon {
+    position: absolute;
+    left: 14px;
+    top: 50%;
+    transform: translateY(-50%);
 
-          .inventory-remove-image {
-            width: auto !important;
-            min-width: 0 !important;
-            padding: 8px 11px !important;
-            border: 1px solid #f1c6c4 !important;
-            border-radius: 6px !important;
-            background: #fff5f4 !important;
-            color: #d92d20 !important;
-            display: inline-flex !important;
-            align-items: center !important;
-            gap: 6px !important;
-            cursor: pointer;
-            font-size: 12px !important;
-          }
+    color: #98a2b3;
+    font-size: 14px;
 
-          .inventory-visibility-section {
-            margin: 8px 0 18px;
-            padding: 15px;
-            border: 1px solid #e1eae9;
-            border-radius: 9px;
-            background: #fafcfc;
-          }
+    pointer-events: none;
+  }
 
-          .inventory-visibility-title {
-            color: #344054;
-            font-size: 13px;
-            font-weight: 700;
-            margin-bottom: 11px;
-          }
+  .inventory-search-box input {
+    width: 100%;
+    height: 42px;
 
-          .inventory-checkbox-card {
-            display: flex;
-            align-items: flex-start;
-            gap: 10px;
-            cursor: pointer;
-            margin-bottom: 11px;
-          }
+    padding: 0 40px;
 
-          .inventory-checkbox-card:last-child {
-            margin-bottom: 0;
-          }
+    box-sizing: border-box;
 
-          .inventory-checkbox-card input {
-            width: 17px !important;
-            height: 17px !important;
-            min-width: 17px;
-            margin: 2px 0 0 !important;
-            accent-color: #159f9f;
-            cursor: pointer;
-          }
+    border: 1px solid #d0d5dd;
+    border-radius: 8px;
 
-          .inventory-checkbox-card div {
-            display: flex;
-            flex-direction: column;
-            gap: 2px;
-          }
+    background: white;
+    color: #344054;
 
-          .inventory-checkbox-card strong {
-            color: #344054;
-            font-size: 13px;
-          }
+    outline: none;
+  }
 
-          .inventory-checkbox-card span {
-            color: #98a2b3;
-            font-size: 11px;
-          }
+  .inventory-search-box input:focus,
+  .inventory-filter-select:focus {
+    border-color: #159f9f;
+    box-shadow: 0 0 0 3px rgba(21, 159, 159, 0.08);
+  }
 
-          .inventory-view-image-wrapper {
-            display: flex;
-            justify-content: center;
-            margin: 0 0 18px;
-          }
+  .inventory-clear-search {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
 
-          .inventory-view-image {
-            width: 120px;
-            height: 120px;
-            object-fit: cover;
-            border-radius: 12px;
-            border: 1px solid #dfe9e8;
-          }
+    width: 25px;
+    height: 25px;
 
-          .inventory-view-placeholder {
-            width: 120px;
-            height: 120px;
-            border-radius: 12px;
-            background: #f3f7f7;
-            border: 1px solid #dfe9e8;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            gap: 7px;
-            color: #98a2b3;
-          }
+    border: none;
+    background: transparent;
+    color: #98a2b3;
 
-          .inventory-view-placeholder svg {
-            font-size: 27px;
-          }
+    cursor: pointer;
 
-          .inventory-view-placeholder span {
-            font-size: 11px;
-          }
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
 
-          .inventory-warning-box {
-            display: flex;
-            align-items: flex-start;
-            gap: 9px;
-            margin: 0 0 15px;
-            padding: 11px 13px;
-            border-radius: 8px;
-            border: 1px solid #f5c7c4;
-            background: #fff5f4;
-            color: #b42318;
-            font-size: 12px;
-            line-height: 1.5;
-          }
+  .inventory-filter-select {
+    width: 100%;
+    height: 42px;
 
-          .inventory-warning-box .inventory-alert-dot {
-            margin-top: 4px;
-          }
+    padding: 0 12px;
 
-          .inventory-row-attention {
-            background: rgba(255, 248, 248, 0.45);
-          }
+    box-sizing: border-box;
 
-          .inventory-row-attention:hover {
-            background: rgba(255, 244, 244, 0.75);
-          }
+    border: 1px solid #d0d5dd;
+    border-radius: 8px;
 
-          @media (max-width: 768px) {
-            .inventory-visibility-section {
-              padding: 12px;
-            }
-          }
-        `}</style>
+    background: white;
+    color: #475467;
 
-        {/* =================================================
-            HEADER
-        ================================================= */}
+    outline: none;
+  }
+
+  .inventory-clear-filters {
+    height: 42px;
+    padding: 0 15px;
+
+    border: 1px solid #d0d5dd;
+    border-radius: 8px;
+
+    background: white;
+    color: #475467;
+
+    font-size: 13px;
+    font-weight: 700;
+
+    cursor: pointer;
+    white-space: nowrap;
+  }
+
+  .inventory-clear-filters:hover {
+    background: #f8fafc;
+  }
+
+  /* =====================================================
+     TABLE
+  ===================================================== */
+
+  .inventory-table-container {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+
+    overflow: hidden;
+
+    background: white;
+    border: 1px solid #e4e7ec;
+    border-radius: 12px;
+  }
+
+  .inventory-table-scroll {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
+
+  .inventory-table {
+    width: 100%;
+    min-width: 1250px;
+    border-collapse: collapse;
+  }
+
+  .inventory-table thead {
+    background: #f8fafc;
+  }
+
+  .inventory-table th {
+    padding: 13px 15px;
+
+    color: #667085;
+
+    font-size: 12px;
+    font-weight: 700;
+
+    text-align: left;
+    white-space: nowrap;
+
+    border-bottom: 1px solid #e4e7ec;
+  }
+
+  .inventory-table td {
+    padding: 14px 15px;
+
+    color: #475467;
+
+    font-size: 13px;
+
+    border-bottom: 1px solid #eef2f2;
+    vertical-align: middle;
+  }
+
+  .inventory-table tbody tr:last-child td {
+    border-bottom: none;
+  }
+
+  .inventory-table tbody tr:hover {
+    background: #fcfefe;
+  }
+
+  /* =====================================================
+     PRODUCT CELL
+  ===================================================== */
+
+  .inventory-item-cell {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+
+    min-width: 190px;
+  }
+
+  .inventory-table-image {
+    width: 45px;
+    height: 45px;
+    flex-shrink: 0;
+
+    border-radius: 8px;
+    object-fit: cover;
+
+    border: 1px solid #e4e7ec;
+    background: #f8fafc;
+  }
+
+  .inventory-table-image-placeholder {
+    width: 45px;
+    height: 45px;
+    flex-shrink: 0;
+
+    border-radius: 8px;
+    border: 1px dashed #c9d7d6;
+
+    background: #f7fbfb;
+    color: #98a2b3;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .inventory-item-cell strong {
+    color: #344054;
+    font-size: 13px;
+    font-weight: 700;
+  }
+
+  .inventory-item-name-row {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+  }
+
+  /* =====================================================
+     ATTENTION
+  ===================================================== */
+
+  .inventory-alert-dot {
+    width: 8px;
+    height: 8px;
+    min-width: 8px;
+
+    display: inline-block;
+
+    border-radius: 50%;
+    background: #f04438;
+
+    box-shadow: 0 0 0 3px rgba(240, 68, 56, 0.1);
+  }
+
+  .inventory-alert-dot.large {
+    width: 10px;
+    height: 10px;
+    min-width: 10px;
+    margin-top: 5px;
+  }
+
+  /* =====================================================
+     STATUS
+  ===================================================== */
+
+  .status {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    padding: 5px 10px;
+
+    border-radius: 999px;
+
+    font-size: 11px;
+    font-weight: 700;
+
+    white-space: nowrap;
+  }
+
+  .status.confirmed {
+    background: #ecfdf3;
+    color: #027a48;
+  }
+
+  .status.pending {
+    background: #fffaeb;
+    color: #b54708;
+  }
+
+  .status.cancelled {
+    background: #fef3f2;
+    color: #b42318;
+  }
+
+  .inventory-visibility-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    min-width: 42px;
+
+    padding: 5px 9px;
+
+    border-radius: 999px;
+
+    font-size: 11px;
+    font-weight: 700;
+  }
+
+  .inventory-visibility-badge.yes {
+    background: #ecfdf3;
+    color: #027a48;
+  }
+
+  .inventory-visibility-badge.no {
+    background: #f2f4f7;
+    color: #667085;
+  }
+
+  .inventory-featured-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    padding: 5px 9px;
+
+    border-radius: 999px;
+
+    font-size: 11px;
+    font-weight: 700;
+
+    background: #eff8ff;
+    color: #175cd3;
+  }
+
+  /* =====================================================
+     ACTION BUTTONS
+  ===================================================== */
+
+  .inventory-action-buttons {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+  }
+
+  .inventory-action-buttons button {
+    width: 35px;
+    height: 35px;
+
+    padding: 0;
+
+    border-radius: 7px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    cursor: pointer;
+
+    transition: 0.2s ease;
+
+    font-size: 13px;
+  }
+
+  .inventory-view-button {
+    border: 1px solid #b8e3e1;
+    background: #effafa;
+    color: #159f9f;
+  }
+
+  .inventory-edit-button {
+    border: 1px solid #c9d8f7;
+    background: #f2f6ff;
+    color: #3b6edc;
+  }
+
+  .inventory-delete-button {
+    border: 1px solid #f4c7c3;
+    background: #fff4f3;
+    color: #d92d20;
+  }
+
+  .inventory-action-buttons button:hover {
+    transform: translateY(-1px);
+  }
+
+  /* =====================================================
+     EMPTY STATE
+  ===================================================== */
+
+  .inventory-empty-state {
+    padding: 50px !important;
+    text-align: center !important;
+    color: #98a2b3 !important;
+  }
+
+  /* =====================================================
+     PAGINATION
+  ===================================================== */
+
+  .inventory-pagination {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    gap: 20px;
+
+    padding: 15px 18px;
+
+    border-top: 1px solid #e4e7ec;
+  }
+
+  .inventory-pagination-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+
+    color: #667085;
+    font-size: 12px;
+  }
+
+  .inventory-pagination-left select {
+    height: 32px;
+
+    padding: 0 8px;
+
+    border: 1px solid #d0d5dd;
+    border-radius: 6px;
+
+    background: white;
+    color: #475467;
+  }
+
+  .inventory-pagination-right {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .inventory-pagination-button:disabled {
+    opacity: 0.45;
+  }
+
+  /* =====================================================
+     MODALS
+  ===================================================== */
+
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    padding: 25px;
+
+    background: rgba(16, 24, 40, 0.48);
+
+    overflow-y: auto;
+  }
+
+  .modal-container {
+    width: min(720px, 96vw);
+    max-height: 92vh;
+
+    overflow-y: auto;
+
+    background: white;
+
+    border-radius: 14px;
+
+    box-shadow: 0 24px 60px rgba(16, 24, 40, 0.28);
+  }
+
+  .modal-header {
+    min-height: 85px;
+
+    padding: 20px 25px;
+
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    gap: 20px;
+
+    background: #55b8b4;
+  }
+
+  .modal-header h2 {
+    margin: 0 0 5px;
+
+    color: white;
+
+    font-size: 22px;
+    font-weight: 700;
+  }
+
+  .modal-header p {
+    margin: 0;
+
+    color: rgba(255, 255, 255, 0.9);
+
+    font-size: 13px;
+  }
+
+  .modal-close {
+    width: 35px;
+    height: 35px;
+    min-width: 35px;
+
+    padding: 0;
+
+    border: none;
+    border-radius: 50%;
+
+    background: white;
+    color: #52706e;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    font-size: 20px;
+    line-height: 1;
+
+    cursor: pointer;
+  }
+
+  .modal-container form {
+    padding: 25px;
+  }
+
+  /* =====================================================
+     FORM
+  ===================================================== */
+
+  .form-row {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+
+    gap: 17px;
+
+    margin-bottom: 17px;
+  }
+
+  .form-field {
+    width: 100%;
+    margin-bottom: 17px;
+  }
+
+  .form-row .form-field {
+    margin-bottom: 0;
+  }
+
+  .form-field label {
+    display: block;
+
+    margin-bottom: 7px;
+
+    color: #344054;
+
+    font-size: 12px;
+    font-weight: 700;
+  }
+
+  .form-field input,
+  .form-field select {
+    width: 100%;
+    height: 42px;
+
+    padding: 0 12px;
+
+    box-sizing: border-box;
+
+    border: 1px solid #d0d5dd;
+    border-radius: 8px;
+
+    background: white;
+    color: #344054;
+
+    font-family: inherit;
+    font-size: 13px;
+
+    outline: none;
+  }
+
+  .form-field textarea {
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .form-field input:focus,
+  .form-field select:focus,
+  .form-field textarea:focus {
+    border-color: #159f9f !important;
+    box-shadow: 0 0 0 3px rgba(21, 159, 159, 0.08);
+  }
+
+  /* =====================================================
+     IMAGE
+  ===================================================== */
+
+  .inventory-image-preview-section {
+    margin-bottom: 20px;
+  }
+
+  .inventory-image-preview-wrapper {
+    position: relative;
+
+    width: 120px;
+    height: 120px;
+  }
+
+  .inventory-image-preview {
+    width: 120px;
+    height: 120px;
+
+    border-radius: 10px;
+
+    object-fit: cover;
+
+    border: 1px solid #e4e7ec;
+  }
+
+  .inventory-remove-image {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+
+    width: 27px;
+    height: 27px;
+
+    padding: 0;
+
+    border: none;
+    border-radius: 50%;
+
+    background: #d92d20;
+    color: white;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    cursor: pointer;
+  }
+
+  /* =====================================================
+     VISIBILITY
+  ===================================================== */
+
+  .inventory-visibility-section {
+    display: flex;
+    flex-wrap: wrap;
+
+    gap: 12px;
+
+    padding: 15px;
+
+    margin-top: 5px;
+
+    border: 1px solid #e4e7ec;
+    border-radius: 10px;
+
+    background: #f9fbfb;
+  }
+
+  .inventory-checkbox-row {
+    display: flex;
+    align-items: center;
+
+    gap: 8px;
+
+    padding: 9px 12px;
+
+    border: 1px solid #e4e7ec;
+    border-radius: 8px;
+
+    background: white;
+
+    color: #475467;
+
+    font-size: 13px;
+    font-weight: 600;
+
+    cursor: pointer;
+  }
+
+  .inventory-checkbox-row input {
+    width: 16px;
+    height: 16px;
+
+    accent-color: #159f9f;
+
+    cursor: pointer;
+  }
+
+  /* =====================================================
+     FORM ACTIONS
+  ===================================================== */
+
+  .form-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+
+    gap: 10px;
+
+    margin-top: 23px;
+    padding-top: 20px;
+
+    border-top: 1px solid #eef2f2;
+  }
+
+  .modal-cancel-button,
+  .save-button {
+    min-width: 110px;
+    height: 42px;
+
+    padding: 0 16px;
+
+    border-radius: 7px;
+
+    font-size: 13px;
+    font-weight: 700;
+
+    cursor: pointer;
+  }
+
+  .modal-cancel-button {
+    border: 1px solid #d0d5dd;
+    background: white;
+    color: #475467;
+  }
+
+  .save-button {
+    border: 1px solid #159f9f;
+    background: #159f9f;
+    color: white;
+  }
+
+  /* =====================================================
+     VIEW PRODUCT
+  ===================================================== */
+
+  .inventory-view-body {
+    padding: 25px;
+  }
+
+  .inventory-view-image-wrapper {
+    padding: 25px 25px 10px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .inventory-view-image {
+    width: 170px;
+    height: 170px;
+
+    object-fit: cover;
+
+    border-radius: 13px;
+
+    border: 1px solid #e4e7ec;
+  }
+
+  .inventory-view-placeholder {
+    width: 170px;
+    height: 170px;
+
+    border: 1px dashed #b8cfcd;
+    border-radius: 13px;
+
+    background: #f7fbfb;
+    color: #98a2b3;
+
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+
+    gap: 9px;
+  }
+
+  .inventory-view-placeholder svg {
+    font-size: 32px;
+  }
+
+  .inventory-warning-box {
+    margin: 15px 25px;
+
+    padding: 13px 15px;
+
+    display: flex;
+    align-items: flex-start;
+
+    gap: 11px;
+
+    border: 1px solid #fedf89;
+    border-radius: 8px;
+
+    background: #fffaeb;
+    color: #93370d;
+
+    font-size: 12px;
+    line-height: 1.6;
+  }
+
+  .detail-row {
+    margin: 0 25px;
+
+    padding: 13px 0;
+
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+
+    gap: 25px;
+
+    border-bottom: 1px solid #eef2f2;
+  }
+
+  .detail-row > span {
+    color: #667085;
+    font-size: 13px;
+  }
+
+  .detail-row > strong {
+    max-width: 65%;
+
+    color: #344054;
+
+    font-size: 13px;
+    font-weight: 700;
+
+    text-align: right;
+    line-height: 1.5;
+
+    overflow-wrap: anywhere;
+  }
+
+  .inventory-description-value {
+    white-space: pre-wrap;
+  }
+
+  .inventory-modal-edit {
+    min-width: 110px;
+    height: 42px;
+
+    padding: 0 16px;
+
+    border: 1px solid #159f9f;
+    border-radius: 7px;
+
+    background: #159f9f;
+    color: white;
+
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    gap: 7px;
+
+    font-size: 13px;
+    font-weight: 700;
+
+    cursor: pointer;
+  }
+
+  /* =====================================================
+     DELETE MODAL
+  ===================================================== */
+
+  .inventory-delete-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 10000;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    padding: 20px;
+
+    background: rgba(16, 24, 40, 0.48);
+  }
+
+  .inventory-delete-dialog {
+    width: min(420px, 95vw);
+
+    padding: 30px;
+
+    box-sizing: border-box;
+
+    border-radius: 14px;
+
+    background: white;
+
+    text-align: center;
+
+    box-shadow: 0 24px 60px rgba(16, 24, 40, 0.28);
+  }
+
+  .inventory-delete-icon {
+    width: 55px;
+    height: 55px;
+
+    margin: 0 auto 16px;
+
+    border-radius: 50%;
+
+    background: #fef3f2;
+    color: #d92d20;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    font-size: 21px;
+  }
+
+  .inventory-delete-dialog h3 {
+    margin: 0 0 10px;
+
+    color: #344054;
+
+    font-size: 20px;
+  }
+
+  .inventory-delete-dialog p {
+    margin: 0;
+
+    color: #667085;
+
+    font-size: 13px;
+    line-height: 1.6;
+  }
+
+  .inventory-delete-dialog p strong {
+    color: #344054;
+  }
+
+  .inventory-delete-actions {
+    display: flex;
+    justify-content: center;
+
+    gap: 10px;
+
+    margin-top: 24px;
+  }
+
+  .inventory-delete-cancel,
+  .inventory-delete-confirm {
+    min-width: 105px;
+    height: 40px;
+
+    border-radius: 7px;
+
+    font-size: 13px;
+    font-weight: 700;
+
+    cursor: pointer;
+  }
+
+  .inventory-delete-cancel {
+    border: 1px solid #d0d5dd;
+    background: white;
+    color: #475467;
+  }
+
+  .inventory-delete-confirm {
+    border: 1px solid #d92d20;
+    background: #d92d20;
+    color: white;
+  }
+
+  /* =====================================================
+     RESPONSIVE
+  ===================================================== */
+
+  @media (max-width: 1200px) {
+    .inventory-filters {
+      grid-template-columns: 1fr 170px 170px;
+    }
+
+    .inventory-clear-filters {
+      grid-column: 1 / -1;
+      justify-self: start;
+    }
+  }
+
+  @media (max-width: 900px) {
+    .main {
+      margin-left: 0;
+      width: 100%;
+      padding: 20px;
+    }
+
+    .inventory-filters {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+
+  @media (max-width: 700px) {
+    .main {
+      padding: 16px;
+    }
+
+    .inventory-page-header {
+      flex-direction: column;
+    }
+
+    .inventory-header-actions {
+      width: 100%;
+    }
+
+    .inventory-export-button,
+    .inventory-add-button {
+      flex: 1;
+    }
+
+    .inventory-filters {
+      grid-template-columns: 1fr;
+    }
+
+    .inventory-clear-filters {
+      width: 100%;
+    }
+
+    .form-row {
+      grid-template-columns: 1fr;
+    }
+
+    .modal-overlay {
+      padding: 10px;
+    }
+
+    .modal-header {
+      padding: 18px;
+    }
+
+    .modal-container form {
+      padding: 18px;
+    }
+
+    .inventory-pagination {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    .detail-row {
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .detail-row > strong {
+      max-width: 100%;
+      text-align: left;
+    }
+  }
+`}</style>
+
+        {/* =====================================================
+            PAGE HEADER
+        ===================================================== */}
 
         <div className="inventory-page-header">
           <div className="inventory-title">
-            <h1>Inventory</h1>
+            <h1>Products</h1>
 
             <p>
-              Manage clinic inventory,
-              stock levels and product
-              visibility
+              Manage products, stock levels, store visibility and
+              product information.
             </p>
           </div>
 
@@ -1305,52 +2680,42 @@ function Inventory() {
               onClick={exportToExcel}
             >
               <FaFileExcel />
-
-              <span>Export</span>
+              Export
             </button>
 
             <button
               type="button"
               className="inventory-add-button"
               onClick={() => {
-                setNewItem(
-                  getEmptyItem()
-                );
-
+                setNewItem(getEmptyItem());
                 setShowAddModal(true);
               }}
             >
-              + Add Item
+              + Add Product
             </button>
           </div>
         </div>
 
-        {/* =================================================
-            SEARCH + FILTERS
-        ================================================= */}
+        {/* =====================================================
+            FILTERS
+        ===================================================== */}
 
-        <div className="inventory-filter-row">
+        <div className="inventory-filters">
           <div className="inventory-search-box">
             <FaSearch className="inventory-search-icon" />
 
             <input
               type="text"
-              placeholder="Search inventory..."
+              placeholder="Search products..."
               value={search}
-              onChange={(e) =>
-                setSearch(
-                  e.target.value
-                )
-              }
+              onChange={(e) => setSearch(e.target.value)}
             />
 
-            {hasActiveFilters && (
+            {search && (
               <button
                 type="button"
-                className="inventory-clear-button"
-                onClick={clearFilters}
-                title="Clear filters"
-                aria-label="Clear filters"
+                className="inventory-clear-search"
+                onClick={() => setSearch("")}
               >
                 <FaTimes />
               </button>
@@ -1361,64 +2726,57 @@ function Inventory() {
             className="inventory-filter-select"
             value={categoryFilter}
             onChange={(e) =>
-              setCategoryFilter(
-                e.target.value
-              )
+              setCategoryFilter(e.target.value)
             }
           >
-            <option value="All">
-              All Categories
-            </option>
+            <option value="All">All Categories</option>
 
-            {categories.map(
-              (category) => (
-                <option
-                  key={category}
-                  value={category}
-                >
-                  {category}
-                </option>
-              )
-            )}
+            {categories.map((category) => (
+              <option
+                key={category.id}
+                value={category.title}
+              >
+                {category.title}
+              </option>
+            ))}
           </select>
 
           <select
             className="inventory-filter-select"
             value={statusFilter}
             onChange={(e) =>
-              setStatusFilter(
-                e.target.value
-              )
+              setStatusFilter(e.target.value)
             }
           >
-            <option value="All">
-              All Status
-            </option>
-
-            <option value="In Stock">
-              In Stock
-            </option>
-
-            <option value="Low Stock">
-              Low Stock
-            </option>
-
+            <option value="All">All Status</option>
+            <option value="In Stock">In Stock</option>
+            <option value="Low Stock">Low Stock</option>
             <option value="Out of Stock">
               Out of Stock
             </option>
           </select>
+
+          {hasActiveFilters && (
+            <button
+              type="button"
+              className="inventory-clear-filters"
+              onClick={clearFilters}
+            >
+              Clear Filters
+            </button>
+          )}
         </div>
 
-        {/* =================================================
-            TABLE
-        ================================================= */}
+        {/* =====================================================
+            PRODUCTS TABLE
+        ===================================================== */}
 
-        <div className="owners-table-container inventory-table-container">
+        <div className="inventory-table-container">
           <div className="inventory-table-scroll">
-            <table className="owners-table inventory-table">
+            <table className="inventory-table">
               <thead>
                 <tr>
-                  <th>Item</th>
+                  <th>Product</th>
                   <th>Category</th>
                   <th>Quantity</th>
                   <th>Min. Stock</th>
@@ -1427,465 +2785,287 @@ function Inventory() {
                   <th>Expiry Date</th>
                   <th>Store</th>
                   <th>POS</th>
+                  <th>Featured</th>
                   <th>Status</th>
                   <th>Actions</th>
                 </tr>
               </thead>
 
               <tbody>
-                {paginatedItems.length >
-                0 ? (
-                  paginatedItems.map(
-                    (item) => {
-                      const status =
-                        getStockStatus(
-                          item
-                        );
+                {paginatedItems.length > 0 ? (
+                  paginatedItems.map((item) => {
+                    const status = getStockStatus(item);
 
-                      const lowStock =
-                        isLowStock(item);
-
-                      const expiryInfo =
-                        getExpiryInfo(
-                          item.expiryDate
-                        );
-
-                      const attention =
-                        needsAttention(
-                          item
-                        );
-
-                      return (
-                        <tr
-                          key={item.id}
-                          className={
-                            attention
-                              ? "inventory-row-attention"
-                              : ""
-                          }
-                        >
-                          <td className="inventory-item-name-cell">
-                            <div className="inventory-item-name-wrapper">
-                              {item.image ? (
-                                <img
-                                  src={
-                                    item.image
-                                  }
-                                  alt={
-                                    item.name
-                                  }
-                                  className="inventory-table-image"
-                                />
-                              ) : (
-                                <div className="inventory-table-image-placeholder">
-                                  <FaImage />
-                                </div>
-                              )}
-
-                              <div>
-                                <div className="inventory-name-content">
-                                  {attention && (
-                                    <span
-                                      className="inventory-alert-dot"
-                                      title="This item needs attention"
-                                    />
-                                  )}
-
-                                  <strong>
-                                    {
-                                      item.name
-                                    }
-                                  </strong>
-                                </div>
-
-                                {lowStock && (
-                                  <div className="inventory-alert-text">
-                                    Low stock
-                                  </div>
-                                )}
-
-                                {expiryInfo.expired && (
-                                  <div className="inventory-alert-text">
-                                    Expired
-                                  </div>
-                                )}
-
-                                {!expiryInfo.expired &&
-                                  expiryInfo.closeToExpiry && (
-                                    <div className="inventory-alert-text">
-                                      Expires in{" "}
-                                      {
-                                        expiryInfo.daysLeft
-                                      }{" "}
-                                      day
-                                      {expiryInfo.daysLeft !==
-                                      1
-                                        ? "s"
-                                        : ""}
-                                    </div>
-                                  )}
+                    return (
+                      <tr key={item.id}>
+                        <td>
+                          <div className="inventory-item-cell">
+                            {item.image ? (
+                              <img
+                                src={item.image}
+                                alt={item.name}
+                                className="inventory-table-image"
+                              />
+                            ) : (
+                              <div className="inventory-table-image-placeholder">
+                                <FaImage />
                               </div>
-                            </div>
-                          </td>
-
-                          <td>
-                            {
-                              item.category
-                            }
-                          </td>
-
-                          <td>
-                            <strong>
-                              {
-                                item.quantity
-                              }
-                            </strong>
-                          </td>
-
-                          <td>
-                            {
-                              item.minimumStock
-                            }
-                          </td>
-
-                          <td>
-                            {formatPrice(
-                              item.purchasePrice
                             )}
-                          </td>
 
-                          <td>
-                            <strong>
-                              {formatPrice(
-                                item.sellingPrice
-                              )}
-                            </strong>
-                          </td>
-
-                          <td>
-                            <div className="inventory-expiry-cell">
-                              {(expiryInfo.closeToExpiry ||
-                                expiryInfo.expired) && (
-                                <span className="inventory-alert-dot" />
+                            <div className="inventory-item-name-row">
+                              {needsAttention(item) && (
+                                <span
+                                  className="inventory-alert-dot"
+                                  title="This product needs attention"
+                                />
                               )}
 
-                              <span
-                                className={
-                                  expiryInfo.closeToExpiry ||
-                                  expiryInfo.expired
-                                    ? "inventory-expiry-warning"
-                                    : ""
-                                }
-                              >
-                                {formatDate(
-                                  item.expiryDate
-                                )}
-                              </span>
+                              <strong>{item.name}</strong>
                             </div>
-                          </td>
+                          </div>
+                        </td>
 
-                          <td>
-                            <span
-                              className={`inventory-visibility-badge ${
-                                item.showOnStore
-                                  ? "yes"
-                                  : "no"
-                              }`}
-                            >
-                              {item.showOnStore
-                                ? "Yes"
-                                : "No"}
+                        <td>{item.category || "—"}</td>
+
+                        <td>{item.quantity}</td>
+
+                        <td>{item.minimumStock}</td>
+
+                        <td>
+                          {formatPrice(item.purchasePrice)}
+                        </td>
+
+                        <td>
+                          {formatPrice(item.sellingPrice)}
+                        </td>
+
+                        <td>
+                          {formatDate(item.expiryDate)}
+                        </td>
+
+                        <td>
+                          <span
+                            className={`inventory-visibility-badge ${
+                              item.showOnStore ? "yes" : "no"
+                            }`}
+                          >
+                            {item.showOnStore ? "Yes" : "No"}
+                          </span>
+                        </td>
+
+                        <td>
+                          <span
+                            className={`inventory-visibility-badge ${
+                              item.showOnPOS ? "yes" : "no"
+                            }`}
+                          >
+                            {item.showOnPOS ? "Yes" : "No"}
+                          </span>
+                        </td>
+
+                        <td>
+                          {item.featured ? (
+                            <span className="inventory-featured-badge">
+                              Featured
                             </span>
-                          </td>
+                          ) : (
+                            "—"
+                          )}
+                        </td>
 
-                          <td>
-                            <span
-                              className={`inventory-visibility-badge ${
-                                item.showOnPOS
-                                  ? "yes"
-                                  : "no"
-                              }`}
+                        <td>
+                          <span
+                            className={getStatusClass(status)}
+                          >
+                            {status}
+                          </span>
+                        </td>
+
+                        <td>
+                          <div className="inventory-action-buttons">
+                            <button
+                              type="button"
+                              className="inventory-view-button"
+                              title="View"
+                              onClick={() =>
+                                handleViewItem(item)
+                              }
                             >
-                              {item.showOnPOS
-                                ? "Yes"
-                                : "No"}
-                            </span>
-                          </td>
+                              <FaEye />
+                            </button>
 
-                          <td>
-                            <span
-                              className={getStatusClass(
-                                status
-                              )}
+                            <button
+                              type="button"
+                              className="inventory-edit-button"
+                              title="Edit"
+                              onClick={() =>
+                                handleOpenEdit(item)
+                              }
                             >
-                              {status}
-                            </span>
-                          </td>
+                              <FaPen />
+                            </button>
 
-                          <td>
-                            <div className="table-actions">
-                              <button
-                                type="button"
-                                className="view-button icon-button"
-                                onClick={() =>
-                                  handleViewItem(
-                                    item
-                                  )
-                                }
-                                title="View"
-                                aria-label="View inventory item"
-                              >
-                                <FaEye />
-                              </button>
-
-                              <button
-                                type="button"
-                                className="edit-button icon-button"
-                                onClick={() =>
-                                  handleOpenEdit(
-                                    item
-                                  )
-                                }
-                                title="Edit"
-                                aria-label="Edit inventory item"
-                              >
-                                <FaPen />
-                              </button>
-
-                              <button
-                                type="button"
-                                className="delete-button icon-button"
-                                onClick={() =>
-                                  handleDeleteItem(
-                                    item
-                                  )
-                                }
-                                title="Delete"
-                                aria-label="Delete inventory item"
-                              >
-                                <FaTrash />
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    }
-                  )
+                            <button
+                              type="button"
+                              className="inventory-delete-button"
+                              title="Delete"
+                              onClick={() =>
+                                handleDeleteItem(item)
+                              }
+                            >
+                              <FaTrash />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
                 ) : (
                   <tr>
                     <td
-                      colSpan="11"
-                      className="no-results"
+                      colSpan="12"
+                      className="inventory-empty-state"
                     >
-                      No inventory items
-                      found
+                      No products found.
                     </td>
                   </tr>
                 )}
               </tbody>
             </table>
           </div>
-        </div>
 
-        {/* =================================================
-            PAGINATION
-        ================================================= */}
+          {/* =====================================================
+              PAGINATION
+          ===================================================== */}
 
-        <div className="inventory-pagination">
-          <div className="inventory-rows">
-            <span>
-              Rows per page:
-            </span>
+          <div className="inventory-pagination">
+            <div className="inventory-pagination-left">
+              <span>Rows per page:</span>
 
-            <select
-              value={rowsPerPage}
-              onChange={(e) =>
-                setRowsPerPage(
-                  Number(
-                    e.target.value
-                  )
-                )
-              }
-            >
-              <option value={5}>
-                5
-              </option>
-
-              <option value={10}>
-                10
-              </option>
-
-              <option value={20}>
-                20
-              </option>
-
-              <option value={50}>
-                50
-              </option>
-            </select>
-          </div>
-
-          <div
-            className="inventory-page-controls"
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "6px",
-            }}
-          >
-            <button
-              type="button"
-              className="inventory-pagination-button"
-              disabled={
-                currentPage === 1
-              }
-              onClick={() =>
-                setCurrentPage(
-                  (previous) =>
-                    Math.max(
-                      previous - 1,
-                      1
-                    )
-                )
-              }
-              style={{
-                ...paginationControlStyle,
-
-                opacity:
-                  currentPage === 1
-                    ? 0.45
-                    : 1,
-
-                cursor:
-                  currentPage === 1
-                    ? "not-allowed"
-                    : "pointer",
-              }}
-              aria-label="Previous page"
-            >
-              &lt;
-            </button>
-
-            {Array.from(
-              {
-                length: totalPages,
-              },
-              (_, index) =>
-                index + 1
-            ).map((page) => (
-              <button
-                type="button"
-                key={page}
-                className={`inventory-page-number ${
-                  currentPage ===
-                  page
-                    ? "active"
-                    : ""
-                }`}
-                onClick={() =>
-                  setCurrentPage(
-                    page
-                  )
-                }
-                style={
-                  currentPage ===
-                  page
-                    ? activePageStyle
-                    : normalPageStyle
+              <select
+                value={rowsPerPage}
+                onChange={(e) =>
+                  setRowsPerPage(Number(e.target.value))
                 }
               >
-                {page}
+                <option value={5}>5</option>
+                <option value={10}>10</option>
+                <option value={20}>20</option>
+              </select>
+
+              <span>
+                {filteredItems.length === 0
+                  ? "0 products"
+                  : `${startIndex + 1}-${Math.min(
+                      startIndex + rowsPerPage,
+                      filteredItems.length
+                    )} of ${filteredItems.length}`}
+              </span>
+            </div>
+
+            <div className="inventory-pagination-right">
+              <button
+                type="button"
+                className="inventory-pagination-button"
+                disabled={currentPage === 1}
+                onClick={() =>
+                  setCurrentPage((previous) =>
+                    Math.max(previous - 1, 1)
+                  )
+                }
+                style={{
+                  ...paginationControlStyle,
+                  opacity: currentPage === 1 ? 0.45 : 1,
+                  cursor:
+                    currentPage === 1
+                      ? "not-allowed"
+                      : "pointer",
+                }}
+              >
+                &lt;
               </button>
-            ))}
 
-            <button
-              type="button"
-              className="inventory-pagination-button"
-              disabled={
-                currentPage ===
-                totalPages
-              }
-              onClick={() =>
-                setCurrentPage(
-                  (previous) =>
-                    Math.min(
-                      previous + 1,
-                      totalPages
-                    )
-                )
-              }
-              style={{
-                ...paginationControlStyle,
+              {Array.from(
+                { length: totalPages },
+                (_, index) => index + 1
+              ).map((page) => (
+                <button
+                  type="button"
+                  key={page}
+                  onClick={() => setCurrentPage(page)}
+                  style={
+                    currentPage === page
+                      ? activePageStyle
+                      : normalPageStyle
+                  }
+                >
+                  {page}
+                </button>
+              ))}
 
-                opacity:
-                  currentPage ===
-                  totalPages
-                    ? 0.45
-                    : 1,
-
-                cursor:
-                  currentPage ===
-                  totalPages
-                    ? "not-allowed"
-                    : "pointer",
-              }}
-              aria-label="Next page"
-            >
-              &gt;
-            </button>
+              <button
+                type="button"
+                className="inventory-pagination-button"
+                disabled={currentPage === totalPages}
+                onClick={() =>
+                  setCurrentPage((previous) =>
+                    Math.min(previous + 1, totalPages)
+                  )
+                }
+                style={{
+                  ...paginationControlStyle,
+                  opacity:
+                    currentPage === totalPages ? 0.45 : 1,
+                  cursor:
+                    currentPage === totalPages
+                      ? "not-allowed"
+                      : "pointer",
+                }}
+              >
+                &gt;
+              </button>
+            </div>
           </div>
         </div>
       </main>
 
       {/* =====================================================
-          ADD ITEM MODAL
+          ADD PRODUCT
       ===================================================== */}
 
       {showAddModal && (
         <div
           className="modal-overlay"
           onMouseDown={(e) => {
-            if (
-              e.target ===
-              e.currentTarget
-            ) {
-              setShowAddModal(
-                false
-              );
+            if (e.target === e.currentTarget) {
+              setShowAddModal(false);
+              setNewItem(getEmptyItem());
             }
           }}
         >
           <div className="modal-container">
             <div className="modal-header">
               <div>
-                <h2>
-                  Add Inventory Item
-                </h2>
-
+                <h2>Add Product</h2>
                 <p>
-                  Enter inventory item
-                  information
+                  Add product information, image, category and
+                  store visibility.
                 </p>
               </div>
 
               <button
                 type="button"
                 className="modal-close"
-                onClick={() =>
-                  setShowAddModal(
-                    false
-                  )
-                }
+                onClick={() => {
+                  setShowAddModal(false);
+                  setNewItem(getEmptyItem());
+                }}
               >
                 ×
               </button>
             </div>
 
-            <form
-              onSubmit={
-                handleAddItem
-              }
-            >
+            <form onSubmit={handleAddItem}>
               {renderItemForm(
                 newItem,
                 handleNewItemChange,
@@ -1897,11 +3077,10 @@ function Inventory() {
                 <button
                   type="button"
                   className="modal-cancel-button"
-                  onClick={() =>
-                    setShowAddModal(
-                      false
-                    )
-                  }
+                  onClick={() => {
+                    setShowAddModal(false);
+                    setNewItem(getEmptyItem());
+                  }}
                 >
                   Cancel
                 </button>
@@ -1910,7 +3089,7 @@ function Inventory() {
                   type="submit"
                   className="save-button"
                 >
-                  Add Item
+                  Add Product
                 </button>
               </div>
             </form>
@@ -1919,489 +3098,363 @@ function Inventory() {
       )}
 
       {/* =====================================================
-          VIEW ITEM MODAL
+          VIEW PRODUCT
       ===================================================== */}
 
-      {showViewModal &&
-        selectedItem && (
-          <div
-            className="modal-overlay"
-            onMouseDown={(e) => {
-              if (
-                e.target ===
-                e.currentTarget
-              ) {
-                setShowViewModal(
-                  false
-                );
+      {showViewModal && selectedItem && (
+        <div
+          className="modal-overlay"
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget) {
+              setShowViewModal(false);
+              setSelectedItem(null);
+            }
+          }}
+        >
+          <div className="modal-container">
+            <div className="modal-header">
+              <div>
+                <h2>Product Details</h2>
 
-                setSelectedItem(
-                  null
-                );
-              }
-            }}
-          >
-            <div className="modal-container">
-              <div className="modal-header">
-                <div>
-                  <h2>
-                    Inventory Item
-                    Details
-                  </h2>
-
-                  <p>
-                    View inventory
-                    information
-                  </p>
-                </div>
-
-                <button
-                  type="button"
-                  className="modal-close"
-                  onClick={() => {
-                    setShowViewModal(
-                      false
-                    );
-
-                    setSelectedItem(
-                      null
-                    );
-                  }}
-                >
-                  ×
-                </button>
+                <p>
+                  View product and store information.
+                </p>
               </div>
 
-              <div className="inventory-view-image-wrapper">
-                {selectedItem.image ? (
-                  <img
-                    src={
-                      selectedItem.image
-                    }
-                    alt={
-                      selectedItem.name
-                    }
-                    className="inventory-view-image"
-                  />
-                ) : (
-                  <div className="inventory-view-placeholder">
-                    <FaImage />
-                    <span>
-                      No image
-                    </span>
-                  </div>
-                )}
-              </div>
+              <button
+                type="button"
+                className="modal-close"
+                onClick={() => {
+                  setShowViewModal(false);
+                  setSelectedItem(null);
+                }}
+              >
+                ×
+              </button>
+            </div>
 
-              {needsAttention(
-                selectedItem
-              ) && (
-                <div className="inventory-warning-box">
-                  <span className="inventory-alert-dot large" />
-
-                  <div>
-                    {isLowStock(
-                      selectedItem
-                    ) && (
-                      <div>
-                        <strong>
-                          Low stock:
-                        </strong>{" "}
-                        Quantity is{" "}
-                        {
-                          selectedItem.quantity
-                        }{" "}
-                        and minimum stock
-                        is{" "}
-                        {
-                          selectedItem.minimumStock
-                        }
-                        .
-                      </div>
-                    )}
-
-                    {isExpired(
-                      selectedItem
-                    ) && (
-                      <div>
-                        <strong>
-                          Expired:
-                        </strong>{" "}
-                        This item expired
-                        on{" "}
-                        {formatDate(
-                          selectedItem.expiryDate
-                        )}
-                        .
-                      </div>
-                    )}
-
-                    {!isExpired(
-                      selectedItem
-                    ) &&
-                      isCloseToExpiry(
-                        selectedItem
-                      ) && (
-                        <div>
-                          <strong>
-                            Close to
-                            expiry:
-                          </strong>{" "}
-                          This item
-                          expires in{" "}
-                          {
-                            getExpiryInfo(
-                              selectedItem.expiryDate
-                            )
-                              .daysLeft
-                          }{" "}
-                          day(s).
-                        </div>
-                      )}
-                  </div>
+            <div className="inventory-view-image-wrapper">
+              {selectedItem.image ? (
+                <img
+                  src={selectedItem.image}
+                  alt={selectedItem.name}
+                  className="inventory-view-image"
+                />
+              ) : (
+                <div className="inventory-view-placeholder">
+                  <FaImage />
+                  <span>No image</span>
                 </div>
               )}
+            </div>
 
-              <div className="detail-row">
-                <span>
-                  Item Name
-                </span>
+            {needsAttention(selectedItem) && (
+              <div className="inventory-warning-box">
+                <span className="inventory-alert-dot large" />
 
-                <strong>
-                  {
-                    selectedItem.name
-                  }
-                </strong>
-              </div>
-
-              <div className="detail-row">
-                <span>
-                  Category
-                </span>
-
-                <strong>
-                  {
-                    selectedItem.category
-                  }
-                </strong>
-              </div>
-
-              <div className="detail-row">
-                <span>
-                  Quantity
-                </span>
-
-                <strong>
-                  {
-                    selectedItem.quantity
-                  }
-                </strong>
-              </div>
-
-              <div className="detail-row">
-                <span>
-                  Minimum Stock
-                </span>
-
-                <strong>
-                  {
-                    selectedItem.minimumStock
-                  }
-                </strong>
-              </div>
-
-              <div className="detail-row">
-                <span>
-                  Purchase Price
-                </span>
-
-                <strong>
-                  {formatPrice(
-                    selectedItem.purchasePrice
+                <div>
+                  {isLowStock(selectedItem) && (
+                    <div>
+                      <strong>Low stock:</strong>{" "}
+                      Quantity is {selectedItem.quantity} and
+                      minimum stock is{" "}
+                      {selectedItem.minimumStock}.
+                    </div>
                   )}
-                </strong>
-              </div>
 
-              <div className="detail-row">
-                <span>
-                  Selling Price
-                </span>
-
-                <strong>
-                  {formatPrice(
-                    selectedItem.sellingPrice
+                  {isExpired(selectedItem) && (
+                    <div>
+                      <strong>Expired:</strong> This product
+                      expired on{" "}
+                      {formatDate(selectedItem.expiryDate)}.
+                    </div>
                   )}
-                </strong>
-              </div>
 
-              <div className="detail-row">
-                <span>
-                  Expiry Date
-                </span>
-
-                <strong>
-                  {formatDate(
-                    selectedItem.expiryDate
-                  )}
-                </strong>
-              </div>
-
-              <div className="detail-row">
-                <span>
-                  Show on Store
-                </span>
-
-                <strong>
-                  <span
-                    className={`inventory-visibility-badge ${
-                      selectedItem.showOnStore
-                        ? "yes"
-                        : "no"
-                    }`}
-                  >
-                    {selectedItem.showOnStore
-                      ? "Yes"
-                      : "No"}
-                  </span>
-                </strong>
-              </div>
-
-              <div className="detail-row">
-                <span>
-                  Show on POS
-                </span>
-
-                <strong>
-                  <span
-                    className={`inventory-visibility-badge ${
-                      selectedItem.showOnPOS
-                        ? "yes"
-                        : "no"
-                    }`}
-                  >
-                    {selectedItem.showOnPOS
-                      ? "Yes"
-                      : "No"}
-                  </span>
-                </strong>
-              </div>
-
-              <div className="detail-row">
-                <span>
-                  Status
-                </span>
-
-                <strong>
-                  <span
-                    className={getStatusClass(
-                      getStockStatus(
-                        selectedItem
-                      )
+                  {!isExpired(selectedItem) &&
+                    isCloseToExpiry(selectedItem) && (
+                      <div>
+                        <strong>Close to expiry:</strong>{" "}
+                        This product expires in{" "}
+                        {
+                          getExpiryInfo(
+                            selectedItem.expiryDate
+                          ).daysLeft
+                        }{" "}
+                        day(s).
+                      </div>
                     )}
-                  >
-                    {getStockStatus(
-                      selectedItem
-                    )}
-                  </span>
-                </strong>
+                </div>
               </div>
+            )}
+
+            <div className="detail-row">
+              <span>Product Name</span>
+              <strong>{selectedItem.name}</strong>
+            </div>
+
+            <div className="detail-row">
+              <span>Category</span>
+              <strong>{selectedItem.category || "—"}</strong>
+            </div>
+
+            <div className="detail-row">
+              <span>Description</span>
+
+              <strong className="inventory-description-value">
+                {selectedItem.description || "—"}
+              </strong>
+            </div>
+
+            <div className="detail-row">
+              <span>Quantity</span>
+              <strong>{selectedItem.quantity}</strong>
+            </div>
+
+            <div className="detail-row">
+              <span>Minimum Stock</span>
+              <strong>{selectedItem.minimumStock}</strong>
+            </div>
+
+            <div className="detail-row">
+              <span>Purchase Price</span>
+
+              <strong>
+                {formatPrice(selectedItem.purchasePrice)}
+              </strong>
+            </div>
+
+            <div className="detail-row">
+              <span>Selling Price</span>
+
+              <strong>
+                {formatPrice(selectedItem.sellingPrice)}
+              </strong>
+            </div>
+
+            <div className="detail-row">
+              <span>Expiry Date</span>
+
+              <strong>
+                {formatDate(selectedItem.expiryDate)}
+              </strong>
+            </div>
+
+            <div className="detail-row">
+              <span>Show on Store</span>
+
+              <strong>
+                <span
+                  className={`inventory-visibility-badge ${
+                    selectedItem.showOnStore ? "yes" : "no"
+                  }`}
+                >
+                  {selectedItem.showOnStore ? "Yes" : "No"}
+                </span>
+              </strong>
+            </div>
+
+            <div className="detail-row">
+              <span>Show on POS</span>
+
+              <strong>
+                <span
+                  className={`inventory-visibility-badge ${
+                    selectedItem.showOnPOS ? "yes" : "no"
+                  }`}
+                >
+                  {selectedItem.showOnPOS ? "Yes" : "No"}
+                </span>
+              </strong>
+            </div>
+
+            <div className="detail-row">
+              <span>Featured Product</span>
+
+              <strong>
+                {selectedItem.featured ? "Yes" : "No"}
+              </strong>
+            </div>
+
+            <div className="detail-row">
+              <span>Status</span>
+
+              <strong>
+                <span
+                  className={getStatusClass(
+                    getStockStatus(selectedItem)
+                  )}
+                >
+                  {getStockStatus(selectedItem)}
+                </span>
+              </strong>
+            </div>
+
+            <div
+              className="form-actions"
+              style={{
+                marginLeft: "25px",
+                marginRight: "25px",
+                marginBottom: "25px",
+              }}
+            >
+              <button
+                type="button"
+                className="modal-cancel-button"
+                onClick={() => {
+                  setShowViewModal(false);
+                  setSelectedItem(null);
+                }}
+              >
+                Close
+              </button>
+
+              <button
+                type="button"
+                className="inventory-modal-edit"
+                onClick={() => {
+                  setShowViewModal(false);
+
+                  setSelectedItem((previous) => ({
+                    ...previous,
+                    description:
+                      previous?.description || "",
+                    featured: Boolean(
+                      previous?.featured
+                    ),
+                  }));
+
+                  setShowEditModal(true);
+                }}
+              >
+                <FaPen />
+                Edit Product
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* =====================================================
+          EDIT PRODUCT
+      ===================================================== */}
+
+      {showEditModal && selectedItem && (
+        <div
+          className="modal-overlay"
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget) {
+              setShowEditModal(false);
+              setSelectedItem(null);
+            }
+          }}
+        >
+          <div className="modal-container">
+            <div className="modal-header">
+              <div>
+                <h2>Edit Product</h2>
+
+                <p>
+                  Update product information displayed in your
+                  store.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                className="modal-close"
+                onClick={() => {
+                  setShowEditModal(false);
+                  setSelectedItem(null);
+                }}
+              >
+                ×
+              </button>
+            </div>
+
+            <form onSubmit={handleUpdateItem}>
+              {renderItemForm(
+                selectedItem,
+                handleEditChange,
+                handleEditImageChange,
+                removeEditImage
+              )}
 
               <div className="form-actions">
                 <button
                   type="button"
                   className="modal-cancel-button"
                   onClick={() => {
-                    setShowViewModal(
-                      false
-                    );
-
-                    setSelectedItem(
-                      null
-                    );
+                    setShowEditModal(false);
+                    setSelectedItem(null);
                   }}
-                >
-                  Close
-                </button>
-
-                <button
-                  type="button"
-                  className="edit-button inventory-modal-edit"
-                  onClick={() => {
-                    setShowViewModal(
-                      false
-                    );
-
-                    setShowEditModal(
-                      true
-                    );
-                  }}
-                >
-                  <FaPen />
-
-                  <span>
-                    Edit Item
-                  </span>
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-      {/* =====================================================
-          EDIT ITEM MODAL
-      ===================================================== */}
-
-      {showEditModal &&
-        selectedItem && (
-          <div
-            className="modal-overlay"
-            onMouseDown={(e) => {
-              if (
-                e.target ===
-                e.currentTarget
-              ) {
-                setShowEditModal(
-                  false
-                );
-
-                setSelectedItem(
-                  null
-                );
-              }
-            }}
-          >
-            <div className="modal-container">
-              <div className="modal-header">
-                <div>
-                  <h2>
-                    Edit Inventory Item
-                  </h2>
-
-                  <p>
-                    Update inventory
-                    information
-                  </p>
-                </div>
-
-                <button
-                  type="button"
-                  className="modal-close"
-                  onClick={() => {
-                    setShowEditModal(
-                      false
-                    );
-
-                    setSelectedItem(
-                      null
-                    );
-                  }}
-                >
-                  ×
-                </button>
-              </div>
-
-              <form
-                onSubmit={
-                  handleUpdateItem
-                }
-              >
-                {renderItemForm(
-                  selectedItem,
-                  handleEditChange,
-                  handleEditImageChange,
-                  removeEditImage
-                )}
-
-                <div className="form-actions">
-                  <button
-                    type="button"
-                    className="modal-cancel-button"
-                    onClick={() => {
-                      setShowEditModal(
-                        false
-                      );
-
-                      setSelectedItem(
-                        null
-                      );
-                    }}
-                  >
-                    Cancel
-                  </button>
-
-                  <button
-                    type="submit"
-                    className="save-button"
-                  >
-                    Save Changes
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )}
-
-      {/* =====================================================
-          DELETE POPUP
-      ===================================================== */}
-
-      {showDeleteModal &&
-        itemToDelete && (
-          <div
-            className="inventory-delete-overlay"
-            onMouseDown={(e) => {
-              if (
-                e.target ===
-                e.currentTarget
-              ) {
-                closeDeleteModal();
-              }
-            }}
-          >
-            <div
-              className="inventory-delete-dialog"
-              role="dialog"
-              aria-modal="true"
-            >
-              <div className="inventory-delete-icon">
-                <FaTrash />
-              </div>
-
-              <h3>Delete Item</h3>
-
-              <p>
-                Are you sure you want
-                to delete{" "}
-                <strong>
-                  {itemToDelete.name}
-                </strong>
-                ?
-              </p>
-
-              <div className="inventory-delete-actions">
-                <button
-                  type="button"
-                  className="inventory-delete-cancel"
-                  onClick={
-                    closeDeleteModal
-                  }
                 >
                   Cancel
                 </button>
 
                 <button
-                  type="button"
-                  className="inventory-delete-confirm"
-                  onClick={
-                    confirmDeleteItem
-                  }
+                  type="submit"
+                  className="save-button"
                 >
-                  Delete
+                  Save Changes
                 </button>
               </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* =====================================================
+          DELETE PRODUCT
+      ===================================================== */}
+
+      {showDeleteModal && itemToDelete && (
+        <div
+          className="inventory-delete-overlay"
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget) {
+              closeDeleteModal();
+            }
+          }}
+        >
+          <div
+            className="inventory-delete-dialog"
+            role="dialog"
+            aria-modal="true"
+          >
+            <div className="inventory-delete-icon">
+              <FaTrash />
+            </div>
+
+            <h3>Delete Product</h3>
+
+            <p>
+              Are you sure you want to delete{" "}
+              <strong>{itemToDelete.name}</strong>?
+              <br />
+              If this product is displayed on the Store, it will
+              also disappear from the Store.
+            </p>
+
+            <div className="inventory-delete-actions">
+              <button
+                type="button"
+                className="inventory-delete-cancel"
+                onClick={closeDeleteModal}
+              >
+                Cancel
+              </button>
+
+              <button
+                type="button"
+                className="inventory-delete-confirm"
+                onClick={confirmDeleteItem}
+              >
+                Delete Product
+              </button>
             </div>
           </div>
-        )}
+        </div>
+      )}
     </div>
   );
 }

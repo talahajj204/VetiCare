@@ -4,13 +4,20 @@ import {
   useLocation,
 } from "react-router-dom";
 
-import { useEffect, useRef, useState } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 
 import {
   FaChartLine,
   FaUserCog,
   FaClipboard,
   FaCashRegister,
+  FaBoxOpen,
+  FaTags,
+  FaClipboardList,
 } from "react-icons/fa";
 
 import {
@@ -36,53 +43,50 @@ import {
   FaArrowTrendDown,
 } from "react-icons/fa6";
 
+
 function Sidebar() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const [menuOpen, setMenuOpen] = useState(false);
+  const [menuOpen, setMenuOpen] =
+    useState(false);
 
   const sidebarRef = useRef(null);
 
-  const SIDEBAR_SCROLL_KEY = "vetClinicSidebarScroll";
+  const SIDEBAR_SCROLL_KEY =
+    "vetClinicSidebarScroll";
 
-  const isPOSPage = location.pathname === "/pos";
+  const isPOSPage =
+    location.pathname === "/pos";
+
+
+  // =========================================================
+  // FINANCIAL
+  // =========================================================
 
   const isFinancialPage =
     location.pathname === "/financial";
 
-  // =========================================================
-  // FINANCIAL QUERY PARAM
-  //
-  // /financial
-  //      => null
-  //
-  // /financial?tab=revenue
-  //      => revenue
-  //
-  // /financial?tab=expenses
-  //      => expenses
-  // =========================================================
-
-  const financialTab = new URLSearchParams(
-    location.search
-  ).get("tab");
+  const financialTab =
+    new URLSearchParams(
+      location.search
+    ).get("tab");
 
   const isFinancialOverview =
     isFinancialPage && !financialTab;
 
   const isRevenuePage =
-    isFinancialPage && financialTab === "revenue";
+    isFinancialPage &&
+    financialTab === "revenue";
 
   const isExpensesPage =
-    isFinancialPage && financialTab === "expenses";
+    isFinancialPage &&
+    financialTab === "expenses";
 
-  const [financialOpen, setFinancialOpen] =
-    useState(isFinancialPage);
-
-  // =========================================================
-  // KEEP FINANCIAL OPEN WHEN USER IS INSIDE FINANCIAL
-  // =========================================================
+  const [
+    financialOpen,
+    setFinancialOpen,
+  ] = useState(isFinancialPage);
 
   useEffect(() => {
     if (isFinancialPage) {
@@ -90,34 +94,75 @@ function Sidebar() {
     }
   }, [isFinancialPage]);
 
+
+  // =========================================================
+  // INVENTORY
+  // =========================================================
+
+  const isInventoryPage =
+    location.pathname.startsWith(
+      "/inventory"
+    );
+
+  const isProductsPage =
+    location.pathname ===
+    "/inventory/products";
+
+  const isCategoriesPage =
+    location.pathname ===
+    "/inventory/categories";
+
+  const [
+    inventoryOpen,
+    setInventoryOpen,
+  ] = useState(isInventoryPage);
+
+  useEffect(() => {
+    if (isInventoryPage) {
+      setInventoryOpen(true);
+    }
+  }, [isInventoryPage]);
+
+
   // =========================================================
   // RESTORE SIDEBAR SCROLL
   // =========================================================
 
   useEffect(() => {
-    const sidebar = sidebarRef.current;
+    const sidebar =
+      sidebarRef.current;
 
     if (!sidebar) return;
 
-    const savedScrollPosition = Number(
-      sessionStorage.getItem(SIDEBAR_SCROLL_KEY) || 0
-    );
+    const savedScrollPosition =
+      Number(
+        sessionStorage.getItem(
+          SIDEBAR_SCROLL_KEY
+        ) || 0
+      );
 
-    const frame = requestAnimationFrame(() => {
-      sidebar.scrollTop = savedScrollPosition;
-    });
+    const frame =
+      requestAnimationFrame(() => {
+        sidebar.scrollTop =
+          savedScrollPosition;
+      });
 
     return () => {
       cancelAnimationFrame(frame);
     };
-  }, [location.pathname, location.search]);
+  }, [
+    location.pathname,
+    location.search,
+  ]);
+
 
   // =========================================================
   // SAVE SIDEBAR SCROLL
   // =========================================================
 
   const saveSidebarScroll = () => {
-    const sidebar = sidebarRef.current;
+    const sidebar =
+      sidebarRef.current;
 
     if (!sidebar) return;
 
@@ -127,9 +172,11 @@ function Sidebar() {
     );
   };
 
+
   const handleSidebarScroll = () => {
     saveSidebarScroll();
   };
+
 
   // =========================================================
   // NORMAL NAVIGATION
@@ -137,63 +184,99 @@ function Sidebar() {
 
   const handleNavigation = () => {
     saveSidebarScroll();
+
     setMenuOpen(false);
   };
 
+
   // =========================================================
   // FINANCIAL PARENT
-  //
-  // Clicking Financial:
-  //      -> /financial
-  //      -> overview only
-  //
-  // If already on /financial overview:
-  //      -> arrow can open / close submenu
   // =========================================================
 
   const handleFinancialParent = () => {
     saveSidebarScroll();
 
-    // If user is NOT on the main Financial overview,
-    // go to /financial.
     if (!isFinancialOverview) {
       navigate("/financial");
 
       setFinancialOpen(true);
+
       setMenuOpen(false);
 
       return;
     }
 
-    // If already on /financial,
-    // clicking Financial toggles submenu.
-    setFinancialOpen((previous) => !previous);
+    setFinancialOpen(
+      (previous) => !previous
+    );
   };
+
 
   // =========================================================
   // FINANCIAL CHILD
   // =========================================================
 
-  const handleFinancialNavigation = (tab) => {
+  const handleFinancialNavigation = (
+    tab
+  ) => {
     saveSidebarScroll();
 
-    navigate(`/financial?tab=${tab}`);
+    navigate(
+      `/financial?tab=${tab}`
+    );
 
     setFinancialOpen(true);
+
     setMenuOpen(false);
   };
+
+
+  // =========================================================
+  // INVENTORY PARENT
+  // =========================================================
+
+  const handleInventoryParent = () => {
+    saveSidebarScroll();
+
+    setInventoryOpen(
+      (previous) => !previous
+    );
+  };
+
+
+  // =========================================================
+  // INVENTORY CHILD
+  // =========================================================
+
+  const handleInventoryNavigation = (
+    page
+  ) => {
+    saveSidebarScroll();
+
+    navigate(
+      `/inventory/${page}`
+    );
+
+    setInventoryOpen(true);
+
+    setMenuOpen(false);
+  };
+
 
   // =========================================================
   // LOGOUT
   // =========================================================
 
   const handleLogout = () => {
-    sessionStorage.removeItem(SIDEBAR_SCROLL_KEY);
+    sessionStorage.removeItem(
+      SIDEBAR_SCROLL_KEY
+    );
 
     setMenuOpen(false);
 
     navigate("/");
   };
+
 
   // =========================================================
   // MOBILE CLOSE
@@ -201,12 +284,15 @@ function Sidebar() {
 
   const closeMenu = () => {
     saveSidebarScroll();
+
     setMenuOpen(false);
   };
+
 
   return (
     <>
       <style>{`
+
         /* =====================================================
            POS COLLAPSED SIDEBAR
         ===================================================== */
@@ -222,61 +308,95 @@ function Sidebar() {
           overflow-x: hidden;
         }
 
-        .sidebar.sidebar-pos-collapsed .sidebar-logo {
-          justify-content: center !important;
+
+        .sidebar.sidebar-pos-collapsed
+        .sidebar-logo {
+          justify-content:
+            center !important;
 
           padding-left: 0 !important;
           padding-right: 0 !important;
         }
 
-        .sidebar.sidebar-pos-collapsed .sidebar-brand {
+
+        .sidebar.sidebar-pos-collapsed
+        .sidebar-brand {
           width: 100%;
 
           display: flex;
+
           align-items: center;
+
           justify-content: center;
         }
 
-        .sidebar.sidebar-pos-collapsed .sidebar-logo-icon {
+
+        .sidebar.sidebar-pos-collapsed
+        .sidebar-logo-icon {
           margin: 0 !important;
+
           font-size: 25px;
         }
 
-        .sidebar.sidebar-pos-collapsed .sidebar-logo-text {
+
+        .sidebar.sidebar-pos-collapsed
+        .sidebar-logo-text {
           display: none !important;
         }
 
-        .sidebar.sidebar-pos-collapsed .sidebar-nav {
+
+        .sidebar.sidebar-pos-collapsed
+        .sidebar-nav {
           width: 100%;
         }
 
-        .sidebar.sidebar-pos-collapsed .sidebar-nav a,
-        .sidebar.sidebar-pos-collapsed .financial-parent-button {
+
+        .sidebar.sidebar-pos-collapsed
+        .sidebar-nav a,
+
+        .sidebar.sidebar-pos-collapsed
+        .financial-parent-button,
+
+        .sidebar.sidebar-pos-collapsed
+        .inventory-parent-button {
           width: 100% !important;
+
           min-width: 0 !important;
 
           height: 46px;
 
           margin: 4px 0 !important;
+
           padding: 0 !important;
 
           display: flex !important;
-          align-items: center !important;
-          justify-content: center !important;
+
+          align-items:
+            center !important;
+
+          justify-content:
+            center !important;
 
           gap: 0 !important;
 
           border-radius: 9px;
         }
 
+
         .sidebar.sidebar-pos-collapsed
-          .sidebar-nav
-          a
-          .sidebar-icon,
+        .sidebar-nav
+        a
+        .sidebar-icon,
+
         .sidebar.sidebar-pos-collapsed
-          .financial-parent-button
-          .sidebar-icon {
+        .financial-parent-button
+        .sidebar-icon,
+
+        .sidebar.sidebar-pos-collapsed
+        .inventory-parent-button
+        .sidebar-icon {
           width: 18px !important;
+
           min-width: 18px !important;
 
           margin: 0 !important;
@@ -284,52 +404,79 @@ function Sidebar() {
           font-size: 18px;
         }
 
-        .sidebar.sidebar-pos-collapsed .sidebar-text,
+
         .sidebar.sidebar-pos-collapsed
-          .financial-parent-arrow {
+        .sidebar-text,
+
+        .sidebar.sidebar-pos-collapsed
+        .financial-parent-arrow,
+
+        .sidebar.sidebar-pos-collapsed
+        .inventory-parent-arrow {
           display: none !important;
         }
 
+
         .sidebar.sidebar-pos-collapsed
-          .sidebar-nav
-          a.active {
+        .sidebar-nav
+        a.active {
           background: #2f7f7b;
+
           color: #ffffff;
         }
 
+
         .sidebar.sidebar-pos-collapsed
-          .financial-parent-button.active {
+        .financial-parent-button.active,
+
+        .sidebar.sidebar-pos-collapsed
+        .inventory-parent-button.active {
           background: #2f7f7b;
+
           color: #ffffff;
         }
 
+
         .sidebar.sidebar-pos-collapsed
-          .financial-submenu {
+        .financial-submenu,
+
+        .sidebar.sidebar-pos-collapsed
+        .inventory-submenu {
           display: none !important;
         }
 
-        .sidebar.sidebar-pos-collapsed .sidebar-logout {
+
+        .sidebar.sidebar-pos-collapsed
+        .sidebar-logout {
           width: 100% !important;
+
           min-width: 0 !important;
 
           height: 46px;
 
           padding: 0 !important;
+
           margin: 0 !important;
 
           display: flex !important;
-          align-items: center !important;
-          justify-content: center !important;
+
+          align-items:
+            center !important;
+
+          justify-content:
+            center !important;
 
           gap: 0 !important;
 
           border-radius: 9px;
         }
 
+
         .sidebar.sidebar-pos-collapsed
-          .sidebar-logout
-          .sidebar-icon {
+        .sidebar-logout
+        .sidebar-icon {
           width: 18px !important;
+
           min-width: 18px !important;
 
           margin: 0 !important;
@@ -337,21 +484,27 @@ function Sidebar() {
           font-size: 18px;
         }
 
+
         /* =====================================================
-           FINANCIAL PARENT
+           FINANCIAL + INVENTORY PARENTS
         ===================================================== */
 
-        .financial-sidebar-group {
+        .financial-sidebar-group,
+        .inventory-sidebar-group {
           width: 100%;
         }
 
-        .financial-parent-button {
+
+        .financial-parent-button,
+        .inventory-parent-button {
           width: 100%;
 
           border: none;
+
           outline: none;
 
           background: transparent;
+
           color: inherit;
 
           font-family: inherit;
@@ -359,6 +512,7 @@ function Sidebar() {
           cursor: pointer;
 
           display: flex;
+
           align-items: center;
 
           box-sizing: border-box;
@@ -370,38 +524,58 @@ function Sidebar() {
             color 0.18s ease;
         }
 
-        .financial-parent-button:hover {
-          background: rgba(255, 255, 255, 0.12);
+
+        .financial-parent-button:hover,
+        .inventory-parent-button:hover {
+          background:
+            rgba(
+              255,
+              255,
+              255,
+              0.12
+            );
         }
 
-        .financial-parent-button.active {
+
+        .financial-parent-button.active,
+        .inventory-parent-button.active {
           background: #2f7f7b;
+
           color: #ffffff;
         }
 
-        .financial-parent-arrow {
+
+        .financial-parent-arrow,
+        .inventory-parent-arrow {
           margin-left: auto;
 
           width: 14px;
+
           min-width: 14px;
 
           font-size: 11px;
 
           display: flex;
+
           align-items: center;
+
           justify-content: center;
         }
 
+
         /* =====================================================
-           FINANCIAL SUBMENU
+           FINANCIAL + INVENTORY SUBMENUS
         ===================================================== */
 
-        .financial-submenu {
+        .financial-submenu,
+        .inventory-submenu {
           width: 100%;
 
-          padding: 4px 0 5px 0;
+          padding:
+            4px 0 5px 0;
 
           display: flex;
+
           flex-direction: column;
 
           gap: 3px;
@@ -409,30 +583,42 @@ function Sidebar() {
           box-sizing: border-box;
         }
 
-        .financial-submenu-button {
-          width: calc(100% - 16px);
+
+        .financial-submenu-button,
+        .inventory-submenu-button {
+          width:
+            calc(
+              100% - 16px
+            );
 
           min-height: 39px;
 
           margin-left: 16px;
 
-          padding: 8px 14px 8px 44px;
+          padding:
+            8px 14px
+            8px 44px;
 
           border: none;
+
           outline: none;
 
           border-radius: 8px;
 
           background: transparent;
+
           color: inherit;
 
           font-family: inherit;
+
           font-size: 13px;
+
           font-weight: 500;
 
           cursor: pointer;
 
           display: flex;
+
           align-items: center;
 
           gap: 9px;
@@ -446,102 +632,167 @@ function Sidebar() {
             color 0.18s ease;
         }
 
-        .financial-submenu-button svg {
+
+        .financial-submenu-button svg,
+        .inventory-submenu-button svg {
           width: 13px;
+
           min-width: 13px;
 
           font-size: 13px;
         }
 
-        .financial-submenu-button:hover {
-          background: rgba(255, 255, 255, 0.12);
+
+        .financial-submenu-button:hover,
+        .inventory-submenu-button:hover {
+          background:
+            rgba(
+              255,
+              255,
+              255,
+              0.12
+            );
         }
 
-        .financial-submenu-button.active {
-          background: rgba(47, 127, 123, 0.75);
+
+        .financial-submenu-button.active,
+        .inventory-submenu-button.active {
+          background:
+            rgba(
+              47,
+              127,
+              123,
+              0.75
+            );
+
           color: #ffffff;
+
           font-weight: 700;
         }
+
 
         /* =====================================================
            MOBILE
         ===================================================== */
 
         @media (max-width: 768px) {
+
           .sidebar.sidebar-pos-collapsed {
-            width: 260px !important;
-            min-width: 260px !important;
-            max-width: 260px !important;
+            width:
+              260px !important;
 
-            padding-left: initial !important;
-            padding-right: initial !important;
+            min-width:
+              260px !important;
+
+            max-width:
+              260px !important;
+
+            padding-left:
+              initial !important;
+
+            padding-right:
+              initial !important;
           }
 
-          .sidebar.sidebar-pos-collapsed .sidebar-logo {
-            justify-content: space-between !important;
+
+          .sidebar.sidebar-pos-collapsed
+          .sidebar-logo {
+            justify-content:
+              space-between !important;
           }
 
-          .sidebar.sidebar-pos-collapsed .sidebar-brand {
+
+          .sidebar.sidebar-pos-collapsed
+          .sidebar-brand {
             width: auto;
 
-            justify-content: flex-start;
+            justify-content:
+              flex-start;
           }
 
+
           .sidebar.sidebar-pos-collapsed
-            .sidebar-logo-text {
-            display: block !important;
+          .sidebar-logo-text {
+            display:
+              block !important;
           }
 
-          .sidebar.sidebar-pos-collapsed .sidebar-text,
+
           .sidebar.sidebar-pos-collapsed
-            .financial-parent-arrow {
-            display: flex !important;
+          .sidebar-text,
+
+          .sidebar.sidebar-pos-collapsed
+          .financial-parent-arrow,
+
+          .sidebar.sidebar-pos-collapsed
+          .inventory-parent-arrow {
+            display:
+              flex !important;
           }
 
-          .sidebar.sidebar-pos-collapsed .sidebar-nav a,
+
           .sidebar.sidebar-pos-collapsed
-            .financial-parent-button {
+          .sidebar-nav a,
+
+          .sidebar.sidebar-pos-collapsed
+          .financial-parent-button,
+
+          .sidebar.sidebar-pos-collapsed
+          .inventory-parent-button {
             height: auto;
 
-            padding: 12px 16px !important;
+            padding:
+              12px 16px !important;
 
-            justify-content: flex-start !important;
+            justify-content:
+              flex-start !important;
 
             gap: 12px !important;
           }
 
+
           .sidebar.sidebar-pos-collapsed
-            .financial-submenu {
-            display: flex !important;
+          .financial-submenu,
+
+          .sidebar.sidebar-pos-collapsed
+          .inventory-submenu {
+            display:
+              flex !important;
           }
 
-          .sidebar.sidebar-pos-collapsed .sidebar-logout {
+
+          .sidebar.sidebar-pos-collapsed
+          .sidebar-logout {
             height: auto;
 
-            padding: 12px 16px !important;
+            padding:
+              12px 16px !important;
 
-            justify-content: flex-start !important;
+            justify-content:
+              flex-start !important;
 
             gap: 12px !important;
           }
+
         }
+
       `}</style>
 
-      {/* =====================================================
-          MOBILE BUTTON
-      ===================================================== */}
+
+      {/* MOBILE BUTTON */}
 
       <button
         className="mobile-menu-button"
-        onClick={() => setMenuOpen(true)}
+        onClick={() =>
+          setMenuOpen(true)
+        }
         aria-label="Open menu"
       >
         <FaBars />
       </button>
 
-      {/* =====================================================
-          MOBILE OVERLAY
-      ===================================================== */}
+
+      {/* MOBILE OVERLAY */}
 
       {menuOpen && (
         <div
@@ -550,32 +801,44 @@ function Sidebar() {
         />
       )}
 
-      {/* =====================================================
-          SIDEBAR
-      ===================================================== */}
+
+      {/* SIDEBAR */}
 
       <aside
         ref={sidebarRef}
-        onScroll={handleSidebarScroll}
+        onScroll={
+          handleSidebarScroll
+        }
         className={`sidebar ${
-          menuOpen ? "sidebar-open" : ""
+          menuOpen
+            ? "sidebar-open"
+            : ""
         } ${
-          isPOSPage ? "sidebar-pos-collapsed" : ""
+          isPOSPage
+            ? "sidebar-pos-collapsed"
+            : ""
         }`}
       >
+
         <div>
-          {/* =================================================
-              LOGO
-          ================================================= */}
+
+
+          {/* LOGO */}
 
           <div className="sidebar-logo">
+
             <div className="sidebar-brand">
-              <FaPaw className="sidebar-logo-icon" />
+
+              <FaPaw
+                className="sidebar-logo-icon"
+              />
 
               <h2 className="sidebar-logo-text">
                 Vet Clinic
               </h2>
+
             </div>
+
 
             <button
               className="mobile-close-button"
@@ -584,131 +847,222 @@ function Sidebar() {
             >
               <FaXmark />
             </button>
+
           </div>
 
-          {/* =================================================
-              NAVIGATION
-          ================================================= */}
+
+          {/* NAVIGATION */}
 
           <nav className="sidebar-nav">
+
+
+            {/* DASHBOARD */}
+
             <NavLink
               to="/dashboard"
-              onClick={handleNavigation}
+              onClick={
+                handleNavigation
+              }
               data-label="Dashboard"
-              title={isPOSPage ? "Dashboard" : ""}
+              title={
+                isPOSPage
+                  ? "Dashboard"
+                  : ""
+              }
             >
+
               <FaHouse className="sidebar-icon" />
 
               <span className="sidebar-text">
                 Dashboard
               </span>
+
             </NavLink>
+
+
+            {/* OWNERS */}
 
             <NavLink
               to="/owners"
-              onClick={handleNavigation}
+              onClick={
+                handleNavigation
+              }
               data-label="Owners"
-              title={isPOSPage ? "Owners" : ""}
+              title={
+                isPOSPage
+                  ? "Owners"
+                  : ""
+              }
             >
+
               <FaUsers className="sidebar-icon" />
 
               <span className="sidebar-text">
                 Owners
               </span>
+
             </NavLink>
+
+
+            {/* PETS */}
 
             <NavLink
               to="/pets"
-              onClick={handleNavigation}
+              onClick={
+                handleNavigation
+              }
               data-label="Pets"
-              title={isPOSPage ? "Pets" : ""}
+              title={
+                isPOSPage
+                  ? "Pets"
+                  : ""
+              }
             >
+
               <FaPaw className="sidebar-icon" />
 
               <span className="sidebar-text">
                 Pets
               </span>
+
             </NavLink>
+
+
+            {/* APPOINTMENTS */}
 
             <NavLink
               to="/appointments"
-              onClick={handleNavigation}
+              onClick={
+                handleNavigation
+              }
               data-label="Appointments"
-              title={isPOSPage ? "Appointments" : ""}
+              title={
+                isPOSPage
+                  ? "Appointments"
+                  : ""
+              }
             >
+
               <FaCalendarDays className="sidebar-icon" />
 
               <span className="sidebar-text">
                 Appointments
               </span>
+
             </NavLink>
+
+
+            {/* MEDICAL RECORDS */}
 
             <NavLink
               to="/medical-records"
-              onClick={handleNavigation}
+              onClick={
+                handleNavigation
+              }
               data-label="Medical Records"
               title={
-                isPOSPage ? "Medical Records" : ""
+                isPOSPage
+                  ? "Medical Records"
+                  : ""
               }
             >
+
               <FaNotesMedical className="sidebar-icon" />
 
               <span className="sidebar-text">
                 Medical Records
               </span>
+
             </NavLink>
+
+
+            {/* VACCINATIONS */}
 
             <NavLink
               to="/vaccinations"
-              onClick={handleNavigation}
+              onClick={
+                handleNavigation
+              }
               data-label="Vaccinations"
               title={
-                isPOSPage ? "Vaccinations" : ""
+                isPOSPage
+                  ? "Vaccinations"
+                  : ""
               }
             >
+
               <FaSyringe className="sidebar-icon" />
 
               <span className="sidebar-text">
                 Vaccinations
               </span>
+
             </NavLink>
+
+
+            {/* REMINDERS */}
 
             <NavLink
               to="/reminders"
-              onClick={handleNavigation}
+              onClick={
+                handleNavigation
+              }
               data-label="Reminders"
-              title={isPOSPage ? "Reminders" : ""}
+              title={
+                isPOSPage
+                  ? "Reminders"
+                  : ""
+              }
             >
+
               <FaBell className="sidebar-icon" />
 
               <span className="sidebar-text">
                 Reminders
               </span>
+
             </NavLink>
+
+
+            {/* MEDICATIONS */}
 
             <NavLink
               to="/medications"
-              onClick={handleNavigation}
+              onClick={
+                handleNavigation
+              }
               data-label="Medications"
               title={
-                isPOSPage ? "Medications" : ""
+                isPOSPage
+                  ? "Medications"
+                  : ""
               }
             >
+
               <FaPills className="sidebar-icon" />
 
               <span className="sidebar-text">
                 Medications
               </span>
+
             </NavLink>
+
+
+            {/* PRESCRIPTIONS */}
 
             <NavLink
               to="/prescriptions"
-              onClick={handleNavigation}
+              onClick={
+                handleNavigation
+              }
               data-label="Prescriptions"
               title={
-                isPOSPage ? "Prescriptions" : ""
+                isPOSPage
+                  ? "Prescriptions"
+                  : ""
               }
             >
+
               <FaPrescriptionBottleMedical
                 className="sidebar-icon"
               />
@@ -716,40 +1070,217 @@ function Sidebar() {
               <span className="sidebar-text">
                 Prescriptions
               </span>
+
             </NavLink>
 
-            <NavLink
-              to="/inventory"
-              onClick={handleNavigation}
-              data-label="Inventory"
-              title={isPOSPage ? "Inventory" : ""}
-            >
-              <FaBoxesStacked className="sidebar-icon" />
 
-              <span className="sidebar-text">
-                Inventory
-              </span>
-            </NavLink>
+            {/* ===============================================
+                INVENTORY + SUBMENU
+            =============================================== */}
 
-            <NavLink
+            <div className="inventory-sidebar-group">
+
+              <button
+                type="button"
+                className={`inventory-parent-button ${
+                  isInventoryPage
+                    ? "active"
+                    : ""
+                }`}
+                onClick={
+                  handleInventoryParent
+                }
+                title={
+                  isPOSPage
+                    ? "Inventory"
+                    : ""
+                }
+              >
+
+                <FaBoxesStacked className="sidebar-icon" />
+
+                <span className="sidebar-text">
+                  Inventory
+                </span>
+
+                <span className="inventory-parent-arrow">
+
+                  {inventoryOpen ? (
+                    <FaChevronDown />
+                  ) : (
+                    <FaChevronRight />
+                  )}
+
+                </span>
+
+              </button>
+
+
+              {inventoryOpen && (
+
+                <div className="inventory-submenu">
+
+
+                  {/* PRODUCTS */}
+
+                  <button
+                    type="button"
+                    className={`inventory-submenu-button ${
+                      location.pathname ===
+                      "/inventory"
+                        ? "active"
+                        : ""
+                    }`}
+                    onClick={() => {
+                      saveSidebarScroll();
+
+                      navigate(
+                        "/inventory"
+                      );
+
+                      setInventoryOpen(
+                        true
+                      );
+
+                      setMenuOpen(
+                        false
+                      );
+                    }}
+                  >
+
+                    <FaBoxOpen />
+
+                    <span>
+                      Products
+                    </span>
+
+                  </button>
+
+
+                  {/* CATEGORIES */}
+
+                  <button
+                    type="button"
+                    className={`inventory-submenu-button ${
+                      isCategoriesPage
+                        ? "active"
+                        : ""
+                    }`}
+                    onClick={() =>
+                      handleInventoryNavigation(
+                        "categories"
+                      )
+                    }
+                  >
+
+                    <FaTags />
+
+                    <span>
+                      Categories
+                    </span>
+
+                  </button>
+
+                </div>
+
+              )}
+
+            </div>
+                        {/* ===============================================
+                POS
+            =============================================== */}
+
+<NavLink
               to="/pos"
-              onClick={handleNavigation}
+              onClick={
+                handleNavigation
+              }
               data-label="POS"
-              title={isPOSPage ? "POS" : ""}
+              title={
+                isPOSPage
+                  ? "POS"
+                  : ""
+              }
             >
+
               <FaCashRegister className="sidebar-icon" />
 
               <span className="sidebar-text">
                 POS
               </span>
+
             </NavLink>
+
+
+            {/* ===============================================
+                ORDERS
+            =============================================== */}
+
+            <NavLink
+              to="/admin/orders"
+              onClick={
+                handleNavigation
+              }
+              data-label="Orders"
+              title={
+                isPOSPage
+                  ? "Orders"
+                  : ""
+              }
+            >
+
+              <FaClipboardList className="sidebar-icon" />
+
+              <span className="sidebar-text">
+                Orders
+              </span>
+
+            </NavLink>
+
+
+            {/* ===============================================
+                SALES
+            =============================================== */}
+
+            <NavLink
+              to="/admin/sales"
+              onClick={
+                handleNavigation
+              }
+              data-label="Sales"
+              title={
+                isPOSPage
+                  ? "Sales"
+                  : ""
+              }
+            >
+
+              <FaChartLine className="sidebar-icon" />
+
+              <span className="sidebar-text">
+                Sales
+              </span>
+
+            </NavLink>
+
+
+            {/* ===============================================
+                BILLING
+            =============================================== */}
 
             <NavLink
               to="/billing"
-              onClick={handleNavigation}
+              onClick={
+                handleNavigation
+              }
               data-label="Billing"
-              title={isPOSPage ? "Billing" : ""}
+              title={
+                isPOSPage
+                  ? "Billing"
+                  : ""
+              }
             >
+
               <FaFileInvoiceDollar
                 className="sidebar-icon"
               />
@@ -757,21 +1288,33 @@ function Sidebar() {
               <span className="sidebar-text">
                 Billing
               </span>
+
             </NavLink>
 
-            {/* =================================================
+
+            {/* ===============================================
                 FINANCIAL + SUBMENU
-            ================================================= */}
+            =============================================== */}
 
             <div className="financial-sidebar-group">
+
               <button
                 type="button"
                 className={`financial-parent-button ${
-                  isFinancialPage ? "active" : ""
+                  isFinancialPage
+                    ? "active"
+                    : ""
                 }`}
-                onClick={handleFinancialParent}
-                title={isPOSPage ? "Financial" : ""}
+                onClick={
+                  handleFinancialParent
+                }
+                title={
+                  isPOSPage
+                    ? "Financial"
+                    : ""
+                }
               >
+
                 <FaChartLine className="sidebar-icon" />
 
                 <span className="sidebar-text">
@@ -779,119 +1322,216 @@ function Sidebar() {
                 </span>
 
                 <span className="financial-parent-arrow">
+
                   {financialOpen ? (
                     <FaChevronDown />
                   ) : (
                     <FaChevronRight />
                   )}
+
                 </span>
+
               </button>
 
+
               {financialOpen && (
+
                 <div className="financial-submenu">
+
+
+                  {/* REVENUE */}
+
                   <button
                     type="button"
                     className={`financial-submenu-button ${
-                      isRevenuePage ? "active" : ""
+                      isRevenuePage
+                        ? "active"
+                        : ""
                     }`}
                     onClick={() =>
-                      handleFinancialNavigation("revenue")
+                      handleFinancialNavigation(
+                        "revenue"
+                      )
                     }
                   >
+
                     <FaArrowTrendUp />
 
-                    <span>Revenue</span>
+                    <span>
+                      Revenue
+                    </span>
+
                   </button>
+
+
+                  {/* EXPENSES */}
 
                   <button
                     type="button"
                     className={`financial-submenu-button ${
-                      isExpensesPage ? "active" : ""
+                      isExpensesPage
+                        ? "active"
+                        : ""
                     }`}
                     onClick={() =>
-                      handleFinancialNavigation("expenses")
+                      handleFinancialNavigation(
+                        "expenses"
+                      )
                     }
                   >
+
                     <FaArrowTrendDown />
 
-                    <span>Expenses</span>
+                    <span>
+                      Expenses
+                    </span>
+
                   </button>
+
                 </div>
+
               )}
+
             </div>
+
+
+            {/* ===============================================
+                REPORTS
+            =============================================== */}
 
             <NavLink
               to="/reports"
-              onClick={handleNavigation}
+              onClick={
+                handleNavigation
+              }
               data-label="Reports"
-              title={isPOSPage ? "Reports" : ""}
+              title={
+                isPOSPage
+                  ? "Reports"
+                  : ""
+              }
             >
+
               <FaChartColumn className="sidebar-icon" />
 
               <span className="sidebar-text">
                 Reports
               </span>
+
             </NavLink>
+
+
+            {/* ===============================================
+                USERS
+            =============================================== */}
 
             <NavLink
               to="/users"
-              onClick={handleNavigation}
+              onClick={
+                handleNavigation
+              }
               data-label="Users"
-              title={isPOSPage ? "Users" : ""}
+              title={
+                isPOSPage
+                  ? "Users"
+                  : ""
+              }
             >
+
               <FaUserCog className="sidebar-icon" />
 
               <span className="sidebar-text">
                 Users
               </span>
+
             </NavLink>
+
+
+            {/* ===============================================
+                AUDIT LOG
+            =============================================== */}
 
             <NavLink
               to="/audit-log"
-              onClick={handleNavigation}
+              onClick={
+                handleNavigation
+              }
               data-label="Audit Log"
-              title={isPOSPage ? "Audit Log" : ""}
+              title={
+                isPOSPage
+                  ? "Audit Log"
+                  : ""
+              }
             >
+
               <FaClipboard className="sidebar-icon" />
 
               <span className="sidebar-text">
                 Audit Log
               </span>
+
             </NavLink>
+
+
+            {/* ===============================================
+                SETTINGS
+            =============================================== */}
 
             <NavLink
               to="/settings"
-              onClick={handleNavigation}
+              onClick={
+                handleNavigation
+              }
               data-label="Settings"
-              title={isPOSPage ? "Settings" : ""}
+              title={
+                isPOSPage
+                  ? "Settings"
+                  : ""
+              }
             >
+
               <FaGear className="sidebar-icon" />
 
               <span className="sidebar-text">
                 Settings
               </span>
+
             </NavLink>
+
           </nav>
+
         </div>
 
-        {/* =====================================================
+
+        {/* ===============================================
             LOGOUT
-        ===================================================== */}
+        =============================================== */}
 
         <button
           className="sidebar-logout"
-          onClick={handleLogout}
-          title={isPOSPage ? "Logout" : ""}
+          onClick={
+            handleLogout
+          }
+          title={
+            isPOSPage
+              ? "Logout"
+              : ""
+          }
         >
+
           <FaRightFromBracket className="sidebar-icon" />
 
           <span className="sidebar-text">
             Logout
           </span>
+
         </button>
+
       </aside>
+
     </>
   );
 }
+
 
 export default Sidebar;

@@ -16,7 +16,10 @@ import Vaccinations from "./pages/Vaccinations";
 import Reminders from "./pages/Reminders";
 import Medications from "./pages/Medications";
 import Prescriptions from "./pages/Prescriptions";
+
 import Inventory from "./pages/Inventory";
+import Categories from "./pages/Categories";
+
 import Billing from "./pages/Billing";
 import Financial from "./pages/Financial";
 import Reports from "./pages/Reports";
@@ -32,30 +35,29 @@ import Orders from "./pages/Orders";
 import Footer from "./pages/Footer";
 import Home from "./pages/Home";
 import Products from "./pages/Products";
+import ProductDetails from "./pages/ProductDetails";
+import AdminOrders from "./pages/AdminOrders";
+import Sales from "./pages/Sales";
+
+import About from "./pages/About";
+import Contact from "./pages/Contact";
 
 import "./App.css";
-
 
 function App() {
   return (
     <BrowserRouter>
-
       <Routes>
-
         {/* =====================================
             LOGIN
         ===================================== */}
 
-        <Route
-          path="/"
-          element={<Login />}
-        />
+        <Route path="/" element={<Login />} />
 
         <Route
           path="/forgot-password"
           element={<ForgotPassword />}
         />
-
 
         {/* =====================================
             DASHBOARD
@@ -65,7 +67,6 @@ function App() {
           path="/dashboard"
           element={<AdminDashboard />}
         />
-
 
         {/* =====================================
             OWNERS
@@ -81,7 +82,6 @@ function App() {
           element={<OwnerProfile />}
         />
 
-
         {/* =====================================
             PETS
         ===================================== */}
@@ -96,7 +96,6 @@ function App() {
           element={<PetProfile />}
         />
 
-
         {/* =====================================
             APPOINTMENTS
         ===================================== */}
@@ -105,7 +104,6 @@ function App() {
           path="/appointments"
           element={<Appointments />}
         />
-
 
         {/* =====================================
             MEDICAL RECORDS
@@ -116,7 +114,6 @@ function App() {
           element={<MedicalRecords />}
         />
 
-
         {/* =====================================
             VACCINATIONS
         ===================================== */}
@@ -125,7 +122,6 @@ function App() {
           path="/vaccinations"
           element={<Vaccinations />}
         />
-
 
         {/* =====================================
             REMINDERS
@@ -136,7 +132,6 @@ function App() {
           element={<Reminders />}
         />
 
-
         {/* =====================================
             MEDICATIONS
         ===================================== */}
@@ -145,7 +140,6 @@ function App() {
           path="/medications"
           element={<Medications />}
         />
-
 
         {/* =====================================
             PRESCRIPTIONS
@@ -156,9 +150,8 @@ function App() {
           element={<Prescriptions />}
         />
 
-
         {/* =====================================
-            INVENTORY
+            INVENTORY - PRODUCTS
         ===================================== */}
 
         <Route
@@ -166,6 +159,19 @@ function App() {
           element={<Inventory />}
         />
 
+        <Route
+          path="/inventory/products"
+          element={<Inventory />}
+        />
+
+        {/* =====================================
+            INVENTORY - CATEGORIES
+        ===================================== */}
+
+        <Route
+          path="/inventory/categories"
+          element={<Categories />}
+        />
 
         {/* =====================================
             BILLING
@@ -176,7 +182,6 @@ function App() {
           element={<Billing />}
         />
 
-
         {/* =====================================
             FINANCIAL
         ===================================== */}
@@ -185,7 +190,6 @@ function App() {
           path="/financial"
           element={<Financial />}
         />
-
 
         {/* =====================================
             REPORTS
@@ -196,7 +200,6 @@ function App() {
           element={<Reports />}
         />
 
-
         {/* =====================================
             USERS
         ===================================== */}
@@ -205,7 +208,6 @@ function App() {
           path="/users"
           element={<Users />}
         />
-
 
         {/* =====================================
             AUDIT LOG
@@ -216,7 +218,6 @@ function App() {
           element={<AuditLog />}
         />
 
-
         {/* =====================================
             SETTINGS
         ===================================== */}
@@ -225,7 +226,6 @@ function App() {
           path="/settings"
           element={<Settings />}
         />
-
 
         {/* =====================================
             POS
@@ -236,6 +236,23 @@ function App() {
           element={<POS />}
         />
 
+        {/* =====================================
+            ADMIN ORDERS
+        ===================================== */}
+
+        <Route
+          path="/admin/orders"
+          element={<AdminOrders />}
+        />
+
+        {/* =====================================
+            ADMIN SALES
+        ===================================== */}
+
+        <Route
+          path="/admin/sales"
+          element={<Sales />}
+        />
 
         {/* =====================================
             STORE HOME
@@ -251,9 +268,36 @@ function App() {
           }
         />
 
+        {/* =====================================
+            ABOUT US
+        ===================================== */}
+
+        <Route
+          path="/about"
+          element={
+            <>
+              <About />
+              <Footer />
+            </>
+          }
+        />
 
         {/* =====================================
-            ALL PRODUCTS
+            CONTACT US
+        ===================================== */}
+
+        <Route
+          path="/contact"
+          element={
+            <>
+              <Contact />
+              <Footer />
+            </>
+          }
+        />
+
+        {/* =====================================
+            STORE - ALL PRODUCTS
         ===================================== */}
 
         <Route
@@ -266,6 +310,14 @@ function App() {
           }
         />
 
+        {/* =====================================
+            PRODUCT DETAILS
+        ===================================== */}
+
+        <Route
+          path="/products/:id"
+          element={<ProductDetails />}
+        />
 
         {/* =====================================
             CART
@@ -281,18 +333,15 @@ function App() {
           }
         />
 
-
         {/* =====================================
-            ORDERS
+            CUSTOMER ORDERS
         ===================================== */}
 
         <Route
           path="/orders"
           element={<Orders />}
         />
-
       </Routes>
-
     </BrowserRouter>
   );
 }
