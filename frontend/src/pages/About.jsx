@@ -1,25 +1,23 @@
+
 import { useEffect, useState } from "react";
 import StoreHeader from "./StoreHeader";
-import { FaPaw } from "react-icons/fa";
+import {
+  FaPaw,
+  FaHeart,
+  FaSeedling,
+  FaUsers,
+} from "react-icons/fa";
 
 const STORE_SETTINGS_KEY = "storeSettings";
 
 const loadStoreSettings = () => {
   try {
     const saved = localStorage.getItem(STORE_SETTINGS_KEY);
-
-    if (saved) {
-      const parsed = JSON.parse(saved);
-
-      if (parsed && typeof parsed === "object") {
-        return parsed;
-      }
-    }
+    return saved ? JSON.parse(saved) || {} : {};
   } catch (error) {
     console.error("Could not load store settings:", error);
+    return {};
   }
-
-  return {};
 };
 
 function About() {
@@ -30,24 +28,17 @@ function About() {
       setSettings(loadStoreSettings());
     };
 
-    refreshSettings();
-
     window.addEventListener(
       "storeSettingsUpdated",
       refreshSettings
     );
-
-    window.addEventListener(
-      "storage",
-      refreshSettings
-    );
+    window.addEventListener("storage", refreshSettings);
 
     return () => {
       window.removeEventListener(
         "storeSettingsUpdated",
         refreshSettings
       );
-
       window.removeEventListener(
         "storage",
         refreshSettings
@@ -55,501 +46,503 @@ function About() {
     };
   }, []);
 
-  const aboutTitle =
-    settings.aboutTitle ||
-    "About Us";
+  const aboutTitle = settings.aboutTitle || "";
+  const aboutDescription = settings.aboutDescription || "";
+  const aboutImage = settings.aboutImage || "";
 
-  const aboutDescription =
-    settings.aboutDescription ||
-    "Welcome to our veterinary clinic. We are dedicated to providing professional care and quality services for your pets.";
-
-  const aboutImage =
-    settings.aboutImage || "";
+  const timeline = [
+    {
+      number: "1",
+      icon: <FaSeedling />,
+      title: settings.aboutStep1Title || "",
+      description: settings.aboutStep1Description || "",
+    },
+    {
+      number: "2",
+      icon: <FaUsers />,
+      title: settings.aboutStep2Title || "",
+      description: settings.aboutStep2Description || "",
+    },
+    {
+      number: "3",
+      icon: <FaHeart />,
+      title: settings.aboutStep3Title || "",
+      description: settings.aboutStep3Description || "",
+    },
+  ];
 
   return (
     <div className="about-page">
       <style>{`
-        * {
+        .about-page,
+        .about-page * {
           box-sizing: border-box;
         }
 
         .about-page {
           min-height: 100vh;
-          background: #ffffff;
-          color: #243434;
-        }
-
-        /* =========================================
-           SMALL HERO
-        ========================================= */
-
-        .about-hero {
-          position: relative;
-          overflow: hidden;
-
-          padding: 28px 20px 25px;
-
           background:
-            linear-gradient(
-              135deg,
-              #edf9f8 0%,
-              #f8fcfc 55%,
-              #e8f7f6 100%
-            );
+            radial-gradient(
+              circle at 5% 38%,
+              rgba(26, 163, 159, 0.06),
+              transparent 23%
+            ),
+            radial-gradient(
+              circle at 95% 8%,
+              rgba(26, 163, 159, 0.08),
+              transparent 22%
+            ),
+            #ffffff;
+          color: #263d3d;
         }
-
-        .about-hero::before {
-          content: "";
-
-          position: absolute;
-
-          width: 160px;
-          height: 160px;
-
-          top: -90px;
-          right: -35px;
-
-          border-radius: 50%;
-
-          background:
-            rgba(27, 158, 154, 0.07);
-        }
-
-        .about-hero::after {
-          content: "";
-
-          position: absolute;
-
-          width: 120px;
-          height: 120px;
-
-          bottom: -75px;
-          left: -35px;
-
-          border-radius: 50%;
-
-          background:
-            rgba(27, 158, 154, 0.05);
-        }
-
-        .about-hero-content {
-          position: relative;
-          z-index: 2;
-
-          max-width: 700px;
-
-          margin: 0 auto;
-
-          text-align: center;
-        }
-
-        .about-small-title {
-          display: inline-flex;
-
-          align-items: center;
-
-          gap: 6px;
-
-          margin-bottom: 8px;
-
-          padding: 5px 10px;
-
-          border-radius: 25px;
-
-          background:
-            rgba(25, 154, 150, 0.1);
-
-          color: #188f8b;
-
-          font-size: 9px;
-
-          font-weight: 800;
-
-          letter-spacing: 0.8px;
-
-          text-transform: uppercase;
-        }
-
-        .about-small-title svg {
-          font-size: 9px;
-        }
-
-        .about-hero h1 {
-          margin: 0;
-
-          color: #273b3a;
-
-          font-size:
-            clamp(27px, 3vw, 36px);
-
-          font-weight: 800;
-
-          line-height: 1.1;
-        }
-
-        .about-hero-line {
-          width: 42px;
-          height: 3px;
-
-          margin: 13px auto 0;
-
-          border-radius: 10px;
-
-          background: #199a96;
-        }
-
-        /* =========================================
-           MAIN
-        ========================================= */
 
         .about-main {
-          width: 100%;
-
-          max-width: 900px;
-
+          max-width: 1320px;
           margin: 0 auto;
-
-          padding: 38px 25px 55px;
+          padding: 95px 40px 110px;
         }
 
-        .about-card {
+        .about-layout {
           display: grid;
-
           grid-template-columns:
-            300px minmax(0, 1fr);
-
+            minmax(0, 0.9fr)
+            minmax(0, 1.1fr);
+          gap: 75px;
           align-items: center;
-
-          gap: 50px;
         }
 
-        /* =========================================
-           IMAGE
-        ========================================= */
+        /* IMAGE */
 
         .about-image-side {
           position: relative;
+          width: 100%;
+          padding: 35px 15px 35px 10px;
+        }
 
-          width: 300px;
+        .about-image-bg {
+          position: absolute;
+          inset: 65px 0 10px 25px;
+          background: #e2f5f3;
+          border-radius: 44% 56% 46% 54%;
+          transform: rotate(-8deg);
         }
 
         .about-image-box {
           position: relative;
-
-          width: 300px;
-          height: 300px;
-
+          z-index: 2;
+          width: 100%;
+          height: 590px;
           overflow: hidden;
-
-          border-radius: 17px;
-
-          background: #edf7f6;
-
+          border-radius:
+            120px 38px 130px 45px;
+          background: #eaf7f6;
           box-shadow:
-            0 10px 28px
-            rgba(28, 74, 72, 0.09);
+            0 24px 65px rgba(18, 82, 80, 0.12);
         }
 
         .about-image-box img {
           display: block;
-
           width: 100%;
           height: 100%;
-
           object-fit: cover;
         }
 
         .about-image-placeholder {
           width: 100%;
           height: 100%;
-
           display: flex;
-
           flex-direction: column;
-
           align-items: center;
           justify-content: center;
-
-          gap: 10px;
-
-          color: #78aaa7;
+          gap: 15px;
+          color: #74aaa7;
         }
 
         .about-image-placeholder svg {
-          font-size: 38px;
+          font-size: 65px;
         }
 
         .about-image-placeholder span {
-          font-size: 11px;
+          font-size: 15px;
           font-weight: 600;
         }
 
-        .about-decoration {
+        .about-floating-card {
           position: absolute;
-
-          width: 75px;
-          height: 75px;
-
-          right: -12px;
-          bottom: -12px;
-
-          z-index: -1;
-
-          border-radius: 18px;
-
-          background: #dff3f1;
+          z-index: 3;
+          left: -12px;
+          bottom: 75px;
+          padding: 20px 23px;
+          background: rgba(255,255,255,0.96);
+          border: 1px solid #e4f2f0;
+          border-radius: 23px;
+          box-shadow:
+            0 14px 45px rgba(23, 80, 78, 0.12);
         }
 
-        /* =========================================
-           TEXT
-        ========================================= */
+        .about-floating-card svg {
+          color: #16a09c;
+          font-size: 27px;
+          margin-bottom: 9px;
+        }
+
+        .about-floating-card p {
+          margin: 0;
+          color: #284340;
+          font-size: 14px;
+          font-weight: 800;
+          line-height: 1.5;
+        }
+
+        .about-paw-one,
+        .about-paw-two {
+          position: absolute;
+          color: rgba(25, 160, 156, 0.18);
+        }
+
+        .about-paw-one {
+          top: 0;
+          left: 12px;
+          font-size: 44px;
+          transform: rotate(-18deg);
+        }
+
+        .about-paw-two {
+          right: -8px;
+          bottom: 10px;
+          font-size: 48px;
+          transform: rotate(22deg);
+        }
+
+        /* TEXT */
 
         .about-text-side {
           width: 100%;
-
-          padding: 5px 0;
+          min-width: 0;
         }
 
-        .about-section-label {
-          margin-bottom: 8px;
-
-          color: #199a96;
-
-          font-size: 10px;
-
+        .about-eyebrow {
+          display: inline-flex;
+          align-items: center;
+          gap: 9px;
+          margin-bottom: 20px;
+          padding: 9px 15px;
+          background: #e7f7f5;
+          border-radius: 30px;
+          color: #169b97;
+          font-size: 12px;
           font-weight: 800;
-
-          letter-spacing: 1.1px;
-
-          text-transform: uppercase;
+          letter-spacing: 1px;
         }
 
-        .about-text-side h2 {
-          margin: 0 0 13px;
-
-          color: #293d3c;
-
-          font-size:
-            clamp(24px, 3vw, 30px);
-
-          font-weight: 800;
-
-          line-height: 1.2;
+        .about-text-side h1 {
+          margin: 0 0 20px;
+          color: #233b3c;
+          font-size: clamp(38px, 4vw, 57px);
+          font-weight: 850;
+          line-height: 1.12;
+          letter-spacing: -1.5px;
+          overflow-wrap: anywhere;
         }
 
         .about-description {
-          margin: 0;
-
-          color: #667c7a;
-
-          font-size: 12px;
-
-          line-height: 1.7;
-
+          margin: 0 0 35px;
+          color: #687e80;
+          font-size: 16px;
+          line-height: 1.9;
           white-space: pre-line;
         }
 
-        /* =========================================
-           INFO BOX
-        ========================================= */
+        /* TIMELINE */
 
-        .about-info-box {
-          margin-top: 18px;
-
-          padding: 14px 16px;
-
-          border-left:
-            3px solid #199a96;
-
-          border-radius:
-            0 10px 10px 0;
-
-          background: #f4fafa;
-
-          color: #536c6a;
-
-          font-size: 11px;
-
-          line-height: 1.6;
+        .about-timeline {
+          position: relative;
+          display: flex;
+          flex-direction: column;
+          gap: 20px;
         }
 
-        /* =========================================
-           TABLET
-        ========================================= */
+        .about-timeline::before {
+          content: "";
+          position: absolute;
+          top: 38px;
+          bottom: 38px;
+          left: 23px;
+          border-left: 2px dashed #9fd8d5;
+        }
 
-        @media (max-width: 800px) {
+        .about-step {
+          position: relative;
+          display: grid;
+          grid-template-columns: 48px minmax(0, 1fr);
+          align-items: center;
+          gap: 18px;
+        }
+
+        .about-step-number {
+          position: relative;
+          z-index: 2;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 48px;
+          height: 48px;
+          border-radius: 50%;
+          background:
+            linear-gradient(135deg, #17a8a4, #0d8987);
+          color: #ffffff;
+          font-size: 18px;
+          font-weight: 800;
+          box-shadow:
+            0 5px 15px rgba(22, 160, 156, 0.2);
+        }
+
+        .about-step-card {
+          display: flex;
+          align-items: center;
+          gap: 20px;
+          min-height: 130px;
+          padding: 23px;
+          background: #f5fbfa;
+          border: 1px solid #edf6f5;
+          border-radius: 23px;
+          transition:
+            transform 0.25s ease,
+            box-shadow 0.25s ease,
+            background 0.25s ease;
+        }
+
+        .about-step-card:hover {
+          transform: translateY(-4px);
+          background: #effaf8;
+          box-shadow:
+            0 12px 30px rgba(20, 90, 86, 0.08);
+        }
+
+        .about-step-icon {
+          display: flex;
+          flex-shrink: 0;
+          align-items: center;
+          justify-content: center;
+          width: 60px;
+          height: 60px;
+          border-radius: 50%;
+          background: #e1f3f1;
+          color: #16a09c;
+          font-size: 25px;
+          border: 3px solid #ffffff;
+        }
+
+        .about-step-content {
+          min-width: 0;
+        }
+
+        .about-step-content h3 {
+          margin: 0 0 9px;
+          color: #243e42;
+          font-size: 19px;
+          font-weight: 800;
+          overflow-wrap: anywhere;
+        }
+
+        .about-step-content p {
+          margin: 0;
+          color: #718589;
+          font-size: 14px;
+          line-height: 1.7;
+          white-space: pre-line;
+        }
+
+        /* RESPONSIVE */
+
+        @media (max-width: 1100px) {
           .about-main {
-            max-width: 620px;
-
-            padding:
-              35px 20px 55px;
+            padding: 75px 28px;
           }
 
-          .about-card {
-            grid-template-columns: 1fr;
+          .about-layout {
+            gap: 40px;
+          }
 
-            gap: 28px;
+          .about-image-box {
+            height: 510px;
+          }
+
+          .about-step-card {
+            padding: 18px;
+            gap: 14px;
+          }
+        }
+
+        @media (max-width: 850px) {
+          .about-main {
+            max-width: 690px;
+            padding: 55px 24px 80px;
+          }
+
+          .about-layout {
+            grid-template-columns: 1fr;
+            gap: 45px;
           }
 
           .about-image-side {
-            width: 100%;
+            max-width: 520px;
+            margin: 0 auto;
           }
 
           .about-image-box {
-            width: 300px;
-            height: 300px;
-
-            margin: 0 auto;
+            height: 470px;
           }
 
-          .about-decoration {
-            display: none;
-          }
-
-          .about-text-side {
-            max-width: 500px;
-
-            margin: 0 auto;
+          .about-text-side h1 {
+            font-size: 40px;
           }
         }
 
-        /* =========================================
-           MOBILE
-        ========================================= */
-
         @media (max-width: 520px) {
-          .about-hero {
-            padding:
-              23px 16px 21px;
-          }
-
-          .about-small-title {
-            margin-bottom: 7px;
-          }
-
-          .about-hero h1 {
-            font-size: 26px;
-          }
-
-          .about-hero-line {
-            width: 37px;
-
-            margin-top: 11px;
-          }
-
           .about-main {
-            padding:
-              28px 16px 45px;
+            padding: 35px 17px 60px;
           }
 
-          .about-card {
-            gap: 24px;
+          .about-image-side {
+            padding: 20px 8px;
           }
 
           .about-image-box {
-            width: 100%;
-            max-width: 280px;
-            height: 280px;
-
-            border-radius: 14px;
+            height: 350px;
+            border-radius:
+              75px 25px 85px 30px;
           }
 
-          .about-text-side {
-            max-width: 100%;
+          .about-floating-card {
+            left: -5px;
+            bottom: 35px;
+            padding: 12px 14px;
           }
 
-          .about-text-side h2 {
-            margin-bottom: 11px;
+          .about-floating-card svg {
+            font-size: 20px;
+          }
 
-            font-size: 24px;
+          .about-floating-card p {
+            font-size: 11px;
+          }
+
+          .about-text-side h1 {
+            font-size: 34px;
           }
 
           .about-description {
-            font-size: 11.5px;
-
-            line-height: 1.65;
+            font-size: 14px;
           }
 
-          .about-info-box {
-            margin-top: 15px;
+          .about-step {
+            grid-template-columns: 38px minmax(0, 1fr);
+            gap: 10px;
+          }
 
-            padding: 12px 14px;
+          .about-step-number {
+            width: 38px;
+            height: 38px;
+            font-size: 15px;
+          }
 
-            font-size: 10.5px;
+          .about-timeline::before {
+            left: 18px;
+          }
+
+          .about-step-card {
+            padding: 15px 12px;
+            min-height: 110px;
+            gap: 12px;
+          }
+
+          .about-step-icon {
+            width: 43px;
+            height: 43px;
+            font-size: 18px;
+          }
+
+          .about-step-content h3 {
+            font-size: 15px;
+          }
+
+          .about-step-content p {
+            font-size: 12px;
           }
         }
       `}</style>
 
-      {/* =========================================
-          HEADER
-      ========================================= */}
-
       <StoreHeader />
 
-      {/* =========================================
-          SMALL HERO
-      ========================================= */}
-
-      <section className="about-hero">
-        <div className="about-hero-content">
-          <div className="about-small-title">
-            <FaPaw />
-            OUR STORY
-          </div>
-
-          <h1>{aboutTitle}</h1>
-
-          <div className="about-hero-line" />
-        </div>
-      </section>
-
-      {/* =========================================
-          ABOUT CONTENT
-      ========================================= */}
-
       <main className="about-main">
-        <div className="about-card">
-
-          {/* IMAGE */}
-
+        <div className="about-layout">
           <div className="about-image-side">
+            <div className="about-image-bg" />
+
+            <FaPaw className="about-paw-one" />
+            <FaPaw className="about-paw-two" />
+
             <div className="about-image-box">
               {aboutImage ? (
                 <img
                   src={aboutImage}
-                  alt={aboutTitle}
+                  alt={aboutTitle || "Clinic"}
                 />
               ) : (
                 <div className="about-image-placeholder">
                   <FaPaw />
-
-                  <span>
-                    About Us Image
-                  </span>
+                  <span>Upload image from Settings</span>
                 </div>
               )}
             </div>
 
-            <div className="about-decoration" />
+            <div className="about-floating-card">
+              <FaPaw />
+              <p>
+                Healthy Pets
+                <br />
+                Happier Lives
+              </p>
+            </div>
           </div>
 
-          {/* TEXT */}
-
           <div className="about-text-side">
-            <div className="about-section-label">
-              About Our Clinic
+            <div className="about-eyebrow">
+              <FaPaw />
+              OUR JOURNEY
             </div>
 
-            <h2>{aboutTitle}</h2>
+            {aboutTitle && <h1>{aboutTitle}</h1>}
 
-            <p className="about-description">
-              {aboutDescription}
-            </p>
+            {aboutDescription && (
+              <p className="about-description">
+                {aboutDescription}
+              </p>
+            )}
 
-            <div className="about-info-box">
-              We care about the health, happiness and
-              well-being of every pet that visits our
-              clinic.
+            <div className="about-timeline">
+              {timeline.map((step) => (
+                <div className="about-step" key={step.number}>
+                  <div className="about-step-number">
+                    {step.number}
+                  </div>
+
+                  <div className="about-step-card">
+                    <div className="about-step-icon">
+                      {step.icon}
+                    </div>
+
+                    <div className="about-step-content">
+                      {step.title && <h3>{step.title}</h3>}
+
+                      {step.description && (
+                        <p>{step.description}</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         </div>

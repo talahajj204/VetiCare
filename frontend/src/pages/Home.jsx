@@ -1,297 +1,125 @@
+
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-
 import StoreHeader from "./StoreHeader";
+import { FaPaw, FaArrowRight } from "react-icons/fa";
 
-import { FaPaw } from "react-icons/fa6";
+const readSettings = () => {
+  try {
+    return (
+      JSON.parse(localStorage.getItem("storeSettings") || "{}") || {}
+    );
+  } catch {
+    return {};
+  }
+};
 
-/* =========================================================
-   HOME
-========================================================= */
+const readCategories = () => {
+  try {
+    const data = JSON.parse(
+      localStorage.getItem("vetClinicCategories") || "[]"
+    );
+
+    if (!Array.isArray(data)) return [];
+
+    return [...data].sort(
+      (a, b) =>
+        Number(a.sortOrder || 0) -
+        Number(b.sortOrder || 0)
+    );
+  } catch {
+    return [];
+  }
+};
+
+const readProducts = () => {
+  try {
+    const data = JSON.parse(
+      localStorage.getItem("vetClinicProducts") || "[]"
+    );
+
+    if (!Array.isArray(data)) return [];
+
+    const visible = data.filter(
+      (product) => product.showOnStore === true
+    );
+
+    const featured = visible.filter(
+      (product) => product.featured === true
+    );
+
+    const other = visible.filter(
+      (product) => product.featured !== true
+    );
+
+    return [...featured, ...other].slice(0, 4);
+  } catch {
+    return [];
+  }
+};
 
 function Home() {
   const navigate = useNavigate();
 
-  /* =========================================================
-     STORE SETTINGS
-  ========================================================= */
-
-  const [storeSettings, setStoreSettings] = useState({
-    storeName: "",
-    storeDescription: "",
-    homeBanner: null,
-    homeBannerTitle: "",
-    homeBannerDescription: "",
-    homeBannerButtonText: "",
-  });
-
-  /* =========================================================
-     DYNAMIC CATEGORIES
-  ========================================================= */
-
-  const [categories, setCategories] = useState([]);
-
-  /* =========================================================
-     DYNAMIC PRODUCTS
-  ========================================================= */
-
-  const [products, setProducts] = useState([]);
-
-  /* =========================================================
-     LOAD SETTINGS
-  ========================================================= */
+  const [settings, setSettings] = useState(readSettings);
+  const [categories, setCategories] = useState(readCategories);
+  const [products, setProducts] = useState(readProducts);
 
   useEffect(() => {
-    const loadSettings = () => {
-      try {
-        const saved = localStorage.getItem("storeSettings");
+    const refreshSettings = () => setSettings(readSettings());
+    const refreshCategories = () =>
+      setCategories(readCategories());
+    const refreshProducts = () =>
+      setProducts(readProducts());
 
-        if (!saved) return;
-
-        const settings = JSON.parse(saved);
-
-        setStoreSettings({
-          storeName: settings.storeName || "",
-          storeDescription: settings.storeDescription || "",
-          homeBanner: settings.homeBanner || null,
-          homeBannerTitle: settings.homeBannerTitle || "",
-          homeBannerDescription:
-            settings.homeBannerDescription || "",
-          homeBannerButtonText:
-            settings.homeBannerButtonText || "",
-        });
-      } catch (error) {
-        console.error(
-          "Could not load store settings:",
-          error
-        );
-      }
+    const refreshAll = () => {
+      refreshSettings();
+      refreshCategories();
+      refreshProducts();
     };
-
-    loadSettings();
 
     window.addEventListener(
       "storeSettingsUpdated",
-      loadSettings
+      refreshSettings
     );
 
     window.addEventListener(
-      "storage",
-      loadSettings
+      "vetClinicCategoriesUpdated",
+      refreshCategories
     );
+
+    window.addEventListener(
+      "vetClinicProductsUpdated",
+      refreshProducts
+    );
+
+    window.addEventListener("storage", refreshAll);
 
     return () => {
       window.removeEventListener(
         "storeSettingsUpdated",
-        loadSettings
+        refreshSettings
       );
 
-      window.removeEventListener(
-        "storage",
-        loadSettings
-      );
-    };
-  }, []);
-
-  /* =========================================================
-     LOAD CATEGORIES FROM CATEGORIES.JSX
-  ========================================================= */
-
-  useEffect(() => {
-    const sortCategories = (list) => {
-      return [...list].sort((a, b) => {
-        const orderA = Number(a.sortOrder) || 0;
-        const orderB = Number(b.sortOrder) || 0;
-
-        if (orderA !== orderB) {
-          return orderA - orderB;
-        }
-
-        return (a.title || "").localeCompare(
-          b.title || ""
-        );
-      });
-    };
-
-    const loadCategories = () => {
-      try {
-        const saved = localStorage.getItem(
-          "vetClinicCategories"
-        );
-
-        if (!saved) {
-          setCategories([]);
-          return;
-        }
-
-        const parsed = JSON.parse(saved);
-
-        if (!Array.isArray(parsed)) {
-          setCategories([]);
-          return;
-        }
-
-        setCategories(sortCategories(parsed));
-      } catch (error) {
-        console.error(
-          "Could not load store categories:",
-          error
-        );
-
-        setCategories([]);
-      }
-    };
-
-    const handleCategoriesUpdated = (event) => {
-      if (Array.isArray(event.detail)) {
-        setCategories(
-          sortCategories(event.detail)
-        );
-
-        return;
-      }
-
-      loadCategories();
-    };
-
-    loadCategories();
-
-    window.addEventListener(
-      "vetClinicCategoriesUpdated",
-      handleCategoriesUpdated
-    );
-
-    window.addEventListener(
-      "storage",
-      loadCategories
-    );
-
-    return () => {
       window.removeEventListener(
         "vetClinicCategoriesUpdated",
-        handleCategoriesUpdated
+        refreshCategories
       );
 
-      window.removeEventListener(
-        "storage",
-        loadCategories
-      );
-    };
-  }, []);
-
-  /* =========================================================
-     LOAD PRODUCTS FROM INVENTORY.JSX
-  ========================================================= */
-
-  useEffect(() => {
-    const prepareProducts = (list) => {
-      if (!Array.isArray(list)) {
-        return [];
-      }
-
-      /*
-        Only products enabled for the public Store.
-
-        Featured products appear first.
-
-        If fewer than 4 products are marked Featured,
-        the remaining Store products fill the empty spaces.
-      */
-
-      const storeProducts = list.filter(
-        (product) => product.showOnStore === true
-      );
-
-      const featuredProducts = storeProducts.filter(
-        (product) => product.featured === true
-      );
-
-      const otherProducts = storeProducts.filter(
-        (product) => product.featured !== true
-      );
-
-      return [
-        ...featuredProducts,
-        ...otherProducts,
-      ].slice(0, 4);
-    };
-
-    const loadProducts = () => {
-      try {
-        const saved = localStorage.getItem(
-          "vetClinicProducts"
-        );
-
-        if (!saved) {
-          setProducts([]);
-          return;
-        }
-
-        const parsed = JSON.parse(saved);
-
-        setProducts(
-          prepareProducts(parsed)
-        );
-      } catch (error) {
-        console.error(
-          "Could not load store products:",
-          error
-        );
-
-        setProducts([]);
-      }
-    };
-
-    const handleProductsUpdated = (event) => {
-      if (Array.isArray(event.detail)) {
-        setProducts(
-          prepareProducts(event.detail)
-        );
-
-        return;
-      }
-
-      loadProducts();
-    };
-
-    loadProducts();
-
-    window.addEventListener(
-      "vetClinicProductsUpdated",
-      handleProductsUpdated
-    );
-
-    window.addEventListener(
-      "storage",
-      loadProducts
-    );
-
-    return () => {
       window.removeEventListener(
         "vetClinicProductsUpdated",
-        handleProductsUpdated
+        refreshProducts
       );
 
-      window.removeEventListener(
-        "storage",
-        loadProducts
-      );
+      window.removeEventListener("storage", refreshAll);
     };
   }, []);
 
-  /* =========================================================
-     NAVIGATION
-  ========================================================= */
+  const goToProducts = () => navigate("/products");
 
-  const goToProducts = () => {
-    navigate("/products");
-  };
-
-  const goToCategory = (category) => {
+  const goToCategory = (title) => {
     navigate(
-      `/products?category=${encodeURIComponent(
-        category
-      )}`
+      `/products?category=${encodeURIComponent(title)}`
     );
   };
 
@@ -299,190 +127,186 @@ function Home() {
     navigate(`/products/${product.id}`);
   };
 
-  /* =========================================================
-     PRICE
-  ========================================================= */
+  const addToCart = (product) => {
+    try {
+      const stored = JSON.parse(
+        localStorage.getItem("vetClinicStoreCart") || "[]"
+      );
 
-  const formatPrice = (price) => {
-    const number = Number(price);
+      const cart = Array.isArray(stored)
+        ? [...stored]
+        : [];
 
-    if (Number.isNaN(number)) {
-      return "$0.00";
+      const existing = cart.find(
+        (item) =>
+          String(item.id) === String(product.id)
+      );
+
+      if (existing) {
+        existing.quantity =
+          Number(existing.quantity || 0) + 1;
+      } else {
+        cart.push({
+          id: product.id,
+          name: product.name,
+          image: product.image || "",
+          price: Number(product.sellingPrice || 0),
+          quantity: 1,
+        });
+      }
+
+      localStorage.setItem(
+        "vetClinicStoreCart",
+        JSON.stringify(cart)
+      );
+
+      window.dispatchEvent(new Event("cartUpdated"));
+    } catch (error) {
+      console.error("Cart error:", error);
     }
-
-    return `$${number.toFixed(2)}`;
   };
 
-  /* =========================================================
-     RETURN
-  ========================================================= */
+  const badge = String(
+    settings.homeBannerBadge || ""
+  ).trim();
+
+  const title = String(
+    settings.homeBannerTitle || ""
+  ).trim();
+
+  const description = String(
+    settings.homeBannerDescription || ""
+  ).trim();
+
+  const buttonText = String(
+    settings.homeBannerButtonText || ""
+  ).trim();
+
+  const bannerImage = settings.homeBanner || "";
 
   return (
     <div className="home-page">
-
-      {/* =====================================================
-          STORE HEADER
-      ===================================================== */}
-
       <StoreHeader />
 
       <style>{`
-        * {
+        .home-page {
+          min-height: 100vh;
+          width: 100%;
+          background: #f8fbfa;
+          color: #263b4f;
+          font-family: Arial, Helvetica, sans-serif;
+          overflow-x: hidden;
+        }
+
+        .home-page * {
           box-sizing: border-box;
         }
 
-        .home-page {
-          width: 100%;
-          min-height: 100vh;
-
-          background: #f8fbfa;
-          color: #263b4f;
-
-          font-family:
-            Arial,
-            Helvetica,
-            sans-serif;
-
-          overflow: hidden;
-        }
-
-        /* =====================================================
-           HERO
-        ===================================================== */
+        /* HERO BANNER */
 
         .home-hero {
-          width: calc(100% - 8%);
-          max-width: 1450px;
-
-          min-height: 410px;
-
-          margin: 28px auto 45px;
-
-          padding: 55px 60px;
-
-          border-radius: 24px;
-
+          position: relative;
+          width: min(94%, 1380px);
+          min-height: 440px;
+          margin: 30px auto 0;
+          padding: 65px 7%;
           display: flex;
           align-items: center;
-
-          position: relative;
-
           overflow: hidden;
-
-          background:
-            linear-gradient(
-              120deg,
-              #f7fcfb 0%,
-              #eef9f8 50%,
-              #e4f6f4 100%
-            );
-
-          border: 1px solid #d7ebe9;
+          border-radius: 24px;
+          background: linear-gradient(
+            120deg,
+            #e3f8f5 0%,
+            #d2f0ed 55%,
+            #bce8e3 100%
+          );
+          background-size: cover;
+          background-position: center;
         }
 
         .home-hero.has-image {
-          background-size: cover;
-          background-position: center;
-          background-repeat: no-repeat;
-
-          border: none;
-
-          box-shadow:
-            0 18px 45px
-            rgba(17, 121, 123, 0.12);
+          background-color: #175d61;
         }
 
         .home-hero-overlay {
           position: absolute;
-
           inset: 0;
-
-          background:
-            linear-gradient(
-              90deg,
-              rgba(8, 50, 52, 0.82) 0%,
-              rgba(8, 50, 52, 0.68) 38%,
-              rgba(8, 50, 52, 0.30) 70%,
-              rgba(8, 50, 52, 0.08) 100%
-            );
-
-          z-index: 1;
+          background: linear-gradient(
+            90deg,
+            rgba(5, 48, 51, 0.85),
+            rgba(5, 48, 51, 0.5),
+            rgba(5, 48, 51, 0.1)
+          );
         }
 
         .home-hero-content {
-          width: 60%;
-          max-width: 680px;
-
           position: relative;
-
           z-index: 2;
+          display: flex;
+          flex-direction: column;
+          align-items: flex-start;
+          width: min(100%, 650px);
+        }
+
+        /* KEEP EMPTY SPACE FOR SETTINGS FIELDS */
+
+        .home-hero-badge-slot {
+          width: 100%;
+          min-height: 65px;
+        }
+
+        .home-hero-title-slot {
+          width: 100%;
+          min-height: 100px;
+        }
+
+        .home-hero-description-slot {
+          width: 100%;
+          min-height: 75px;
+        }
+
+        .home-hero-button-slot {
+          width: 100%;
+          min-height: 52px;
+          display: flex;
+          align-items: flex-start;
+          justify-content: flex-start;
         }
 
         .home-hero-badge {
-          width: fit-content;
-
-          padding: 8px 13px;
-
-          margin-bottom: 18px;
-
-          display: flex;
+          display: inline-flex;
           align-items: center;
-
-          gap: 7px;
-
-          border-radius: 50px;
-
-          background: #e8f7f7;
-
-          color: #11797b;
-
+          gap: 9px;
+          padding: 9px 15px;
+          margin-bottom: 20px;
+          border-radius: 30px;
+          background: rgba(255,255,255,0.8);
+          color: #168e89;
           font-size: 12px;
           font-weight: 800;
         }
 
-        .home-hero.has-image
-        .home-hero-badge {
-          background:
-            rgba(255, 255, 255, 0.15);
-
-          color: white;
-
-          border:
-            1px solid
-            rgba(255, 255, 255, 0.25);
-
-          backdrop-filter: blur(8px);
+        .home-hero-badge svg {
+          font-size: 12px;
         }
 
         .home-hero h1 {
-          margin: 0 0 17px;
-
-          max-width: 650px;
-
-          font-size:
-            clamp(
-              34px,
-              4vw,
-              58px
-            );
-
-          line-height: 1.04;
-
-          letter-spacing: -1.8px;
-
-          color: #263b4f;
+          margin: 0 0 20px;
+          font-size: clamp(34px, 4.5vw, 61px);
+          font-weight: 850;
+          letter-spacing: -1.5px;
+          line-height: 1.13;
+          color: #194e50;
+          overflow-wrap: anywhere;
         }
 
         .home-hero p {
-          max-width: 600px;
-
-          margin: 0 0 25px;
-
-          color: #728197;
-
+          max-width: 520px;
+          margin: 0 0 28px;
+          color: #557477;
           font-size: 15px;
-
-          line-height: 1.7;
+          line-height: 1.9;
+          white-space: pre-line;
         }
 
         .home-hero.has-image h1 {
@@ -490,707 +314,518 @@ function Home() {
         }
 
         .home-hero.has-image p {
-          color:
-            rgba(
-              255,
-              255,
-              255,
-              0.90
-            );
+          color: rgba(255,255,255,0.88);
         }
 
-        .home-shop-button {
-          width: fit-content;
+        /* SMALL SHOP BUTTON */
 
-          min-width: 0;
-
-          height: 34px;
-
-          padding: 0 15px;
-
-          border: none;
-
-          border-radius: 8px;
-
+        .home-page .home-shop-button {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          align-self: flex-start;
+          gap: 10px;
+          width: fit-content !important;
+          max-width: 100%;
+          min-height: 42px;
+          padding: 12px 22px;
+          flex: 0 0 auto;
+          border: 0;
+          border-radius: 10px;
           background: #1aa6a6;
-
           color: white;
-
-          font-size: 12px;
-
+          font-size: 13px;
           font-weight: 800;
-
+          white-space: nowrap;
           cursor: pointer;
-
-          transition: 0.2s ease;
+          transition: 0.2s;
         }
 
-        .home-shop-button:hover {
-          background: #11797b;
-
-          transform:
-            translateY(-2px);
+        .home-page .home-shop-button:hover {
+          background: #118e8e;
+          transform: translateY(-2px);
         }
 
-        .home-hero.has-image
-        .home-shop-button {
-          background: white;
-
-          color: #11797b;
-        }
-
-        /* =====================================================
-           MAIN CONTENT
-        ===================================================== */
+        /* MAIN CONTENT */
 
         .home-container {
-          width: 92%;
-
-          max-width: 1450px;
-
+          width: min(92%, 1240px);
           margin: 0 auto;
+          padding: 65px 0 90px;
         }
 
-        /* =====================================================
-           SECTION HEADER
-        ===================================================== */
-
         .home-section-header {
-          margin-bottom: 20px;
+          text-align: center;
+          margin-bottom: 30px;
         }
 
         .home-section-header h2 {
-          margin: 0 0 6px;
-
-          color: #263b4f;
-
-          font-size: 27px;
-
-          font-weight: 800;
-
+          margin: 0 0 10px;
+          color: #243f46;
+          font-size: clamp(23px, 3vw, 31px);
+          font-weight: 850;
           letter-spacing: -0.6px;
         }
 
         .home-section-header p {
           margin: 0;
-
-          color: #8290a3;
-
+          color: #879ca2;
           font-size: 13px;
+          line-height: 1.7;
         }
 
-        /* =====================================================
-           CATEGORIES
-        ===================================================== */
+        /* CATEGORIES */
 
         .home-categories-section {
-          margin-bottom: 50px;
-
-          overflow: hidden;
+          margin-bottom: 75px;
         }
 
         .home-categories-window {
           width: 100%;
-
           overflow: hidden;
-
-          padding: 2px 0 8px;
+          padding: 8px 0 20px;
         }
 
         .home-categories-track {
-          width: max-content;
-
           display: flex;
-
-          gap: 16px;
-
-          animation:
-            categoryScroll
-            28s
-            linear
-            infinite;
+          gap: 17px;
+          width: max-content;
+          animation: homeCategoryScroll 35s linear infinite;
         }
 
-        .home-categories-track:hover {
+        .home-categories-window:hover
+        .home-categories-track {
           animation-play-state: paused;
         }
 
-        @keyframes categoryScroll {
+        @keyframes homeCategoryScroll {
           from {
-            transform:
-              translateX(0);
+            transform: translateX(0);
           }
 
           to {
-            transform:
-              translateX(-50%);
+            transform: translateX(-50%);
           }
         }
+
         .home-category-card {
-          width: 150px;
-          min-width: 150px;
-          min-height: 150px;
-        
-          padding: 0;
-        
-          border: 1px solid #dfeceb;
-          border-radius: 17px;
-        
-          background: white;
-        
           display: flex;
           flex-direction: column;
-        
-          align-items: center;
-          justify-content: flex-start;
-        
-          gap: 0;
-        
-          text-align: center;
-        
-          cursor: pointer;
-        
-          transition: 0.25s ease;
-        
+          align-items: stretch;
+          width: 185px;
+          flex: 0 0 185px;
+          padding: 0;
           overflow: hidden;
-        
+          border: 1px solid #e5eeee;
+          border-radius: 15px;
+          background: white;
           box-shadow:
-            0 7px 20px
-            rgba(38, 59, 79, 0.04);
+            0 5px 15px rgba(18,85,86,0.04);
+          text-align: center;
+          cursor: pointer;
+          transition: 0.2s;
         }
 
         .home-category-card:hover {
-          transform:
-            translateY(-5px);
-
-          border-color: #9dd9d5;
-
+          transform: translateY(-4px);
           box-shadow:
-            0 13px 27px
-            rgba(
-              17,
-              121,
-              123,
-              0.11
-            );
+            0 10px 25px rgba(18,85,86,0.12);
         }
 
-        /* =====================================================
-           DYNAMIC CATEGORY IMAGE
-        ===================================================== */
         .home-category-image-wrapper {
           width: 100%;
-          height: 105px;
-        
-          border-radius: 0;
-        
+          height: 130px;
           overflow: hidden;
-        
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        
-          background: #eef9f8;
-        
-          border: none;
+          background: #eaf7f5;
         }
 
         .home-category-image {
           width: 100%;
           height: 100%;
-
           object-fit: cover;
-
           display: block;
         }
 
         .home-category-no-image {
-          width: 100%;
-          height: 100%;
-
           display: flex;
           align-items: center;
           justify-content: center;
-
-          color: #55b8b4;
-
-          font-size: 29px;
+          width: 100%;
+          height: 100%;
+          color: #19a49e;
+          font-size: 32px;
         }
 
         .home-category-name {
-          width: 100%;
-        
-          padding: 12px 8px;
-        
-          color: #34495e;
-        
+          padding: 15px 12px;
           font-size: 13px;
           font-weight: 800;
-          line-height: 1.3;
+          color: #36575c;
+          overflow-wrap: anywhere;
         }
 
-        /* =====================================================
-           EMPTY CATEGORIES
-        ===================================================== */
-
-        .home-categories-empty {
-          width: 100%;
-
-          padding: 30px;
-
-          border:
-            1px dashed
-            #cfe1df;
-
-          border-radius: 15px;
-
-          background: white;
-
-          color: #8290a3;
-
-          font-size: 13px;
-
-          text-align: center;
-        }
-
-        /* =====================================================
-           PRODUCTS
-        ===================================================== */
-
-        .home-products-section {
-          margin-bottom: 55px;
-        }
+        /* PRODUCTS */
 
         .home-products-header {
           display: flex;
-
-          align-items: flex-end;
+          align-items: center;
           justify-content: space-between;
-
           gap: 20px;
-
-          margin-bottom: 20px;
+          margin-bottom: 28px;
         }
 
-        .home-view-all-button {
-          width: fit-content;
+        .home-products-header .home-section-header {
+          margin: 0;
+          text-align: left;
+        }
 
-          min-width: 0;
+        /*
+         * ONLY CHANGE:
+         * SMALL VIEW ALL BUTTON ON THE RIGHT
+         */
 
-          padding: 0;
+        .home-page .home-products-header
+        button.home-view-all-button {
+          display: inline-flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          gap: 8px !important;
 
-          border: none;
+          width: max-content !important;
+          min-width: 0 !important;
+          max-width: max-content !important;
+          height: 42px !important;
+          min-height: 42px !important;
 
-          background: transparent;
+          flex: 0 0 auto !important;
+          flex-grow: 0 !important;
+          flex-shrink: 0 !important;
 
-          color: #159f9f;
+          margin: 0 0 0 auto !important;
+          padding: 10px 16px !important;
 
-          font-size: 13px;
+          border: 1px solid #a6dcd7 !important;
+          border-radius: 9px !important;
+          background: white !important;
+          color: #159c97 !important;
 
-          font-weight: 800;
-
+          font-size: 12px !important;
+          font-weight: 800 !important;
+          line-height: 1 !important;
+          white-space: nowrap !important;
           cursor: pointer;
         }
 
-        .home-view-all-button:hover {
-          color: #11797b;
+        .home-page .home-products-header
+        button.home-view-all-button:hover {
+          background: #e8f8f6 !important;
         }
 
         .home-products-grid {
           display: grid;
-
           grid-template-columns:
-            repeat(4, 1fr);
-
-          gap: 18px;
+            repeat(4, minmax(0, 1fr));
+          gap: 20px;
         }
 
         .home-product-card {
           overflow: hidden;
-
-          border:
-            1px solid
-            #e0eceb;
-
-          border-radius: 17px;
-
+          border: 1px solid #e5eeee;
+          border-radius: 16px;
           background: white;
-
-          transition: 0.25s ease;
-
-          cursor: pointer;
-
-          box-shadow:
-            0 7px 22px
-            rgba(
-              38,
-              59,
-              79,
-              0.04
-            );
+          transition: 0.2s;
         }
 
         .home-product-card:hover {
-          transform:
-            translateY(-4px);
-
+          transform: translateY(-4px);
           box-shadow:
-            0 14px 30px
-            rgba(
-              38,
-              59,
-              79,
-              0.09
-            );
+            0 10px 25px rgba(18,85,86,0.09);
         }
 
         .home-product-image-area {
-          width: 100%;
-
-          height: 190px;
-
-          display: flex;
-          align-items: center;
-          justify-content: center;
-
+          height: 200px;
+          background: #eff8f7;
+          cursor: pointer;
           overflow: hidden;
-
-          background:
-            linear-gradient(
-              145deg,
-              #f5fbfa,
-              #eaf7f6
-            );
         }
 
         .home-product-image {
           width: 100%;
           height: 100%;
-
-          object-fit: cover;
-
           display: block;
+          object-fit: cover;
+          transition: transform 0.25s;
+        }
+
+        .home-product-card:hover
+        .home-product-image {
+          transform: scale(1.04);
         }
 
         .home-product-placeholder {
-          color: #7bc9c5;
-
-          font-size: 47px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          height: 100%;
+          color: #19a49e;
+          font-size: 40px;
         }
 
-        .home-product-content {
-          padding: 16px;
+        .home-product-info {
+          padding: 17px;
+        }
+
+        .home-product-info h3 {
+          margin: 0 0 8px;
+          font-size: 15px;
+          font-weight: 800;
+          color: #2d4b50;
+          cursor: pointer;
         }
 
         .home-product-category {
-          margin-bottom: 6px;
-
-          color: #159f9f;
-
+          display: block;
+          color: #91a3a8;
           font-size: 11px;
-
-          font-weight: 800;
-
-          text-transform: uppercase;
-
-          letter-spacing: 0.5px;
-        }
-
-        .home-product-name {
-          margin: 0 0 11px;
-
-          color: #263b4f;
-
-          font-size: 15px;
-
-          font-weight: 800;
-
-          line-height: 1.35;
+          margin-bottom: 15px;
         }
 
         .home-product-bottom {
           display: flex;
-
-          align-items: center;
           justify-content: space-between;
-
+          align-items: center;
           gap: 10px;
         }
 
         .home-product-price {
-          color: #263b4f;
-
-          font-size: 16px;
-
-          font-weight: 800;
+          color: #139d98;
+          font-size: 17px;
+          font-weight: 850;
         }
 
-        .home-product-stock {
-          color: #8290a3;
-
+        .home-add-cart {
+          padding: 9px 12px;
+          border: none;
+          border-radius: 8px;
+          background: #e6f7f4;
+          color: #119c96;
           font-size: 11px;
+          font-weight: 800;
+          cursor: pointer;
         }
 
-        /* =====================================================
-           EMPTY PRODUCTS
-        ===================================================== */
+        .home-add-cart:hover {
+          background: #159d99;
+          color: white;
+        }
 
-        .home-products-empty {
-          grid-column: 1 / -1;
-
-          width: 100%;
-
-          padding: 45px 25px;
-
-          border:
-            1px dashed
-            #cfe1df;
-
-          border-radius: 17px;
-
-          background: white;
-
-          color: #8290a3;
-
+        .home-empty {
+          padding: 35px;
+          border: 1px dashed #d5e8e5;
+          border-radius: 12px;
           text-align: center;
-
+          color: #8ba0a5;
           font-size: 13px;
         }
 
-        .home-products-empty-icon {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-
-          margin-bottom: 12px;
-
-          color: #7bc9c5;
-
-          font-size: 36px;
-        }
-
-        .home-products-empty strong {
-          display: block;
-
-          margin-bottom: 5px;
-
-          color: #34495e;
-
-          font-size: 15px;
-        }
-
-        /* =====================================================
-           RESPONSIVE
-        ===================================================== */
-
-        @media (max-width: 1050px) {
+        @media (max-width: 1000px) {
           .home-products-grid {
             grid-template-columns:
-              repeat(2, 1fr);
-          }
-
-          .home-hero-content {
-            width: 75%;
+              repeat(2, minmax(0, 1fr));
           }
         }
 
-        @media (max-width: 700px) {
+        @media (max-width: 600px) {
           .home-hero {
-            width:
-              calc(100% - 28px);
-
-            min-height: 370px;
-
-            margin-top: 18px;
-
-            padding: 38px 25px;
+            width: 94%;
+            min-height: 380px;
+            margin-top: 15px;
+            padding: 35px 25px;
+            border-radius: 17px;
           }
 
-          .home-hero-content {
-            width: 100%;
+          .home-hero h1 {
+            font-size: 34px;
           }
 
-          .home-products-grid {
-            grid-template-columns: 1fr;
+          .home-hero p {
+            font-size: 13px;
           }
 
-          .home-products-header {
-            align-items: flex-start;
-            flex-direction: column;
+          .home-hero-badge-slot {
+            min-height: 55px;
+          }
+
+          .home-hero-title-slot {
+            min-height: 70px;
+          }
+
+          .home-hero-description-slot {
+            min-height: 65px;
+          }
+
+          .home-container {
+            padding: 45px 0 65px;
           }
 
           .home-category-card {
-            width: 135px;
-            min-width: 135px;
-
-            min-height: 140px;
+            width: 150px;
+            flex-basis: 150px;
           }
 
           .home-category-image-wrapper {
-            width: 72px;
-            height: 72px;
+            height: 110px;
+          }
+
+          .home-products-grid {
+            grid-template-columns:
+              repeat(2, minmax(0, 1fr));
+            gap: 12px;
+          }
+
+          .home-product-image-area {
+            height: 140px;
+          }
+
+          .home-product-info {
+            padding: 12px;
+          }
+
+          .home-product-info h3 {
+            font-size: 12px;
+          }
+
+          .home-product-price {
+            font-size: 14px;
+          }
+
+          .home-product-bottom {
+            flex-wrap: wrap;
+          }
+
+          .home-products-header {
+            flex-wrap: wrap;
+          }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .home-categories-track {
+            animation: none;
           }
         }
       `}</style>
 
-      {/* =====================================================
-          HERO
-      ===================================================== */}
+      {/* PART 2 CONTINUES BELOW */}
+
+      {/* HOME BANNER — ALL TEXT FROM SETTINGS */}
 
       <section
         className={`home-hero ${
-          storeSettings.homeBanner
-            ? "has-image"
-            : ""
+          bannerImage ? "has-image" : ""
         }`}
         style={
-          storeSettings.homeBanner
+          bannerImage
             ? {
-                backgroundImage:
-                  `url(${storeSettings.homeBanner})`,
+                backgroundImage: `url("${bannerImage}")`,
               }
             : undefined
         }
       >
-        {storeSettings.homeBanner && (
+        {bannerImage && (
           <div className="home-hero-overlay" />
         )}
 
         <div className="home-hero-content">
-          <div className="home-hero-badge">
-            <FaPaw />
-            Everything your pet needs
+          <div className="home-hero-badge-slot">
+            {badge && (
+              <div className="home-hero-badge">
+                <FaPaw />
+                <span>{badge}</span>
+              </div>
+            )}
           </div>
 
-          <h1>
-            {storeSettings.homeBannerTitle ||
-              "Healthy pets. Happy homes."}
-          </h1>
+          <div className="home-hero-title-slot">
+            {title && <h1>{title}</h1>}
+          </div>
 
-          <p>
-            {storeSettings.homeBannerDescription ||
-              storeSettings.storeDescription ||
-              "Discover carefully selected food, care products, accessories, and everyday essentials for your pets."}
-          </p>
+          <div className="home-hero-description-slot">
+            {description && <p>{description}</p>}
+          </div>
 
-          <button
-            type="button"
-            className="home-shop-button"
-            onClick={goToProducts}
-          >
-            {storeSettings.homeBannerButtonText ||
-              "Shop Now"}
-          </button>
+          <div className="home-hero-button-slot">
+            {buttonText && (
+              <button
+                type="button"
+                className="home-shop-button"
+                onClick={goToProducts}
+              >
+                {buttonText}
+                <FaArrowRight />
+              </button>
+            )}
+          </div>
         </div>
       </section>
 
-      {/* =====================================================
-          MAIN CONTENT
-      ===================================================== */}
-
       <main className="home-container">
-
-        {/* =====================================================
-            SHOP BY CATEGORY
-        ===================================================== */}
+        {/* SHOP BY CATEGORY */}
 
         <section className="home-categories-section">
           <div className="home-section-header">
             <h2>Shop by Category</h2>
-
-            <p>
-              Find exactly what your pet needs.
-            </p>
+            <p>Explore our available categories.</p>
           </div>
 
           {categories.length > 0 ? (
             <div className="home-categories-window">
               <div className="home-categories-track">
+                {[...categories, ...categories].map(
+                  (category, index) => (
+                    <button
+                      type="button"
+                      key={`${category.id}-${index}`}
+                      className="home-category-card"
+                      onClick={() =>
+                        goToCategory(category.title)
+                      }
+                    >
+                      <div className="home-category-image-wrapper">
+                        {category.image ? (
+                          <img
+                            src={category.image}
+                            alt={category.title}
+                            className="home-category-image"
+                          />
+                        ) : (
+                          <div className="home-category-no-image">
+                            <FaPaw />
+                          </div>
+                        )}
+                      </div>
 
-                {/* FIRST SET */}
-
-                {categories.map((category) => (
-                  <button
-                    type="button"
-                    className="home-category-card"
-                    key={`category-first-${category.id}`}
-                    onClick={() =>
-                      goToCategory(category.title)
-                    }
-                  >
-                    <div className="home-category-image-wrapper">
-                      {category.image ? (
-                        <img
-                          src={category.image}
-                          alt={category.title}
-                          className="home-category-image"
-                        />
-                      ) : (
-                        <div className="home-category-no-image">
-                          <FaPaw />
-                        </div>
-                      )}
-                    </div>
-
-                    <span className="home-category-name">
-                      {category.title}
-                    </span>
-                  </button>
-                ))}
-
-                {/* SECOND SET FOR AUTO SCROLL */}
-
-                {categories.map((category) => (
-                  <button
-                    type="button"
-                    className="home-category-card"
-                    key={`category-second-${category.id}`}
-                    onClick={() =>
-                      goToCategory(category.title)
-                    }
-                    aria-hidden="true"
-                    tabIndex={-1}
-                  >
-                    <div className="home-category-image-wrapper">
-                      {category.image ? (
-                        <img
-                          src={category.image}
-                          alt=""
-                          className="home-category-image"
-                        />
-                      ) : (
-                        <div className="home-category-no-image">
-                          <FaPaw />
-                        </div>
-                      )}
-                    </div>
-
-                    <span className="home-category-name">
-                      {category.title}
-                    </span>
-                  </button>
-                ))}
+                      <span className="home-category-name">
+                        {category.title}
+                      </span>
+                    </button>
+                  )
+                )}
               </div>
             </div>
           ) : (
-            <div className="home-categories-empty">
-              No categories are available yet.
+            <div className="home-empty">
+              No categories available yet.
             </div>
           )}
         </section>
 
-        {/* =====================================================
-            DYNAMIC FEATURED PRODUCTS
-        ===================================================== */}
+        {/* FEATURED PRODUCTS */}
 
         <section className="home-products-section">
           <div className="home-products-header">
             <div className="home-section-header">
               <h2>Featured Products</h2>
-
-              <p>
-                Popular products selected for your pets.
-              </p>
+              <p>Explore products from our store.</p>
             </div>
 
             <button
@@ -1198,21 +833,24 @@ function Home() {
               className="home-view-all-button"
               onClick={goToProducts}
             >
-              View All →
+              View All
+              <FaArrowRight />
             </button>
           </div>
 
-          <div className="home-products-grid">
-            {products.length > 0 ? (
-              products.map((product) => (
+          {products.length > 0 ? (
+            <div className="home-products-grid">
+              {products.map((product) => (
                 <article
                   className="home-product-card"
                   key={product.id}
-                  onClick={() =>
-                    goToProduct(product)
-                  }
                 >
-                  <div className="home-product-image-area">
+                  <div
+                    className="home-product-image-area"
+                    onClick={() =>
+                      goToProduct(product)
+                    }
+                  >
                     {product.image ? (
                       <img
                         src={product.image}
@@ -1220,51 +858,52 @@ function Home() {
                         className="home-product-image"
                       />
                     ) : (
-                      <FaPaw className="home-product-placeholder" />
+                      <div className="home-product-placeholder">
+                        <FaPaw />
+                      </div>
                     )}
                   </div>
 
-                  <div className="home-product-content">
-                    <div className="home-product-category">
-                      {product.category ||
-                        "Uncategorized"}
-                    </div>
-
-                    <h3 className="home-product-name">
+                  <div className="home-product-info">
+                    <h3
+                      onClick={() =>
+                        goToProduct(product)
+                      }
+                    >
                       {product.name}
                     </h3>
 
+                    <span className="home-product-category">
+                      {product.category}
+                    </span>
+
                     <div className="home-product-bottom">
                       <span className="home-product-price">
-                        {formatPrice(
-                          product.sellingPrice
-                        )}
+                        $
+                        {Number(
+                          product.sellingPrice || 0
+                        ).toFixed(2)}
                       </span>
 
-                      <span className="home-product-stock">
-                        {Number(product.quantity) > 0
-                          ? `${product.quantity} in stock`
-                          : "Out of stock"}
-                      </span>
+                      <button
+                        type="button"
+                        className="home-add-cart"
+                        onClick={() =>
+                          addToCart(product)
+                        }
+                      >
+                        Add to Cart
+                      </button>
                     </div>
                   </div>
                 </article>
-              ))
-            ) : (
-              <div className="home-products-empty">
-                <div className="home-products-empty-icon">
-                  <FaPaw />
-                </div>
-
-                <strong>
-                  No store products yet
-                </strong>
-
-                Products enabled with "Show on Store"
-                from Admin will appear here.
-              </div>
-            )}
-          </div>
+              ))}
+            </div>
+          ) : (
+            <div className="home-empty">
+              No featured products available yet.
+            </div>
+          )}
         </section>
       </main>
     </div>

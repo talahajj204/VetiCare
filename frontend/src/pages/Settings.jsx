@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from "react";
 
+import { useRef, useState } from "react";
 import Sidebar from "../components/Sidebar";
 
 import {
@@ -7,2784 +7,1236 @@ import {
   FaTrash,
   FaPlus,
   FaCheckCircle,
-  FaCog,
   FaTimes,
   FaInstagram,
   FaFacebookF,
   FaWhatsapp,
+  FaPaw,
   FaImage,
+  FaSave,
 } from "react-icons/fa";
 
 import { FaTiktok } from "react-icons/fa6";
 
-function Settings() {
-  // =====================================================
-  // REFS
-  // =====================================================
+const STORAGE_KEY = "storeSettings";
 
-  const logoInputRef = useRef(null);
-  const homeBannerInputRef = useRef(null);
-  const aboutImageInputRef = useRef(null);
+const DEFAULT_STATUSES = [
+  "Active",
+  "Inactive",
+  "Pending",
+  "Completed",
+  "Cancelled",
+];
 
-  // =====================================================
-  // STORE INFORMATION
-  // =====================================================
+function readSettings() {
+  try {
+    const data = localStorage.getItem(STORAGE_KEY);
+    const parsed = data ? JSON.parse(data) : {};
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch {
+    return {};
+  }
+}
 
-  const [storeName, setStoreName] = useState("");
-  const [storeDescription, setStoreDescription] =
-    useState("");
+function ImageUploader({
+  label,
+  image,
+  onChange,
+  onRemove,
+  description,
+}) {
+  const inputRef = useRef(null);
+  const [dragging, setDragging] = useState(false);
 
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
-  const [whatsapp, setWhatsapp] = useState("");
-  const [address, setAddress] = useState("");
-
-  const [instagram, setInstagram] = useState("");
-  const [tiktok, setTiktok] = useState("");
-  const [facebook, setFacebook] = useState("");
-
-  // =====================================================
-  // ABOUT US PAGE
-  // =====================================================
-
-  const [aboutTitle, setAboutTitle] = useState("");
-  const [aboutDescription, setAboutDescription] =
-    useState("");
-  const [aboutImage, setAboutImage] = useState(null);
-  const [
-    isAboutImageDragging,
-    setIsAboutImageDragging,
-  ] = useState(false);
-
-  // =====================================================
-  // CONTACT US PAGE
-  // =====================================================
-
-  const [contactTitle, setContactTitle] =
-    useState("");
-  const [
-    contactDescription,
-    setContactDescription,
-  ] = useState("");
-
-  // =====================================================
-  // STORE LOGO
-  // storeBanner stays for Header + Footer compatibility
-  // =====================================================
-
-  const [storeBanner, setStoreBanner] =
-    useState(null);
-
-  const [
-    isLogoDragging,
-    setIsLogoDragging,
-  ] = useState(false);
-
-  // =====================================================
-  // HOME BANNER
-  // Everything is controlled from Settings.
-  // NO predefined banner content.
-  // =====================================================
-
-  const [homeBanner, setHomeBanner] =
-    useState(null);
-
-  const [
-    homeBannerTitle,
-    setHomeBannerTitle,
-  ] = useState("");
-
-  const [
-    homeBannerDescription,
-    setHomeBannerDescription,
-  ] = useState("");
-
-  const [
-    homeBannerButtonText,
-    setHomeBannerButtonText,
-  ] = useState("");
-
-  const [
-    isHomeBannerDragging,
-    setIsHomeBannerDragging,
-  ] = useState(false);
-
-  // =====================================================
-  // STATUS OPTIONS
-  // =====================================================
-
-  const [statuses, setStatuses] = useState([
-    "Active",
-    "Inactive",
-    "Pending",
-    "Completed",
-    "Cancelled",
-  ]);
-
-  const [newStatus, setNewStatus] =
-    useState("");
-
-  const [
-    showStatusModal,
-    setShowStatusModal,
-  ] = useState(false);
-
-  const [saved, setSaved] = useState(false);
-
-  // =====================================================
-  // LOAD SETTINGS
-  // =====================================================
-
-  useEffect(() => {
-    try {
-      const savedSettings =
-        localStorage.getItem("storeSettings");
-
-      if (!savedSettings) return;
-
-      const settings =
-        JSON.parse(savedSettings);
-
-      setStoreName(
-        settings.storeName || ""
-      );
-
-      setStoreDescription(
-        settings.storeDescription || ""
-      );
-
-      setEmail(settings.email || "");
-      setPhone(settings.phone || "");
-      setWhatsapp(settings.whatsapp || "");
-      setAddress(settings.address || "");
-
-      setInstagram(
-        settings.instagram || ""
-      );
-
-      setTiktok(
-        settings.tiktok || ""
-      );
-
-      setFacebook(
-        settings.facebook || ""
-      );
-
-      // About Us Page
-
-      setAboutTitle(
-        settings.aboutTitle || ""
-      );
-
-      setAboutDescription(
-        settings.aboutDescription || ""
-      );
-
-      setAboutImage(
-        settings.aboutImage || null
-      );
-
-      // Contact Us Page
-
-      setContactTitle(
-        settings.contactTitle || ""
-      );
-
-      setContactDescription(
-        settings.contactDescription || ""
-      );
-
-      // Store Logo
-
-      setStoreBanner(
-        settings.storeBanner || null
-      );
-
-      // Home Banner Image
-
-      setHomeBanner(
-        settings.homeBanner || null
-      );
-
-      // Home Banner Content
-      // No fallback/default text.
-
-      setHomeBannerTitle(
-        settings.homeBannerTitle || ""
-      );
-
-      setHomeBannerDescription(
-        settings.homeBannerDescription || ""
-      );
-
-      setHomeBannerButtonText(
-        settings.homeBannerButtonText || ""
-      );
-
-      if (Array.isArray(settings.statuses)) {
-        setStatuses(settings.statuses);
-      }
-    } catch (error) {
-      console.error(
-        "Could not load store settings:",
-        error
-      );
-    }
-  }, []);
-
-  // =====================================================
-  // SAVE ONE IMAGE WITHOUT DELETING OTHER SETTINGS
-  // =====================================================
-
-  const saveImageImmediately = (
-    key,
-    imageData
-  ) => {
-    try {
-      let currentSettings = {};
-
-      const existing =
-        localStorage.getItem(
-          "storeSettings"
-        );
-
-      if (existing) {
-        currentSettings =
-          JSON.parse(existing);
-      }
-
-      const updatedSettings = {
-        ...currentSettings,
-        [key]: imageData,
-      };
-
-      localStorage.setItem(
-        "storeSettings",
-        JSON.stringify(
-          updatedSettings
-        )
-      );
-
-      window.dispatchEvent(
-        new Event(
-          "storeSettingsUpdated"
-        )
-      );
-    } catch (error) {
-      console.error(
-        `Could not save ${key}:`,
-        error
-      );
-
-      alert(
-        "Could not save the image. Please try a smaller image."
-      );
-    }
-  };
-
-  // =====================================================
-  // VALIDATE + READ IMAGE
-  // =====================================================
-
-  const readImageFile = (
-    file,
-    onSuccess
-  ) => {
+  const processFile = (file) => {
     if (!file) return;
 
     if (
-      !file.type.startsWith("image/")
+      !["image/png", "image/jpeg", "image/webp"].includes(
+        file.type
+      )
     ) {
-      alert(
-        "Please select an image file."
-      );
-
+      alert("Please select a PNG, JPG or WEBP image.");
       return;
     }
 
-    // Images are temporarily stored as base64
-    // inside localStorage.
-
-    if (
-      file.size >
-      2 * 1024 * 1024
-    ) {
-      alert(
-        "Please choose an image smaller than 2 MB."
-      );
-
+    if (file.size > 2 * 1024 * 1024) {
+      alert("Image must be smaller than 2 MB.");
       return;
     }
 
     const reader = new FileReader();
 
     reader.onload = () => {
-      const imageData =
-        reader.result;
-
-      if (
-        !imageData ||
-        typeof imageData !== "string"
-      ) {
-        alert(
-          "Could not read the image."
-        );
-
-        return;
+      if (typeof reader.result === "string") {
+        onChange(reader.result);
       }
-
-      onSuccess(imageData);
     };
 
     reader.onerror = () => {
-      console.error(
-        "FileReader could not read image."
-      );
-
-      alert(
-        "Could not read the selected image."
-      );
+      alert("Could not read this image.");
     };
 
     reader.readAsDataURL(file);
   };
 
-  // =====================================================
-  // STORE LOGO
-  // =====================================================
+  return (
+    <div className="settings-field settings-image-field">
+      <label className="settings-label">{label}</label>
 
-  const handleLogoFile = (file) => {
-    readImageFile(
-      file,
-      (imageData) => {
-        setStoreBanner(imageData);
+      <input
+        ref={inputRef}
+        className="settings-native-file"
+        type="file"
+        accept="image/png,image/jpeg,image/webp"
+        style={{ display: "none" }}
+        tabIndex={-1}
+        onChange={(event) => {
+          processFile(event.target.files?.[0]);
+          event.target.value = "";
+        }}
+      />
 
-        saveImageImmediately(
-          "storeBanner",
-          imageData
-        );
-      }
-    );
-  };
+      {image ? (
+        <div className="settings-image-preview">
+          <div className="settings-preview-picture">
+            <img src={image} alt={label} />
+          </div>
 
-  const handleLogoChange = (e) => {
-    const file =
-      e.target.files?.[0];
+          <div className="settings-preview-details">
+            <span className="settings-image-status">
+              <FaCheckCircle />
+              Image uploaded
+            </span>
 
-    if (file) {
-      handleLogoFile(file);
-    }
-  };
+            <p>
+              Your image is ready to display on the store.
+            </p>
 
-  const handleLogoDragOver = (e) => {
-    e.preventDefault();
+            <button
+              type="button"
+              className="settings-btn settings-btn-danger"
+              onClick={onRemove}
+            >
+              <FaTrash />
+              Remove Image
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div
+          className={`settings-upload-zone ${
+            dragging ? "dragging" : ""
+          }`}
+          onDragOver={(event) => {
+            event.preventDefault();
+            setDragging(true);
+          }}
+          onDragLeave={(event) => {
+            event.preventDefault();
+            setDragging(false);
+          }}
+          onDrop={(event) => {
+            event.preventDefault();
+            setDragging(false);
+            processFile(event.dataTransfer.files?.[0]);
+          }}
+        >
+          <div className="settings-upload-icon">
+            <FaCloudUploadAlt />
+          </div>
 
-    setIsLogoDragging(true);
-  };
+          <strong>Upload {label}</strong>
 
-  const handleLogoDragLeave = (e) => {
-    e.preventDefault();
+          <p>
+            Drag and drop an image or browse your files.
+          </p>
 
-    setIsLogoDragging(false);
-  };
+          <button
+            type="button"
+            className="settings-btn settings-btn-outline"
+            onClick={() => inputRef.current?.click()}
+          >
+            <FaImage />
+            Choose Image
+          </button>
 
-  const handleLogoDrop = (e) => {
-    e.preventDefault();
+          <small>PNG, JPG, WEBP · Max 2 MB</small>
 
-    setIsLogoDragging(false);
+          {description && <small>{description}</small>}
+        </div>
+      )}
+    </div>
+  );
+}
 
-    const file =
-      e.dataTransfer.files?.[0];
+function Settings() {
+  const [form, setForm] = useState(readSettings);
 
-    if (file) {
-      handleLogoFile(file);
-    }
-  };
+  const [statuses, setStatuses] = useState(() => {
+    const data = readSettings();
 
-  const handleRemoveLogo = (e) => {
-    e.stopPropagation();
+    return Array.isArray(data.statuses)
+      ? data.statuses
+      : DEFAULT_STATUSES;
+  });
 
-    setStoreBanner(null);
+  const [newStatus, setNewStatus] = useState("");
+  const [saved, setSaved] = useState(false);
 
-    if (logoInputRef.current) {
-      logoInputRef.current.value =
-        "";
-    }
-
-    saveImageImmediately(
-      "storeBanner",
-      null
-    );
-  };
-
-  // =====================================================
-  // HOME BANNER IMAGE
-  // Completely separate from Store Logo
-  // =====================================================
-
-  const handleHomeBannerFile = (
-    file
-  ) => {
-    readImageFile(
-      file,
-      (imageData) => {
-        setHomeBanner(imageData);
-
-        saveImageImmediately(
-          "homeBanner",
-          imageData
-        );
-      }
-    );
-  };
-
-  const handleHomeBannerChange = (
-    e
-  ) => {
-    const file =
-      e.target.files?.[0];
-
-    if (file) {
-      handleHomeBannerFile(file);
-    }
-  };
-
-  const handleHomeBannerDragOver = (
-    e
-  ) => {
-    e.preventDefault();
-
-    setIsHomeBannerDragging(true);
-  };
-
-  const handleHomeBannerDragLeave = (
-    e
-  ) => {
-    e.preventDefault();
-
-    setIsHomeBannerDragging(false);
-  };
-
-  const handleHomeBannerDrop = (e) => {
-    e.preventDefault();
-
-    setIsHomeBannerDragging(false);
-
-    const file =
-      e.dataTransfer.files?.[0];
-
-    if (file) {
-      handleHomeBannerFile(file);
-    }
-  };
-
-  const handleRemoveHomeBanner = (
-    e
-  ) => {
-    e.stopPropagation();
-
-    setHomeBanner(null);
-
-    if (
-      homeBannerInputRef.current
-    ) {
-      homeBannerInputRef.current.value =
-        "";
-    }
-
-    saveImageImmediately(
-      "homeBanner",
-      null
-    );
-  };
-
-  // =====================================================
-  // ABOUT US IMAGE
-  // =====================================================
-
-  const handleAboutImageFile = (file) => {
-    readImageFile(
-      file,
-      (imageData) => {
-        setAboutImage(imageData);
-
-        saveImageImmediately(
-          "aboutImage",
-          imageData
-        );
-      }
-    );
-  };
-
-  const handleAboutImageChange = (e) => {
-    const file = e.target.files?.[0];
-
-    if (file) {
-      handleAboutImageFile(file);
-    }
-  };
-
-  const handleAboutImageDragOver = (e) => {
-    e.preventDefault();
-
-    setIsAboutImageDragging(true);
-  };
-
-  const handleAboutImageDragLeave = (e) => {
-    e.preventDefault();
-
-    setIsAboutImageDragging(false);
-  };
-
-  const handleAboutImageDrop = (e) => {
-    e.preventDefault();
-
-    setIsAboutImageDragging(false);
-
-    const file =
-      e.dataTransfer.files?.[0];
-
-    if (file) {
-      handleAboutImageFile(file);
-    }
-  };
-
-  const handleRemoveAboutImage = (e) => {
-    e.stopPropagation();
-
-    setAboutImage(null);
-
-    if (aboutImageInputRef.current) {
-      aboutImageInputRef.current.value = "";
-    }
-
-    saveImageImmediately(
-      "aboutImage",
-      null
-    );
-  };
-
-  // =====================================================
-  // STATUS OPTIONS
-  // =====================================================
-
-  const handleAddStatus = () => {
-    const status =
-      newStatus.trim();
-
-    if (!status) return;
-
-    const exists =
-      statuses.some(
-        (item) =>
-          item.toLowerCase() ===
-          status.toLowerCase()
-      );
-
-    if (exists) {
-      alert(
-        "This status already exists."
-      );
-
-      return;
-    }
-
-    setStatuses((current) => [
+  const updateField = (key, value) => {
+    setForm((current) => ({
       ...current,
-      status,
-    ]);
+      [key]: value,
+    }));
 
-    setNewStatus("");
+    setSaved(false);
   };
 
-  const handleStatusKeyDown = (
-    e
-  ) => {
-    if (e.key === "Enter") {
-      e.preventDefault();
-
-      handleAddStatus();
-    }
-  };
-
-  const handleDeleteStatus = (
-    statusToDelete
-  ) => {
-    setStatuses((current) =>
-      current.filter(
-        (status) =>
-          status !==
-          statusToDelete
-      )
-    );
-  };
-
-  const handleCloseStatusModal =
-    () => {
-      setShowStatusModal(false);
-
-      setNewStatus("");
-    };
-
-  // =====================================================
-  // SAVE ALL SETTINGS
-  // =====================================================
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-
-    /*
-      Keep images separate:
-
-      storeBanner = Header + Footer Logo
-      homeBanner  = Ecommerce Home Banner
-      aboutImage  = About Us Page Image
-    */
-
-    let savedLogo = storeBanner;
-
-    let savedHomeBanner =
-      homeBanner;
-
-    let savedAboutImage =
-      aboutImage;
-
-    try {
-      const existing =
-        localStorage.getItem(
-          "storeSettings"
-        );
-
-      if (existing) {
-        const oldSettings =
-          JSON.parse(existing);
-
-        if (
-          oldSettings.storeBanner
-        ) {
-          savedLogo =
-            oldSettings.storeBanner;
-        }
-
-        if (
-          oldSettings.homeBanner
-        ) {
-          savedHomeBanner =
-            oldSettings.homeBanner;
-        }
-
-        if (
-          oldSettings.aboutImage
-        ) {
-          savedAboutImage =
-            oldSettings.aboutImage;
-        }
-      }
-    } catch (error) {
-      console.error(
-        "Could not read current images:",
-        error
-      );
-    }
-
-    const settings = {
-      storeName,
-      storeDescription,
-
-      email,
-      phone,
-      whatsapp,
-      address,
-
-      instagram,
-      tiktok,
-      facebook,
-
-      // Header + Footer Logo
-
-      storeBanner: savedLogo,
-
-      // Ecommerce Home Banner
-
-      homeBanner:
-        savedHomeBanner,
-
-      // Banner content comes ONLY from Settings
-
-      homeBannerTitle:
-        homeBannerTitle.trim(),
-
-      homeBannerDescription:
-        homeBannerDescription.trim(),
-
-      homeBannerButtonText:
-        homeBannerButtonText.trim(),
-
-      // About Us Page
-
-      aboutTitle:
-        aboutTitle.trim(),
-
-      aboutDescription:
-        aboutDescription.trim(),
-
-      aboutImage:
-        savedAboutImage,
-
-      // Contact Us Page
-
-      contactTitle:
-        contactTitle.trim(),
-
-      contactDescription:
-        contactDescription.trim(),
-
+  const updateImage = (key, value) => {
+    const updated = {
+      ...readSettings(),
+      ...form,
+      [key]: value,
       statuses,
     };
 
     try {
       localStorage.setItem(
-        "storeSettings",
-        JSON.stringify(settings)
+        STORAGE_KEY,
+        JSON.stringify(updated)
       );
 
-      setStoreBanner(savedLogo);
-
-      setHomeBanner(
-        savedHomeBanner
-      );
-
-      setAboutImage(
-        savedAboutImage
-      );
+      setForm(updated);
+      setSaved(false);
 
       window.dispatchEvent(
-        new Event(
-          "storeSettingsUpdated"
-        )
-      );
-
-      setSaved(true);
-
-      setTimeout(() => {
-        setSaved(false);
-      }, 2500);
-
-      console.log(
-        "SETTINGS SAVED:",
-        settings
+        new Event("storeSettingsUpdated")
       );
     } catch (error) {
-      console.error(
-        "Could not save settings:",
-        error
-      );
-
-      alert(
-        "Could not save the settings. Try using smaller images."
-      );
+      console.error("Image save error:", error);
+      alert("Could not save image. Try a smaller image.");
     }
   };
 
-  // =====================================================
-  // PAGE
-  // =====================================================
+  const handleSave = (event) => {
+    event.preventDefault();
+
+    const updated = {
+      ...readSettings(),
+      ...form,
+      statuses,
+    };
+
+    try {
+      localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify(updated)
+      );
+
+      window.dispatchEvent(
+        new Event("storeSettingsUpdated")
+      );
+
+      setForm(updated);
+      setSaved(true);
+    } catch (error) {
+      console.error("Settings save error:", error);
+      alert("Could not save settings. Try smaller images.");
+    }
+  };
+
+  const addStatus = () => {
+    const value = newStatus.trim();
+    if (!value) return;
+
+    if (
+      statuses.some(
+        (status) =>
+          status.toLowerCase() === value.toLowerCase()
+      )
+    ) {
+      alert("This status already exists.");
+      return;
+    }
+
+    setStatuses((current) => [...current, value]);
+    setNewStatus("");
+    setSaved(false);
+  };
+
+  const removeStatus = (value) => {
+    setStatuses((current) =>
+      current.filter((status) => status !== value)
+    );
+
+    setSaved(false);
+  };
+
+  const renderInput = (
+    label,
+    key,
+    placeholder = "",
+    type = "text"
+  ) => (
+    <div className="settings-field" key={key}>
+      <label className="settings-label">{label}</label>
+
+      <input
+        type={type}
+        value={form[key] ?? ""}
+        placeholder={placeholder}
+        onChange={(event) =>
+          updateField(key, event.target.value)
+        }
+      />
+    </div>
+  );
+
+  const renderTextarea = (
+    label,
+    key,
+    placeholder = ""
+  ) => (
+    <div className="settings-field" key={key}>
+      <label className="settings-label">{label}</label>
+
+      <textarea
+        rows={4}
+        value={form[key] ?? ""}
+        placeholder={placeholder}
+        onChange={(event) =>
+          updateField(key, event.target.value)
+        }
+      />
+    </div>
+  );
 
   return (
     <div className="dashboard-layout">
       <Sidebar />
 
-      <main className="dashboard-main">
-        <div className="page-header">
-          <div>
-            <h1>Settings</h1>
+      <main className="dashboard-main settings-page">
+        <style>{`
+          .settings-page {
+            min-height: 100vh;
+            padding: 32px 38px 65px;
+            background: #f6f9f9;
+            color: #283f43;
+            font-family: inherit;
+          }
 
-            <p>
-              Customize your store
-              information, branding and
-              homepage
-            </p>
-          </div>
-        </div>
+          .settings-page *,
+          .settings-page *::before,
+          .settings-page *::after {
+            box-sizing: border-box;
+          }
 
-        <form
-          className="settings-form"
-          onSubmit={handleSubmit}
-        >
-          {/* =========================================
-              STORE INFORMATION
-          ========================================== */}
+          .settings-container {
+            width: 100%;
+            max-width: 1120px;
+            margin: 0 auto;
+          }
 
-          <div className="settings-card">
-            <div className="settings-card-header">
-              <h2>
-                Store Information
-              </h2>
+          .settings-page-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            margin-bottom: 26px;
+          }
 
+          .settings-page-header h1 {
+            margin: 0 0 7px;
+            font-size: 28px;
+            font-weight: 800;
+            letter-spacing: -0.8px;
+            color: #263f45;
+          }
+
+          .settings-page-header p {
+            margin: 0;
+            font-size: 13px;
+            line-height: 1.7;
+            color: #84969b;
+          }
+
+          .settings-header-icon {
+            width: 46px;
+            height: 46px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 14px;
+            background: #e3f5f2;
+            color: #159b97;
+            font-size: 19px;
+            flex-shrink: 0;
+          }
+
+          .settings-form {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+          }
+
+          .settings-card {
+            padding: 26px 28px;
+            background: #fff;
+            border: 1px solid #e5ecee;
+            border-radius: 17px;
+            box-shadow: 0 3px 18px rgba(24, 58, 64, 0.025);
+          }
+
+          .settings-card-header {
+            margin-bottom: 23px;
+          }
+
+          .settings-card-header h2 {
+            margin: 0 0 7px;
+            font-size: 17px;
+            font-weight: 800;
+            letter-spacing: -0.35px;
+            color: #29414b;
+          }
+
+          .settings-card-header p {
+            margin: 0;
+            font-size: 12px;
+            line-height: 1.7;
+            color: #8b9da6;
+          }
+
+          .settings-section-divider {
+            height: 1px;
+            background: #edf1f2;
+            margin: 25px 0;
+          }
+
+          .settings-field {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            min-width: 0;
+            margin-bottom: 18px;
+          }
+
+          .settings-field:last-child {
+            margin-bottom: 0;
+          }
+
+          .settings-label {
+            display: block;
+            font-size: 12px;
+            font-weight: 750;
+            color: #40565d;
+          }
+
+          .settings-field input:not([type="file"]),
+          .settings-field textarea {
+            width: 100%;
+            min-width: 0;
+            border: 1px solid #dce7e9;
+            border-radius: 9px;
+            padding: 11px 13px;
+            background: #fcfdfd;
+            color: #293f45;
+            font-family: inherit;
+            font-size: 12.5px;
+            outline: none;
+            transition: 0.2s ease;
+          }
+
+          .settings-field input:not([type="file"]) {
+            height: 43px;
+          }
+
+          .settings-field textarea {
+            min-height: 98px;
+            resize: vertical;
+            line-height: 1.65;
+          }
+
+          .settings-field input:focus,
+          .settings-field textarea:focus {
+            border-color: #19a49f;
+            background: #fff;
+            box-shadow: 0 0 0 3px rgba(25,164,159,0.07);
+          }
+
+          .settings-field input::placeholder,
+          .settings-field textarea::placeholder {
+            color: #a6b5bd;
+          }
+
+          .settings-row {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            column-gap: 18px;
+          }
+
+          /* IMAGE UPLOAD */
+
+          .settings-page input.settings-native-file,
+          .settings-page input[type="file"] {
+            display: none !important;
+            position: absolute !important;
+            width: 0 !important;
+            height: 0 !important;
+            opacity: 0 !important;
+            pointer-events: none !important;
+          }
+
+          .settings-upload-zone {
+            min-height: 155px;
+            padding: 22px;
+            border: 1.5px dashed #9ad8d3;
+            border-radius: 12px;
+            background: #f5fbfa;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+            text-align: center;
+            transition: 0.2s;
+          }
+
+          .settings-upload-zone.dragging {
+            background: #e7f7f4;
+            border-color: #119e98;
+          }
+
+          .settings-upload-icon {
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 10px;
+            background: #e0f4f1;
+            color: #149e99;
+            font-size: 18px;
+          }
+
+          .settings-upload-zone strong {
+            font-size: 12px;
+            font-weight: 750;
+            color: #385660;
+          }
+
+          .settings-upload-zone p {
+            margin: 0;
+            font-size: 11px;
+            color: #8ca2aa;
+          }
+
+          .settings-upload-zone small {
+            font-size: 10px;
+            color: #9aaeb4;
+          }
+
+          .settings-image-preview {
+            min-height: 150px;
+            display: flex;
+            align-items: center;
+            gap: 24px;
+            padding: 18px;
+            border: 1px solid #dcece9;
+            border-radius: 12px;
+            background: #f7fbfa;
+          }
+
+          .settings-preview-picture {
+            width: 170px;
+            height: 120px;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 10px;
+            overflow: hidden;
+            background: #e9f3f2;
+          }
+
+          .settings-preview-picture img {
+            display: block;
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+          }
+
+          .settings-preview-details {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 9px;
+            min-width: 0;
+          }
+
+          .settings-image-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            font-size: 12px;
+            font-weight: 750;
+            color: #139879;
+          }
+
+          .settings-preview-details p {
+            margin: 0;
+            font-size: 11px;
+            color: #879da3;
+            line-height: 1.5;
+          }
+
+          /* SMALL BUTTONS */
+
+          .settings-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 7px;
+            width: auto !important;
+            min-width: 0;
+            min-height: 34px;
+            padding: 8px 13px;
+            border-radius: 8px;
+            border: 1px solid transparent;
+            font-family: inherit;
+            font-size: 11.5px;
+            font-weight: 750;
+            line-height: 1.2;
+            white-space: nowrap;
+            cursor: pointer;
+            transition: 0.18s;
+          }
+
+          .settings-btn svg {
+            font-size: 11px;
+          }
+
+          .settings-btn-primary {
+            color: white;
+            background: #159d99;
+            border-color: #159d99;
+          }
+
+          .settings-btn-primary:hover {
+            background: #0d8581;
+          }
+
+          .settings-btn-outline {
+            background: #fff;
+            color: #118f8b;
+            border-color: #bce0dc;
+          }
+
+          .settings-btn-outline:hover {
+            background: #e8f7f5;
+          }
+
+          .settings-btn-danger {
+            color: #c65353;
+            background: #fff;
+            border-color: #f0cece;
+          }
+
+          .settings-btn-danger:hover {
+            background: #fff0f0;
+          }
+
+          /* ABOUT TIMELINE */
+
+          .settings-timeline {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 13px;
+          }
+
+          .settings-timeline-card {
+            padding: 17px;
+            border: 1px solid #e0edeb;
+            border-radius: 12px;
+            background: #f8fbfa;
+          }
+
+          .settings-timeline-heading {
+            display: flex;
+            align-items: center;
+            gap: 9px;
+            margin-bottom: 16px;
+          }
+
+          .settings-timeline-number {
+            width: 28px;
+            height: 28px;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            background: #ddf3ef;
+            color: #15958f;
+            font-size: 12px;
+            font-weight: 800;
+          }
+
+          .settings-timeline-heading h3 {
+            margin: 0;
+            font-size: 12px;
+            font-weight: 800;
+            color: #38555b;
+          }
+
+          .settings-timeline-card .settings-field {
+            margin-bottom: 14px;
+          }
+
+          .settings-timeline-card .settings-field:last-child {
+            margin-bottom: 0;
+          }
+
+          .settings-timeline-card textarea {
+            min-height: 90px;
+          }
+
+          /* SOCIAL MEDIA */
+
+          .settings-social-icons {
+            display: flex;
+            align-items: center;
+            gap: 9px;
+            color: #159c97;
+            font-size: 15px;
+            margin-top: 4px;
+          }
+
+          .settings-social-icons span {
+            width: 31px;
+            height: 31px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #edf8f6;
+            border-radius: 8px;
+          }
+
+          /* STATUS MANAGEMENT */
+
+          .settings-status-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+          }
+
+          .settings-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 9px;
+            padding: 7px 10px;
+            border-radius: 7px;
+            border: 1px solid #dcefeb;
+            background: #f0f9f7;
+            color: #237e7a;
+            font-size: 11.5px;
+            font-weight: 700;
+          }
+
+          .settings-status button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border: none;
+            padding: 2px;
+            background: transparent;
+            color: #cf6868;
+            cursor: pointer;
+          }
+
+          .settings-add-status {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 16px;
+          }
+
+          .settings-add-status input {
+            flex: 1;
+            min-width: 0;
+            max-width: 350px;
+            height: 37px;
+            padding: 9px 12px;
+            border: 1px solid #dce7e9;
+            border-radius: 8px;
+            outline: none;
+            background: #fcfdfd;
+            color: #29434a;
+            font: inherit;
+            font-size: 12px;
+          }
+
+          .settings-add-status input:focus {
+            border-color: #19a49f;
+          }
+
+          /* SAVE SETTINGS */
+
+          .settings-save-bar {
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+            padding: 5px 0 30px;
+          }
+
+          .settings-saved {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            color: #159879;
+            font-size: 12px;
+            font-weight: 700;
+          }
+
+          .settings-save-bar .settings-btn {
+            min-height: 38px;
+            padding: 10px 18px;
+            font-size: 12px;
+          }
+
+          @media (max-width: 1100px) {
+            .settings-timeline {
+              grid-template-columns: 1fr;
+            }
+          }
+
+          @media (max-width: 700px) {
+            .settings-page {
+              padding: 18px 14px 45px;
+            }
+
+            .settings-page-header h1 {
+              font-size: 24px;
+            }
+
+            .settings-card {
+              padding: 20px 16px;
+              border-radius: 13px;
+            }
+
+            .settings-row {
+              grid-template-columns: 1fr;
+            }
+
+            .settings-image-preview {
+              flex-direction: column;
+              align-items: stretch;
+              gap: 13px;
+            }
+
+            .settings-preview-picture {
+              width: 100%;
+              height: 150px;
+            }
+
+            .settings-save-bar {
+              justify-content: flex-start;
+            }
+          }
+        `}</style>
+
+        <div className="settings-container">
+          <div className="settings-page-header">
+            <div>
+              <h1>Settings</h1>
               <p>
-                Customize the information
-                displayed on your store
+                Manage your store information, branding,
+                public pages and preferences.
               </p>
             </div>
 
-            <div className="form-field">
-              <label>
-                Store Name
-              </label>
-
-              <input
-                type="text"
-                placeholder="Enter store name"
-                value={storeName}
-                onChange={(e) =>
-                  setStoreName(
-                    e.target.value
-                  )
-                }
-              />
-            </div>
-
-            <div className="form-field">
-              <label>
-                Store Description
-              </label>
-
-              <textarea
-                placeholder="Write a short description about your store"
-                value={
-                  storeDescription
-                }
-                onChange={(e) =>
-                  setStoreDescription(
-                    e.target.value
-                  )
-                }
-                rows="4"
-              />
-            </div>
-
-            <div className="form-row">
-              <div className="form-field">
-                <label>Email</label>
-
-                <input
-                  type="email"
-                  placeholder="Enter store email"
-                  value={email}
-                  onChange={(e) =>
-                    setEmail(
-                      e.target.value
-                    )
-                  }
-                />
-              </div>
-
-              <div className="form-field">
-                <label>
-                  Phone Number
-                </label>
-
-                <input
-                  type="tel"
-                  placeholder="Enter phone number"
-                  value={phone}
-                  onChange={(e) =>
-                    setPhone(
-                      e.target.value
-                    )
-                  }
-                />
-              </div>
-            </div>
-
-            <div className="form-row">
-              <div className="form-field">
-                <label>
-                  <FaWhatsapp />
-                  WhatsApp
-                </label>
-
-                <input
-                  type="tel"
-                  placeholder="Example: +961 3 123 456"
-                  value={whatsapp}
-                  onChange={(e) =>
-                    setWhatsapp(
-                      e.target.value
-                    )
-                  }
-                />
-              </div>
-
-              <div className="form-field">
-                <label>
-                  Address
-                </label>
-
-                <input
-                  type="text"
-                  placeholder="Enter store address"
-                  value={address}
-                  onChange={(e) =>
-                    setAddress(
-                      e.target.value
-                    )
-                  }
-                />
-              </div>
+            <div className="settings-header-icon">
+              <FaPaw />
             </div>
           </div>
 
-          {/* =========================================
-              STORE LOGO
-          ========================================== */}
+          <form
+            className="settings-form"
+            onSubmit={handleSave}
+          >
 
-          <div className="settings-card">
-            <div className="settings-card-header">
-              <h2>
-                Store Branding
-              </h2>
+            {/* STORE INFORMATION */}
 
-              <p>
-                Upload your store logo.
-                This logo appears in the
-                store header and footer.
-              </p>
-            </div>
-
-            <div className="form-field">
-              <label>
-                Store Logo
-              </label>
-
-              <div className="store-banner-wrapper">
-                <div
-                  className={`store-banner-upload ${
-                    isLogoDragging
-                      ? "dragging"
-                      : ""
-                  }`}
-                  onDragOver={
-                    handleLogoDragOver
-                  }
-                  onDragLeave={
-                    handleLogoDragLeave
-                  }
-                  onDrop={
-                    handleLogoDrop
-                  }
-                  onClick={() =>
-                    logoInputRef.current?.click()
-                  }
-                >
-                  {storeBanner ? (
-                    <img
-                      src={storeBanner}
-                      alt="Store Logo"
-                      className="store-banner-preview"
-                    />
-                  ) : (
-                    <div className="store-banner-empty">
-                      <FaCloudUploadAlt className="store-banner-upload-icon" />
-
-                      <span>
-                        Upload Store Logo
-                      </span>
-
-                      <small>
-                        PNG, JPG, JPEG or
-                        WEBP • Max 2 MB
-                      </small>
-                    </div>
-                  )}
-                </div>
-
-                {storeBanner && (
-                  <button
-                    type="button"
-                    className="store-banner-remove"
-                    onClick={
-                      handleRemoveLogo
-                    }
-                    title="Remove logo"
-                  >
-                    <FaTrash />
-                  </button>
-                )}
-
-                <input
-                  ref={logoInputRef}
-                  type="file"
-                  accept="image/png,image/jpeg,image/jpg,image/webp"
-                  onChange={
-                    handleLogoChange
-                  }
-                  hidden
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* =========================================
-              HOME BANNER
-          ========================================== */}
-
-          <div className="settings-card">
-            <div className="settings-card-header">
-              <h2>
-                Home Banner
-              </h2>
-
-              <p>
-                Customize the image and
-                all content displayed in
-                the main store banner.
-              </p>
-            </div>
-
-            <div className="form-field">
-              <label>
-                Banner Image
-              </label>
-
-              <div className="store-banner-wrapper">
-                <div
-                  className={`store-banner-upload home-banner-upload ${
-                    isHomeBannerDragging
-                      ? "dragging"
-                      : ""
-                  }`}
-                  onDragOver={
-                    handleHomeBannerDragOver
-                  }
-                  onDragLeave={
-                    handleHomeBannerDragLeave
-                  }
-                  onDrop={
-                    handleHomeBannerDrop
-                  }
-                  onClick={() =>
-                    homeBannerInputRef.current?.click()
-                  }
-                >
-                  {homeBanner ? (
-                    <img
-                      src={homeBanner}
-                      alt="Home Banner"
-                      className="store-banner-preview home-banner-preview"
-                    />
-                  ) : (
-                    <div className="store-banner-empty">
-                      <FaImage className="store-banner-upload-icon" />
-
-                      <span>
-                        Upload Home Banner
-                      </span>
-
-                      <small>
-                        PNG, JPG, JPEG or
-                        WEBP • Max 2 MB
-                      </small>
-
-                      <small>
-                        Recommended:
-                        1600 × 600 px
-                      </small>
-                    </div>
-                  )}
-                </div>
-
-                {homeBanner && (
-                  <button
-                    type="button"
-                    className="store-banner-remove"
-                    onClick={
-                      handleRemoveHomeBanner
-                    }
-                    title="Remove home banner"
-                  >
-                    <FaTrash />
-                  </button>
-                )}
-
-                <input
-                  ref={
-                    homeBannerInputRef
-                  }
-                  type="file"
-                  accept="image/png,image/jpeg,image/jpg,image/webp"
-                  onChange={
-                    handleHomeBannerChange
-                  }
-                  hidden
-                />
-              </div>
-            </div>
-
-            <div className="form-field">
-              <label>
-                Banner Title
-              </label>
-
-              <input
-                type="text"
-                placeholder="Enter banner title"
-                value={
-                  homeBannerTitle
-                }
-                onChange={(e) =>
-                  setHomeBannerTitle(
-                    e.target.value
-                  )
-                }
-              />
-            </div>
-
-            <div className="form-field">
-              <label>
-                Banner Description
-              </label>
-
-              <textarea
-                placeholder="Enter banner description"
-                value={
-                  homeBannerDescription
-                }
-                onChange={(e) =>
-                  setHomeBannerDescription(
-                    e.target.value
-                  )
-                }
-                rows="3"
-              />
-            </div>
-
-            <div className="form-field">
-              <label>
-                Button Text
-              </label>
-
-              <input
-                type="text"
-                placeholder="Enter button text"
-                value={
-                  homeBannerButtonText
-                }
-                onChange={(e) =>
-                  setHomeBannerButtonText(
-                    e.target.value
-                  )
-                }
-              />
-            </div>
-          </div>
-
-          {/* =========================================
-              ABOUT US PAGE
-          ========================================== */}
-
-          <div className="settings-card">
-            <div className="settings-card-header">
-              <h2>
-                About Us Page
-              </h2>
-
-              <p>
-                Customize the title,
-                description and image
-                displayed on your About
-                Us page.
-              </p>
-            </div>
-
-            <div className="form-field">
-              <label>
-                About Title
-              </label>
-
-              <input
-                type="text"
-                placeholder="Example: Caring for pets like family"
-                value={aboutTitle}
-                onChange={(e) =>
-                  setAboutTitle(
-                    e.target.value
-                  )
-                }
-              />
-            </div>
-
-            <div className="form-field">
-              <label>
-                About Description
-              </label>
-
-              <textarea
-                placeholder="Write your clinic or store story..."
-                value={
-                  aboutDescription
-                }
-                onChange={(e) =>
-                  setAboutDescription(
-                    e.target.value
-                  )
-                }
-                rows="5"
-              />
-            </div>
-
-            <div className="form-field">
-              <label>
-                About Image
-              </label>
-
-              <div className="store-banner-wrapper">
-                <div
-                  className={`store-banner-upload about-image-upload ${
-                    isAboutImageDragging
-                      ? "dragging"
-                      : ""
-                  }`}
-                  onDragOver={
-                    handleAboutImageDragOver
-                  }
-                  onDragLeave={
-                    handleAboutImageDragLeave
-                  }
-                  onDrop={
-                    handleAboutImageDrop
-                  }
-                  onClick={() =>
-                    aboutImageInputRef.current?.click()
-                  }
-                >
-                  {aboutImage ? (
-                    <img
-                      src={aboutImage}
-                      alt="About Us"
-                      className="store-banner-preview about-image-preview"
-                    />
-                  ) : (
-                    <div className="store-banner-empty">
-                      <FaImage className="store-banner-upload-icon" />
-
-                      <span>
-                        Upload About Us
-                        Image
-                      </span>
-
-                      <small>
-                        PNG, JPG, JPEG or
-                        WEBP • Max 2 MB
-                      </small>
-
-                      <small>
-                        Recommended:
-                        1200 × 900 px
-                      </small>
-                    </div>
-                  )}
-                </div>
-
-                {aboutImage && (
-                  <button
-                    type="button"
-                    className="store-banner-remove"
-                    onClick={
-                      handleRemoveAboutImage
-                    }
-                    title="Remove about image"
-                  >
-                    <FaTrash />
-                  </button>
-                )}
-
-                <input
-                  ref={
-                    aboutImageInputRef
-                  }
-                  type="file"
-                  accept="image/png,image/jpeg,image/jpg,image/webp"
-                  onChange={
-                    handleAboutImageChange
-                  }
-                  hidden
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* =========================================
-              CONTACT US PAGE
-          ========================================== */}
-
-          <div className="settings-card">
-            <div className="settings-card-header">
-              <h2>
-                Contact Us Page
-              </h2>
-
-              <p>
-                Customize your Contact Us
-                page. Email, location and
-                social media are connected
-                automatically.
-              </p>
-            </div>
-
-            <div className="form-field">
-              <label>
-                Contact Page Title
-              </label>
-
-              <input
-                type="text"
-                placeholder="Example: Contact Us"
-                value={contactTitle}
-                onChange={(e) =>
-                  setContactTitle(
-                    e.target.value
-                  )
-                }
-              />
-            </div>
-
-            <div className="form-field">
-              <label>
-                Contact Page Description
-              </label>
-
-              <textarea
-                placeholder="Example: Have a question? We are always happy to help."
-                value={
-                  contactDescription
-                }
-                onChange={(e) =>
-                  setContactDescription(
-                    e.target.value
-                  )
-                }
-                rows="4"
-              />
-            </div>
-
-            <div className="form-row">
-              <div className="form-field">
-                <label>
-                  Contact Email
-                </label>
-
-                <input
-                  type="email"
-                  placeholder="Enter contact email"
-                  value={email}
-                  onChange={(e) =>
-                    setEmail(
-                      e.target.value
-                    )
-                  }
-                />
-              </div>
-
-              <div className="form-field">
-                <label>
-                  Location
-                </label>
-
-                <input
-                  type="text"
-                  placeholder="Enter clinic or store location"
-                  value={address}
-                  onChange={(e) =>
-                    setAddress(
-                      e.target.value
-                    )
-                  }
-                />
-              </div>
-            </div>
-
-            <div className="contact-settings-note">
-              Social media links for the
-              Contact Us page are managed
-              in the Social Media section
-              below.
-            </div>
-          </div>
-
-          {/* =========================================
-              SOCIAL MEDIA
-          ========================================== */}
-
-          <div className="settings-card">
-            <div className="settings-card-header">
-              <h2>
-                Social Media
-              </h2>
-
-              <p>
-                Add your social media
-                accounts so customers can
-                easily reach your store.
-              </p>
-            </div>
-
-            <div className="form-row">
-              <div className="form-field">
-                <label>
-                  <FaInstagram />
-                  Instagram
-                </label>
-
-                <input
-                  type="text"
-                  placeholder="Instagram username or link"
-                  value={instagram}
-                  onChange={(e) =>
-                    setInstagram(
-                      e.target.value
-                    )
-                  }
-                />
-              </div>
-
-              <div className="form-field">
-                <label>
-                  <FaTiktok />
-                  TikTok
-                </label>
-
-                <input
-                  type="text"
-                  placeholder="TikTok username or link"
-                  value={tiktok}
-                  onChange={(e) =>
-                    setTiktok(
-                      e.target.value
-                    )
-                  }
-                />
-              </div>
-            </div>
-
-            <div className="form-row">
-              <div className="form-field">
-                <label>
-                  <FaFacebookF />
-                  Facebook
-                </label>
-
-                <input
-                  type="text"
-                  placeholder="Facebook username or link"
-                  value={facebook}
-                  onChange={(e) =>
-                    setFacebook(
-                      e.target.value
-                    )
-                  }
-                />
-              </div>
-            </div>
-          </div>
-                    {/* =========================================
-              STATUS MANAGEMENT
-          ========================================== */}
-
-<div className="settings-card">
-            <div className="settings-card-header settings-card-header-row">
-              <div>
-                <h2>Status Management</h2>
-
+            <section className="settings-card">
+              <div className="settings-card-header">
+                <h2>Store Information</h2>
                 <p>
-                  Manage the status options used
-                  throughout your system.
+                  Manage your brand name and store contact
+                  information.
                 </p>
               </div>
 
-              <button
-                type="button"
-                className="settings-secondary-button"
-                onClick={() =>
-                  setShowStatusModal(true)
-                }
-              >
-                <FaCog />
-                Manage Statuses
-              </button>
-            </div>
+              {renderInput(
+                "Store Name",
+                "storeName",
+                "Enter your brand name"
+              )}
 
-            <div className="status-preview-list">
-              {statuses.length > 0 ? (
-                statuses.map((status) => (
+              {renderTextarea(
+                "Store Description",
+                "storeDescription",
+                "Write a description about your store"
+              )}
+
+              <div className="settings-row">
+                {renderInput(
+                  "Email",
+                  "email",
+                  "Enter store email",
+                  "email"
+                )}
+
+                {renderInput(
+                  "Phone Number",
+                  "phone",
+                  "Enter phone number",
+                  "tel"
+                )}
+              </div>
+
+              <div className="settings-row">
+                {renderInput(
+                  "WhatsApp",
+                  "whatsapp",
+                  "Example: +961 3 123 456",
+                  "tel"
+                )}
+
+                {renderInput(
+                  "Address",
+                  "address",
+                  "Enter store address"
+                )}
+              </div>
+            </section>
+
+            {/* STORE BRANDING */}
+
+            <section className="settings-card">
+              <div className="settings-card-header">
+                <h2>Store Branding</h2>
+                <p>
+                  Upload your brand logo. Your store name
+                  and logo are managed separately.
+                </p>
+              </div>
+
+              <ImageUploader
+                label="Store Logo"
+                image={form.storeBanner}
+                onChange={(image) =>
+                  updateImage("storeBanner", image)
+                }
+                onRemove={() =>
+                  updateImage("storeBanner", null)
+                }
+              />
+            </section>
+
+            {/* HOME BANNER */}
+
+            <section className="settings-card">
+              <div className="settings-card-header">
+                <h2>Home Banner</h2>
+                <p>
+                  Control all text and images displayed
+                  in the center of your store homepage.
+                  Empty fields will not display text.
+                </p>
+              </div>
+
+              <ImageUploader
+                label="Home Banner"
+                image={form.homeBanner}
+                onChange={(image) =>
+                  updateImage("homeBanner", image)
+                }
+                onRemove={() =>
+                  updateImage("homeBanner", null)
+                }
+              />
+
+              <div className="settings-section-divider" />
+
+              {renderInput(
+                "Banner Badge Text",
+                "homeBannerBadge",
+                "Enter the small text above your banner title"
+              )}
+
+              {renderInput(
+                "Banner Title",
+                "homeBannerTitle",
+                "Enter the main banner title"
+              )}
+
+              {renderTextarea(
+                "Banner Description",
+                "homeBannerDescription",
+                "Enter the banner description"
+              )}
+
+              {renderInput(
+                "Button Text",
+                "homeBannerButtonText",
+                "Enter button text"
+              )}
+            </section>
+
+            {/* ABOUT US */}
+
+            <section className="settings-card">
+              <div className="settings-card-header">
+                <h2>About Us Page</h2>
+                <p>
+                  Customize your story, image and journey
+                  timeline. Content is saved dynamically.
+                </p>
+              </div>
+
+              {renderInput(
+                "About Title",
+                "aboutTitle",
+                "Enter your About Us title"
+              )}
+
+              {renderTextarea(
+                "About Description",
+                "aboutDescription",
+                "Write your clinic or store story"
+              )}
+
+              <ImageUploader
+                label="About Us Image"
+                image={form.aboutImage}
+                onChange={(image) =>
+                  updateImage("aboutImage", image)
+                }
+                onRemove={() =>
+                  updateImage("aboutImage", null)
+                }
+                description="Recommended: 1200 × 900 px"
+              />
+
+              <div className="settings-section-divider" />
+
+              <div className="settings-card-header">
+                <h2>
+                  <FaPaw
+                    style={{
+                      color: "#159c97",
+                      marginRight: 8,
+                      fontSize: 14,
+                    }}
+                  />
+                  Our Journey Timeline
+                </h2>
+
+                <p>
+                  Customize the three milestones displayed
+                  beside your About Us image.
+                </p>
+              </div>
+
+              <div className="settings-timeline">
+                {[1, 2, 3].map((number) => (
+                  <div
+                    className="settings-timeline-card"
+                    key={number}
+                  >
+                    <div className="settings-timeline-heading">
+                      <span className="settings-timeline-number">
+                        {number}
+                      </span>
+
+                      <h3>Timeline Step {number}</h3>
+                    </div>
+
+                    {renderInput(
+                      `Step ${number} Title`,
+                      `aboutStep${number}Title`,
+                      `Enter step ${number} title`
+                    )}
+
+                    {renderTextarea(
+                      `Step ${number} Description`,
+                      `aboutStep${number}Description`,
+                      `Enter step ${number} description`
+                    )}
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            {/* CONTACT US */}
+
+            <section className="settings-card">
+              <div className="settings-card-header">
+                <h2>Contact Us Page</h2>
+                <p>
+                  Manage the title and description displayed
+                  on your Contact Us page.
+                </p>
+              </div>
+
+              {renderInput(
+                "Contact Title",
+                "contactTitle",
+                "Enter your contact page title"
+              )}
+
+              {renderTextarea(
+                "Contact Description",
+                "contactDescription",
+                "Write a message for your customers"
+              )}
+
+              <p
+                style={{
+                  fontSize: 11.5,
+                  lineHeight: 1.7,
+                  color: "#879ca3",
+                  margin: "4px 0 0",
+                }}
+              >
+                Contact email, phone, WhatsApp and address
+                are managed in Store Information above.
+              </p>
+            </section>
+
+            {/* SOCIAL MEDIA */}
+
+            <section className="settings-card">
+              <div className="settings-card-header">
+                <h2>Social Media</h2>
+                <p>
+                  Add your social media links to display
+                  them on the store.
+                </p>
+              </div>
+
+              <div className="settings-row">
+                {renderInput(
+                  "Instagram",
+                  "instagram",
+                  "Instagram username or URL"
+                )}
+
+                {renderInput(
+                  "Facebook",
+                  "facebook",
+                  "Facebook username or URL"
+                )}
+              </div>
+
+              <div className="settings-row">
+                {renderInput(
+                  "TikTok",
+                  "tiktok",
+                  "TikTok username or URL"
+                )}
+              </div>
+
+              <div className="settings-social-icons">
+                <span><FaInstagram /></span>
+                <span><FaFacebookF /></span>
+                <span><FaTiktok /></span>
+                <span><FaWhatsapp /></span>
+              </div>
+            </section>
+
+            {/* STATUS MANAGEMENT */}
+
+            <section className="settings-card">
+              <div className="settings-card-header">
+                <h2>Status Management</h2>
+                <p>
+                  Add or remove the status options
+                  available in your system.
+                </p>
+              </div>
+
+              <div className="settings-status-list">
+                {statuses.map((status) => (
                   <span
-                    className="status-preview-item"
+                    className="settings-status"
                     key={status}
                   >
-                    <FaCheckCircle />
                     {status}
+
+                    <button
+                      type="button"
+                      title={`Remove ${status}`}
+                      onClick={() =>
+                        removeStatus(status)
+                      }
+                    >
+                      <FaTimes />
+                    </button>
                   </span>
-                ))
-              ) : (
-                <p className="status-empty-text">
-                  No statuses added yet.
-                </p>
-              )}
-            </div>
-          </div>
-
-          {/* =========================================
-              SAVE SETTINGS
-          ========================================== */}
-
-          <div className="settings-save-section">
-            <div className="settings-save-message">
-              {saved && (
-                <>
-                  <FaCheckCircle />
-                  Settings saved successfully
-                </>
-              )}
-            </div>
-
-            <button
-              type="submit"
-              className="settings-save-button"
-            >
-              <FaCheckCircle />
-              Save Settings
-            </button>
-          </div>
-        </form>
-      </main>
-
-      {/* =========================================
-          STATUS MODAL
-      ========================================== */}
-
-      {showStatusModal && (
-        <div
-          className="settings-modal-overlay"
-          onMouseDown={(e) => {
-            if (e.target === e.currentTarget) {
-              handleCloseStatusModal();
-            }
-          }}
-        >
-          <div className="settings-modal">
-            <div className="settings-modal-header">
-              <div>
-                <h2>Manage Statuses</h2>
-
-                <p>
-                  Add or remove status options.
-                </p>
+                ))}
               </div>
 
-              <button
-                type="button"
-                className="settings-modal-close"
-                onClick={
-                  handleCloseStatusModal
-                }
-              >
-                <FaTimes />
-              </button>
-            </div>
-
-            <div className="settings-modal-body">
-              <div className="status-add-row">
+              <div className="settings-add-status">
                 <input
                   type="text"
                   placeholder="Enter new status"
                   value={newStatus}
-                  onChange={(e) =>
-                    setNewStatus(
-                      e.target.value
-                    )
+                  onChange={(event) =>
+                    setNewStatus(event.target.value)
                   }
-                  onKeyDown={
-                    handleStatusKeyDown
-                  }
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      event.preventDefault();
+                      addStatus();
+                    }
+                  }}
                 />
 
                 <button
                   type="button"
-                  onClick={handleAddStatus}
+                  className="settings-btn settings-btn-primary"
+                  onClick={addStatus}
                 >
                   <FaPlus />
-                  Add
+                  Add Status
                 </button>
               </div>
+            </section>
 
-              <div className="status-modal-list">
-                {statuses.length > 0 ? (
-                  statuses.map((status) => (
-                    <div
-                      className="status-modal-item"
-                      key={status}
-                    >
-                      <div>
-                        <FaCheckCircle />
-                        <span>{status}</span>
-                      </div>
+            {/* SAVE SETTINGS */}
 
-                      <button
-                        type="button"
-                        onClick={() =>
-                          handleDeleteStatus(
-                            status
-                          )
-                        }
-                        title="Delete status"
-                      >
-                        <FaTrash />
-                      </button>
-                    </div>
-                  ))
-                ) : (
-                  <div className="status-modal-empty">
-                    No statuses added yet.
-                  </div>
-                )}
-              </div>
+            <div className="settings-save-bar">
+              {saved && (
+                <span className="settings-saved">
+                  <FaCheckCircle />
+                  Settings saved successfully
+                </span>
+              )}
+
+              <button
+                type="submit"
+                className="settings-btn settings-btn-primary"
+              >
+                <FaSave />
+                Save Settings
+              </button>
             </div>
-          </div>
+          </form>
         </div>
-      )}
-
-      {/* =========================================
-          CSS
-      ========================================== */}
-
-      <style>{`
-        * {
-          box-sizing: border-box;
-        }
-
-        .dashboard-layout {
-          min-height: 100vh;
-          display: flex;
-          background: #f7faf9;
-          color: #344054;
-
-          font-family:
-            Arial,
-            Helvetica,
-            sans-serif;
-        }
-
-        .dashboard-main {
-          width: 100%;
-          min-width: 0;
-
-          margin-left: 250px;
-
-          padding:
-            32px 38px 55px;
-        }
-
-        /* =====================================
-           PAGE HEADER
-        ====================================== */
-
-        .page-header {
-          margin-bottom: 24px;
-        }
-
-        .page-header h1 {
-          margin: 0;
-
-          color: #24364b;
-
-          font-size: 27px;
-          font-weight: 800;
-
-          letter-spacing: -0.7px;
-        }
-
-        .page-header p {
-          margin: 7px 0 0;
-
-          color: #98a2b3;
-
-          font-size: 11px;
-          line-height: 1.6;
-        }
-
-        /* =====================================
-           FORM
-        ====================================== */
-
-        .settings-form {
-          width: 100%;
-          max-width: 1050px;
-
-          display: flex;
-          flex-direction: column;
-
-          gap: 20px;
-        }
-
-        /* =====================================
-           CARDS
-        ====================================== */
-
-        .settings-card {
-          width: 100%;
-
-          padding: 25px 27px;
-
-          border:
-            1px solid #e2e9e8;
-
-          border-radius: 15px;
-
-          background: #ffffff;
-
-          box-shadow:
-            0 4px 16px
-            rgba(16, 24, 40, 0.025);
-        }
-
-        .settings-card-header {
-          margin-bottom: 22px;
-        }
-
-        .settings-card-header-row {
-          display: flex;
-
-          align-items: center;
-          justify-content:
-            space-between;
-
-          gap: 20px;
-        }
-
-        .settings-card-header h2 {
-          margin: 0;
-
-          color: #344054;
-
-          font-size: 15px;
-          font-weight: 800;
-        }
-
-        .settings-card-header p {
-          margin: 6px 0 0;
-
-          color: #98a2b3;
-
-          font-size: 10px;
-          line-height: 1.55;
-        }
-
-        /* =====================================
-           FORM FIELDS
-        ====================================== */
-
-        .form-row {
-          display: grid;
-
-          grid-template-columns:
-            repeat(
-              2,
-              minmax(0, 1fr)
-            );
-
-          gap: 17px;
-        }
-
-        .form-field {
-          margin-bottom: 18px;
-        }
-
-        .form-field:last-child {
-          margin-bottom: 0;
-        }
-
-        .form-field label {
-          margin-bottom: 7px;
-
-          display: flex;
-          align-items: center;
-
-          gap: 6px;
-
-          color: #475467;
-
-          font-size: 10px;
-          font-weight: 750;
-        }
-
-        .form-field label svg {
-          color: #159f9f;
-
-          font-size: 12px;
-        }
-
-        .form-field input,
-        .form-field textarea {
-          width: 100%;
-
-          border:
-            1px solid #dce5e4;
-
-          border-radius: 9px;
-
-          outline: none;
-
-          background: #ffffff;
-          color: #344054;
-
-          font-family: inherit;
-          font-size: 11px;
-
-          transition:
-            border-color 0.2s ease,
-            box-shadow 0.2s ease;
-        }
-
-        .form-field input {
-          height: 43px;
-
-          padding: 0 13px;
-        }
-
-        .form-field textarea {
-          min-height: 95px;
-
-          padding: 12px 13px;
-
-          resize: vertical;
-
-          line-height: 1.6;
-        }
-
-        .form-field input::placeholder,
-        .form-field textarea::placeholder {
-          color: #b0b8c2;
-        }
-
-        .form-field input:focus,
-        .form-field textarea:focus {
-          border-color: #159f9f;
-
-          box-shadow:
-            0 0 0 3px
-            rgba(
-              21,
-              159,
-              159,
-              0.08
-            );
-        }
-
-        /* =====================================
-           CONTACT SETTINGS NOTE
-        ====================================== */
-
-        .contact-settings-note {
-          display: flex;
-          align-items: center;
-
-          min-height: 46px;
-
-          margin-top: 3px;
-          padding: 12px 15px;
-
-          border:
-            1px solid #d9eeee;
-
-          border-radius: 9px;
-
-          background: #f4fbfb;
-
-          color: #668180;
-
-          font-size: 10px;
-          line-height: 1.6;
-        }
-
-        /* =====================================
-           IMAGE UPLOAD
-        ====================================== */
-
-        .store-banner-wrapper {
-          width: 100%;
-
-          position: relative;
-        }
-
-        .store-banner-upload {
-          width: 100%;
-          min-height: 150px;
-
-          border:
-            1.5px dashed
-            #cbdcda;
-
-          border-radius: 13px;
-
-          background:
-            linear-gradient(
-              135deg,
-              #fbfefe,
-              #f3faf9
-            );
-
-          display: flex;
-          align-items: center;
-          justify-content: center;
-
-          overflow: hidden;
-
-          cursor: pointer;
-
-          position: relative;
-
-          transition:
-            border-color 0.2s ease,
-            background 0.2s ease,
-            box-shadow 0.2s ease,
-            transform 0.2s ease;
-        }
-
-        .store-banner-upload:hover {
-          border-color: #159f9f;
-
-          background:
-            linear-gradient(
-              135deg,
-              #f8fdfd,
-              #edf9f8
-            );
-
-          box-shadow:
-            0 5px 18px
-            rgba(
-              21,
-              159,
-              159,
-              0.08
-            );
-        }
-
-        .store-banner-upload.dragging {
-          border-color: #159f9f;
-
-          background: #edf9f8;
-
-          box-shadow:
-            0 0 0 4px
-            rgba(
-              21,
-              159,
-              159,
-              0.08
-            );
-        }
-
-        .store-banner-empty {
-          min-height: 145px;
-
-          padding: 25px;
-
-          display: flex;
-          flex-direction: column;
-
-          align-items: center;
-          justify-content: center;
-
-          gap: 8px;
-
-          text-align: center;
-
-          color: #98a2b3;
-        }
-
-        .store-banner-empty span {
-          color: #475467;
-
-          font-size: 11px;
-          font-weight: 750;
-        }
-
-        .store-banner-empty small {
-          color: #a5afb9;
-
-          font-size: 9px;
-          line-height: 1.4;
-        }
-
-        .store-banner-upload-icon {
-          margin-bottom: 3px;
-
-          color: #159f9f;
-
-          font-size: 28px;
-        }
-
-        .store-banner-preview {
-          display: block;
-
-          width: 100%;
-          height: 180px;
-
-          object-fit: contain;
-
-          padding: 12px;
-
-          background: #ffffff;
-        }
-
-        .home-banner-upload {
-          min-height: 230px;
-        }
-
-        .home-banner-preview {
-          height: 270px;
-
-          padding: 0;
-
-          object-fit: cover;
-        }
-
-        /* =====================================
-           ABOUT US IMAGE
-        ====================================== */
-
-        .about-image-upload {
-          min-height: 260px;
-
-          background:
-            linear-gradient(
-              135deg,
-              #f9fdfd,
-              #eef9f8
-            );
-        }
-
-        .about-image-upload
-        .store-banner-empty {
-          min-height: 255px;
-        }
-
-        .about-image-preview {
-          width: 100%;
-          height: 300px;
-
-          padding: 0;
-
-          object-fit: cover;
-        }
-
-        .store-banner-remove {
-          width: 34px;
-          height: 34px;
-
-          padding: 0;
-
-          position: absolute;
-
-          top: 10px;
-          right: 10px;
-
-          z-index: 5;
-
-          border: none;
-          border-radius: 9px;
-
-          background:
-            rgba(
-              255,
-              255,
-              255,
-              0.95
-            );
-
-          color: #d92d20;
-
-          display: flex;
-          align-items: center;
-          justify-content: center;
-
-          cursor: pointer;
-
-          box-shadow:
-            0 4px 12px
-            rgba(
-              16,
-              24,
-              40,
-              0.12
-            );
-
-          transition:
-            transform 0.2s ease,
-            background 0.2s ease,
-            color 0.2s ease;
-        }
-
-        .store-banner-remove:hover {
-          transform: translateY(-1px);
-
-          background: #d92d20;
-
-          color: #ffffff;
-        }
-
-        /* =====================================
-           STATUS MANAGEMENT
-        ====================================== */
-
-        .settings-secondary-button {
-          min-height: 38px;
-
-          padding: 0 15px;
-
-          border:
-            1px solid #d8e6e5;
-
-          border-radius: 9px;
-
-          background: #ffffff;
-
-          color: #475467;
-
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-
-          gap: 7px;
-
-          cursor: pointer;
-
-          font-size: 10px;
-          font-weight: 750;
-
-          white-space: nowrap;
-
-          transition:
-            border-color 0.2s ease,
-            background 0.2s ease,
-            color 0.2s ease;
-        }
-
-        .settings-secondary-button svg {
-          color: #159f9f;
-        }
-
-        .settings-secondary-button:hover {
-          border-color: #159f9f;
-
-          background: #f2fbfa;
-
-          color: #159f9f;
-        }
-
-        .status-preview-list {
-          display: flex;
-          flex-wrap: wrap;
-
-          gap: 9px;
-        }
-
-        .status-preview-item {
-          min-height: 32px;
-
-          padding: 0 12px;
-
-          border:
-            1px solid #d8ebe9;
-
-          border-radius: 20px;
-
-          background: #f4fbfa;
-
-          color: #52706e;
-
-          display: inline-flex;
-          align-items: center;
-
-          gap: 6px;
-
-          font-size: 9px;
-          font-weight: 700;
-        }
-
-        .status-preview-item svg {
-          color: #159f9f;
-
-          font-size: 10px;
-        }
-
-        .status-empty-text {
-          margin: 0;
-
-          color: #98a2b3;
-
-          font-size: 10px;
-        }
-
-        /* =====================================
-           SAVE SECTION
-        ====================================== */
-
-        .settings-save-section {
-          width: 100%;
-
-          margin-top: 3px;
-
-          padding: 18px 0 0;
-
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-
-          gap: 20px;
-        }
-
-        .settings-save-message {
-          min-height: 35px;
-
-          color: #159f9f;
-
-          display: flex;
-          align-items: center;
-
-          gap: 7px;
-
-          font-size: 10px;
-          font-weight: 750;
-        }
-
-        .settings-save-button {
-          min-width: 150px;
-          height: 43px;
-
-          padding: 0 20px;
-
-          border: none;
-          border-radius: 9px;
-
-          background: #159f9f;
-
-          color: #ffffff;
-
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-
-          gap: 7px;
-
-          cursor: pointer;
-
-          font-size: 10px;
-          font-weight: 800;
-
-          box-shadow:
-            0 5px 14px
-            rgba(
-              21,
-              159,
-              159,
-              0.16
-            );
-
-          transition:
-            transform 0.2s ease,
-            background 0.2s ease,
-            box-shadow 0.2s ease;
-        }
-
-        .settings-save-button:hover {
-          transform: translateY(-1px);
-
-          background: #118f8f;
-
-          box-shadow:
-            0 7px 18px
-            rgba(
-              21,
-              159,
-              159,
-              0.2
-            );
-        }
-
-        .settings-save-button:active {
-          transform: translateY(0);
-        }
-
-        /* =====================================
-           STATUS MODAL
-        ====================================== */
-
-        .settings-modal-overlay {
-          position: fixed;
-
-          inset: 0;
-
-          z-index: 9999;
-
-          padding: 20px;
-
-          background:
-            rgba(
-              16,
-              24,
-              40,
-              0.42
-            );
-
-          display: flex;
-          align-items: center;
-          justify-content: center;
-
-          backdrop-filter:
-            blur(3px);
-        }
-
-        .settings-modal {
-          width: 100%;
-          max-width: 520px;
-
-          max-height:
-            calc(100vh - 40px);
-
-          overflow: hidden;
-
-          border:
-            1px solid #e3ebea;
-
-          border-radius: 16px;
-
-          background: #ffffff;
-
-          box-shadow:
-            0 24px 60px
-            rgba(
-              16,
-              24,
-              40,
-              0.18
-            );
-        }
-
-        .settings-modal-header {
-          padding: 20px 22px;
-
-          border-bottom:
-            1px solid #edf1f0;
-
-          display: flex;
-          align-items: flex-start;
-          justify-content:
-            space-between;
-
-          gap: 15px;
-        }
-
-        .settings-modal-header h2 {
-          margin: 0;
-
-          color: #344054;
-
-          font-size: 16px;
-          font-weight: 800;
-        }
-
-        .settings-modal-header p {
-          margin: 5px 0 0;
-
-          color: #98a2b3;
-
-          font-size: 10px;
-          line-height: 1.5;
-        }
-
-        .settings-modal-close {
-          width: 32px;
-          height: 32px;
-
-          padding: 0;
-
-          border:
-            1px solid #e1e8e7;
-
-          border-radius: 8px;
-
-          background: #ffffff;
-
-          color: #667085;
-
-          display: flex;
-          align-items: center;
-          justify-content: center;
-
-          cursor: pointer;
-
-          flex-shrink: 0;
-
-          transition:
-            background 0.2s ease,
-            color 0.2s ease;
-        }
-
-        .settings-modal-close:hover {
-          background: #f5f7f7;
-
-          color: #d92d20;
-        }
-
-        .settings-modal-body {
-          max-height:
-            calc(100vh - 160px);
-
-          overflow-y: auto;
-
-          padding: 22px;
-        }
-
-        .status-add-row {
-          display: grid;
-
-          grid-template-columns:
-            minmax(0, 1fr)
-            auto;
-
-          gap: 10px;
-
-          margin-bottom: 20px;
-        }
-
-        .status-add-row input {
-          width: 100%;
-          height: 42px;
-
-          padding: 0 13px;
-
-          border:
-            1px solid #dce5e4;
-
-          border-radius: 9px;
-
-          outline: none;
-
-          background: #ffffff;
-
-          color: #344054;
-
-          font-family: inherit;
-          font-size: 11px;
-        }
-
-        .status-add-row input:focus {
-          border-color: #159f9f;
-
-          box-shadow:
-            0 0 0 3px
-            rgba(
-              21,
-              159,
-              159,
-              0.08
-            );
-        }
-
-        .status-add-row button {
-          min-width: 90px;
-          height: 42px;
-
-          padding: 0 16px;
-
-          border: none;
-          border-radius: 9px;
-
-          background: #159f9f;
-
-          color: #ffffff;
-
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-
-          gap: 6px;
-
-          cursor: pointer;
-
-          font-size: 10px;
-          font-weight: 750;
-        }
-
-        .status-add-row button:hover {
-          background: #118f8f;
-        }
-
-        .status-modal-list {
-          display: flex;
-          flex-direction: column;
-
-          gap: 8px;
-        }
-
-        .status-modal-item {
-          min-height: 45px;
-
-          padding: 8px 10px 8px 13px;
-
-          border:
-            1px solid #e3ebea;
-
-          border-radius: 9px;
-
-          background: #fbfdfd;
-
-          display: flex;
-          align-items: center;
-          justify-content:
-            space-between;
-
-          gap: 12px;
-        }
-
-        .status-modal-item > div {
-          min-width: 0;
-
-          display: flex;
-          align-items: center;
-
-          gap: 8px;
-
-          color: #475467;
-
-          font-size: 10px;
-          font-weight: 700;
-        }
-
-        .status-modal-item > div svg {
-          color: #159f9f;
-
-          flex-shrink: 0;
-        }
-
-        .status-modal-item button {
-          width: 31px;
-          height: 31px;
-
-          padding: 0;
-
-          border: none;
-          border-radius: 7px;
-
-          background: #fff2f0;
-
-          color: #d92d20;
-
-          display: flex;
-          align-items: center;
-          justify-content: center;
-
-          cursor: pointer;
-
-          flex-shrink: 0;
-
-          transition:
-            background 0.2s ease,
-            color 0.2s ease;
-        }
-
-        .status-modal-item button:hover {
-          background: #d92d20;
-
-          color: #ffffff;
-        }
-
-        .status-modal-empty {
-          padding: 30px 15px;
-
-          border:
-            1px dashed #dce5e4;
-
-          border-radius: 10px;
-
-          color: #98a2b3;
-
-          text-align: center;
-
-          font-size: 10px;
-        }
-
-        /* =====================================
-           SCROLLBAR
-        ====================================== */
-
-        .settings-modal-body::-webkit-scrollbar {
-          width: 6px;
-        }
-
-        .settings-modal-body::-webkit-scrollbar-track {
-          background: transparent;
-        }
-
-        .settings-modal-body::-webkit-scrollbar-thumb {
-          border-radius: 20px;
-
-          background: #d8e4e3;
-        }
-
-        /* =====================================
-           RESPONSIVE
-        ====================================== */
-
-        @media (max-width: 1100px) {
-          .dashboard-main {
-            padding:
-              30px 28px 50px;
-          }
-
-          .settings-form {
-            max-width: 100%;
-          }
-        }
-
-        @media (max-width: 900px) {
-          .dashboard-main {
-            margin-left: 0;
-
-            padding:
-              80px 20px 45px;
-          }
-
-          .form-row {
-            grid-template-columns: 1fr;
-            gap: 0;
-          }
-
-          .settings-card-header-row {
-            align-items: flex-start;
-          }
-        }
-
-        @media (max-width: 650px) {
-          .dashboard-main {
-            padding:
-              75px 14px 35px;
-          }
-
-          .page-header h1 {
-            font-size: 23px;
-          }
-
-          .settings-card {
-            padding: 20px 17px;
-
-            border-radius: 12px;
-          }
-
-          .settings-card-header-row {
-            flex-direction: column;
-          }
-
-          .settings-secondary-button {
-            width: 100%;
-          }
-
-          .settings-save-section {
-            flex-direction: column;
-
-            align-items: stretch;
-          }
-
-          .settings-save-message {
-            justify-content: center;
-          }
-
-          .settings-save-button {
-            width: 100%;
-          }
-
-          .store-banner-preview {
-            height: 150px;
-          }
-
-          .home-banner-upload {
-            min-height: 190px;
-          }
-
-          .home-banner-preview {
-            height: 210px;
-          }
-
-          .about-image-upload {
-            min-height: 210px;
-          }
-
-          .about-image-upload
-          .store-banner-empty {
-            min-height: 205px;
-          }
-
-          .about-image-preview {
-            height: 230px;
-          }
-
-          .settings-modal-overlay {
-            padding: 12px;
-          }
-
-          .settings-modal-header,
-          .settings-modal-body {
-            padding: 17px;
-          }
-
-          .status-add-row {
-            grid-template-columns: 1fr;
-          }
-
-          .status-add-row button {
-            width: 100%;
-          }
-        }
-
-        @media (max-width: 430px) {
-          .dashboard-main {
-            padding-left: 11px;
-            padding-right: 11px;
-          }
-
-          .settings-card {
-            padding: 18px 14px;
-          }
-
-          .store-banner-upload,
-          .store-banner-empty {
-            min-height: 130px;
-          }
-
-          .home-banner-upload {
-            min-height: 165px;
-          }
-
-          .home-banner-preview {
-            height: 180px;
-          }
-
-          .about-image-upload {
-            min-height: 185px;
-          }
-
-          .about-image-upload
-          .store-banner-empty {
-            min-height: 180px;
-          }
-
-          .about-image-preview {
-            height: 200px;
-          }
-        }
-      `}</style>
+      </main>
     </div>
   );
 }

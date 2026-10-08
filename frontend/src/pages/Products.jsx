@@ -21,6 +21,9 @@ import {
 ========================================================= */
 
 function Products() {
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
   const navigate = useNavigate();
 
   const [searchParams] = useSearchParams();
@@ -281,8 +284,10 @@ function Products() {
   const filteredProducts = useMemo(() => {
     const searchValue =
       search.toLowerCase().trim();
+      
 
     return storeProducts.filter(
+      
       (product) => {
         const productName =
           String(

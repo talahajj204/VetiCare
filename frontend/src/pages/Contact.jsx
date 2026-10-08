@@ -746,7 +746,7 @@ function Contact() {
 
         .contact-send-button {
           height: 40px;
-
+width:  20%;
           padding: 0 19px;
 
           border: none;
@@ -879,6 +879,7 @@ function Contact() {
 
           .contact-send-button {
             width: 100%;
+           
           }
         }
       `}</style>

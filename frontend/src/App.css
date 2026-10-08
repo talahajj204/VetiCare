@@ -20816,3 +20816,747 @@ html body #root
   resize: vertical;
   min-height: 100px;
 }
+
+
+/* ==========================================
+   PREMIUM SETTINGS DESIGN
+   Clean • Modern • Compact • Teal
+========================================== */
+
+.settings-page {
+  padding: 32px 38px !important;
+  background: #f8fafb !important;
+  min-height: 100vh;
+  color: #263c42;
+}
+
+.settings-page .settings-form {
+  width: 100%;
+  max-width: 1120px;
+  gap: 22px;
+}
+
+/* PAGE HEADER */
+
+.settings-page-header {
+  margin-bottom: 30px;
+}
+
+.settings-page-header h1 {
+  font-size: 29px;
+  font-weight: 800;
+  letter-spacing: -0.8px;
+  color: #233b43;
+}
+
+.settings-page-header p {
+  font-size: 13px;
+  color: #82939c;
+}
+
+/* CARDS */
+
+.settings-page .settings-card {
+  padding: 30px 34px;
+  border: 1px solid #e7eef0;
+  border-radius: 20px;
+  background: #ffffff;
+  box-shadow: 0 5px 24px rgba(26, 61, 67, 0.035);
+  transition: box-shadow 0.25s ease;
+}
+
+.settings-page .settings-card:hover {
+  box-shadow: 0 9px 32px rgba(26, 61, 67, 0.055);
+}
+
+.settings-page .settings-card-header {
+  margin-bottom: 25px;
+}
+
+.settings-page .settings-card-header h2 {
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: -0.3px;
+  color: #293d4e;
+}
+
+.settings-page .settings-card-header p {
+  margin-top: 6px;
+  font-size: 12px;
+  line-height: 1.7;
+  color: #92a1ad;
+}
+
+/* INPUT FIELDS */
+
+.settings-page .settings-field {
+  gap: 9px;
+  margin-bottom: 20px;
+}
+
+.settings-page .settings-field label {
+  font-size: 13px;
+  font-weight: 700;
+  color: #40535a;
+}
+
+.settings-page .settings-field input,
+.settings-page .settings-field textarea {
+  width: 100%;
+  padding: 12px 15px;
+  border: 1px solid #dfe8eb;
+  border-radius: 10px;
+  background: #fcfdfd;
+  color: #30434a;
+  font-size: 13px;
+  box-shadow: none;
+  transition: all 0.2s ease;
+}
+
+.settings-page .settings-field input {
+  min-height: 43px;
+}
+
+.settings-page .settings-field textarea {
+  min-height: 105px;
+  line-height: 1.7;
+}
+
+.settings-page .settings-field input:focus,
+.settings-page .settings-field textarea:focus {
+  outline: none;
+  border-color: #1ca7a2;
+  background: #ffffff;
+  box-shadow: 0 0 0 3px rgba(28, 167, 162, 0.08);
+}
+
+.settings-page .settings-field input::placeholder,
+.settings-page .settings-field textarea::placeholder {
+  color: #aebbc4;
+  font-size: 12px;
+}
+
+/* IMAGE UPLOAD */
+
+.settings-page .settings-upload {
+  min-height: 180px;
+  border: 1.5px dashed #8dd1ce;
+  border-radius: 14px;
+  background: linear-gradient(
+    135deg,
+    #f8fdfc,
+    #f0faf9
+  );
+}
+
+.settings-page .settings-upload:hover {
+  border-color: #169c98;
+  background: #edf9f7;
+}
+
+.settings-page .settings-upload-empty {
+  gap: 9px;
+}
+
+.settings-page .settings-upload-empty svg {
+  font-size: 28px;
+  color: #21a6a1;
+}
+
+.settings-page .settings-upload-empty strong {
+  font-size: 13px;
+}
+
+.settings-page .settings-upload-empty small {
+  font-size: 11px;
+}
+
+/* TIMELINE SETTINGS */
+
+.settings-page .settings-timeline {
+  gap: 14px;
+}
+
+.settings-page .settings-timeline-card {
+  padding: 22px 24px;
+  border: 1px solid #e2efed;
+  border-radius: 15px;
+  background: #f9fcfc;
+}
+
+.settings-page .settings-timeline-heading {
+  margin-bottom: 18px;
+}
+
+.settings-page .settings-timeline-number {
+  width: 31px;
+  height: 31px;
+  font-size: 13px;
+  background: #1aa39e;
+}
+
+.settings-page .settings-timeline-heading h3 {
+  font-size: 14px;
+  font-weight: 800;
+}
+
+/* STATUS CHIPS */
+
+.settings-page .settings-status-list {
+  gap: 9px;
+}
+
+.settings-page .settings-status {
+  padding: 8px 11px;
+  border: 1px solid #e0efed;
+  border-radius: 9px;
+  background: #f0f8f7;
+  color: #237e7a;
+  font-size: 12px;
+}
+
+.settings-page .settings-status button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  font-size: 12px;
+}
+
+/* ADD STATUS */
+
+.settings-page .settings-add-status {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.settings-page .settings-add-status input {
+  flex: 0 1 320px;
+  width: 100%;
+  min-width: 0;
+  height: 39px;
+  padding: 9px 13px;
+  border: 1px solid #dfe8eb;
+  border-radius: 9px;
+  background: #ffffff;
+  font-size: 12px;
+}
+
+/* ALL ACTION BUTTONS */
+
+.settings-page .settings-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: auto;
+  min-width: 0;
+  height: 39px;
+  padding: 0 17px;
+  border: none;
+  border-radius: 9px;
+  background: #169e99;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.settings-page .settings-button:hover {
+  background: #0f8783;
+  transform: translateY(-1px);
+  box-shadow: 0 5px 14px rgba(22, 158, 153, 0.15);
+}
+
+/* REMOVE IMAGE */
+
+.settings-page .settings-remove {
+  width: fit-content;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 11px;
+}
+
+/* SAVE SETTINGS */
+
+.settings-page .settings-save-bar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 16px;
+  padding: 8px 0 35px;
+}
+
+.settings-page .settings-save-bar .settings-button {
+  flex: 0 0 auto !important;
+  width: auto !important;
+  min-width: 145px;
+  max-width: max-content;
+  height: 42px;
+  padding: 0 20px;
+  font-size: 12px;
+}
+
+.settings-page .settings-saved {
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+/* RESPONSIVE */
+
+@media (max-width: 700px) {
+  .settings-page {
+    padding: 20px 14px !important;
+  }
+
+  .settings-page .settings-card {
+    padding: 22px 18px;
+    border-radius: 15px;
+  }
+
+  .settings-page .settings-row {
+    grid-template-columns: 1fr;
+  }
+
+  .settings-page .settings-add-status {
+    flex-wrap: wrap;
+  }
+
+  .settings-page .settings-add-status input {
+    flex: 1 1 180px;
+  }
+
+  .settings-page .settings-save-bar {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
+  .settings-page .settings-save-bar .settings-button {
+    flex: 0 0 auto !important;
+    width: auto !important;
+    min-width: 140px;
+  }
+}
+
+/* COMPACT IMAGE UPLOAD - SIDE BY SIDE */
+
+.settings-page .settings-field:has(.settings-upload) {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 180px;
+  align-items: center;
+  gap: 12px;
+}
+
+.settings-page .settings-field:has(.settings-upload) > label {
+  grid-column: 1 / -1;
+}
+
+.settings-page .settings-upload {
+  min-height: 125px !important;
+  height: 125px !important;
+  border-radius: 12px;
+}
+
+.settings-page .settings-upload-empty svg {
+  font-size: 23px;
+}
+
+.settings-page .settings-upload-empty {
+  gap: 5px;
+}
+
+.settings-page .settings-upload img {
+  height: 100%;
+  max-height: 125px;
+  object-fit: contain;
+}
+
+/* SHOW CHOOSE FILE BESIDE UPLOAD BOX */
+
+.settings-page .settings-field:has(.settings-upload) input[type="file"] {
+  display: block !important;
+  width: 100%;
+  max-width: 180px;
+  min-height: auto;
+  padding: 8px;
+  font-size: 11px;
+  background: #f8fbfb;
+  border: 1px solid #e1e9ea;
+  border-radius: 9px;
+}
+
+.settings-page input[type="file"]::file-selector-button {
+  padding: 8px 10px;
+  margin-right: 7px;
+  background: #e6f5f3;
+  border: none;
+  border-radius: 7px;
+  color: #138e89;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.settings-page .settings-field:has(.settings-upload) .settings-remove {
+  grid-column: 1 / -1;
+  justify-self: start;
+}
+
+@media (max-width: 600px) {
+  .settings-page .settings-field:has(.settings-upload) {
+    grid-template-columns: 1fr;
+  }
+
+  .settings-page .settings-field:has(.settings-upload) input[type="file"] {
+    max-width: 100%;
+  }
+}
+
+/* UPLOAD BOX WITH CHOOSE FILE INSIDE */
+
+.settings-page .settings-field:has(.settings-upload) {
+  position: relative;
+  display: flex !important;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.settings-page .settings-upload {
+  width: 100%;
+  height: 160px !important;
+  min-height: 160px !important;
+  padding-bottom: 45px;
+  border: 1.5px dashed #8dd1ce;
+  border-radius: 14px;
+  background: #f3fbfa;
+}
+
+.settings-page .settings-upload-empty {
+  gap: 5px;
+}
+
+.settings-page .settings-upload-empty svg {
+  font-size: 25px;
+}
+
+/* PLACE FILE INPUT INSIDE UPLOAD BOX */
+
+.settings-page .settings-field:has(.settings-upload) input[type="file"] {
+  display: block !important;
+  position: absolute;
+  bottom: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 5;
+
+  width: 220px;
+  max-width: 85%;
+  min-height: auto;
+  padding: 6px 8px;
+  border: 1px solid #d6eae7;
+  border-radius: 9px;
+  background: #ffffff;
+  color: #637b80;
+  font-size: 11px;
+}
+
+.settings-page input[type="file"]::file-selector-button {
+  padding: 7px 12px;
+  margin-right: 7px;
+  border: none;
+  border-radius: 7px;
+  background: #e0f4f1;
+  color: #128e89;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.settings-page .settings-field:has(.settings-upload) .settings-remove {
+  position: static;
+  transform: none;
+  align-self: flex-start;
+}
+
+
+
+/* ==============================================
+   GLOBAL VIEW DETAILS MODALS
+   Vaccinations / Patients / Appointments / etc.
+   ============================================== */
+
+/* Modal content spacing */
+:is(
+  .view-modal,
+  .details-modal,
+  .view-details-modal,
+  .modal-content,
+  .modal-box
+) {
+  box-sizing: border-box !important;
+  overflow: hidden;
+}
+
+/* Details rows: label on left, value on right */
+:is(
+  .view-modal,
+  .details-modal,
+  .view-details-modal,
+  .modal-content,
+  .modal-box
+) :is(
+  .detail-row,
+  .details-row,
+  .view-row,
+  .info-row,
+  .modal-detail-row
+) {
+  display: flex !important;
+  align-items: flex-start !important;
+  justify-content: space-between !important;
+  gap: 24px !important;
+  padding: 18px 26px !important;
+  min-height: 62px !important;
+  box-sizing: border-box !important;
+}
+
+/* Left labels */
+:is(
+  .view-modal,
+  .details-modal,
+  .view-details-modal,
+  .modal-content,
+  .modal-box
+) :is(
+  .detail-label,
+  .details-label,
+  .view-label,
+  .info-label
+) {
+  flex: 0 0 38% !important;
+  min-width: 0 !important;
+  text-align: left !important;
+  line-height: 1.6 !important;
+}
+
+/* Right values */
+:is(
+  .view-modal,
+  .details-modal,
+  .view-details-modal,
+  .modal-content,
+  .modal-box
+) :is(
+  .detail-value,
+  .details-value,
+  .view-value,
+  .info-value
+) {
+  flex: 1 1 0 !important;
+  min-width: 0 !important;
+  text-align: right !important;
+  overflow-wrap: anywhere !important;
+  line-height: 1.6 !important;
+}
+
+/* Footer buttons */
+:is(
+  .view-modal,
+  .details-modal,
+  .view-details-modal,
+  .modal-content,
+  .modal-box
+) :is(
+  .modal-footer,
+  .modal-actions,
+  .details-actions,
+  .view-actions,
+  .modal-buttons
+) {
+  display: flex !important;
+  justify-content: flex-end !important;
+  align-items: center !important;
+  flex-wrap: wrap !important;
+  gap: 12px !important;
+  padding: 18px 26px !important;
+}
+
+/* Footer buttons size */
+:is(
+  .view-modal,
+  .details-modal,
+  .view-details-modal,
+  .modal-content,
+  .modal-box
+) :is(
+  .modal-footer,
+  .modal-actions,
+  .details-actions,
+  .view-actions,
+  .modal-buttons
+) button {
+  width: auto !important;
+  min-height: 38px !important;
+  padding: 10px 16px !important;
+  margin: 0 !important;
+  border-radius: 9px !important;
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  white-space: normal !important;
+}
+
+/* Prevent text touching modal edges */
+:is(
+  .view-modal,
+  .details-modal,
+  .view-details-modal,
+  .modal-content,
+  .modal-box
+) :is(
+  .modal-body,
+  .details-body,
+  .view-body
+) {
+  padding: 12px 0 !important;
+}
+
+/* Mobile */
+@media (max-width: 600px) {
+  :is(
+    .view-modal,
+    .details-modal,
+    .view-details-modal,
+    .modal-content,
+    .modal-box
+  ) :is(
+    .detail-row,
+    .details-row,
+    .view-row,
+    .info-row,
+    .modal-detail-row
+  ) {
+    gap: 12px !important;
+    padding: 15px 18px !important;
+  }
+
+  :is(
+    .view-modal,
+    .details-modal,
+    .view-details-modal,
+    .modal-content,
+    .modal-box
+  ) :is(
+    .modal-footer,
+    .modal-actions,
+    .details-actions,
+    .view-actions,
+    .modal-buttons
+  ) {
+    padding: 16px 18px !important;
+    gap: 10px !important;
+  }
+}
+
+/* ==========================================
+   GLOBAL VIEW MODALS - EDGE SPACING FIX
+   ========================================== */
+
+/* Fix details rows even when no modal-body exists */
+.modal-overlay :is(
+  .detail-row,
+  .details-row,
+  .view-row,
+  .info-row,
+  .modal-detail-row
+) {
+  display: flex !important;
+  align-items: flex-start !important;
+  justify-content: space-between !important;
+  gap: 24px !important;
+
+  padding: 18px 32px !important;
+  margin: 0 !important;
+  box-sizing: border-box !important;
+}
+
+/* Labels */
+.modal-overlay :is(
+  .detail-row,
+  .details-row,
+  .view-row,
+  .info-row,
+  .modal-detail-row
+) > :first-child {
+  min-width: 0 !important;
+  flex: 0 0 38% !important;
+  text-align: left !important;
+}
+
+/* Values */
+.modal-overlay :is(
+  .detail-row,
+  .details-row,
+  .view-row,
+  .info-row,
+  .modal-detail-row
+) > :last-child {
+  min-width: 0 !important;
+  flex: 1 1 0 !important;
+  text-align: right !important;
+  overflow-wrap: anywhere !important;
+}
+
+/* Modal footer buttons */
+.modal-overlay :is(
+  .details-actions,
+  .modal-actions,
+  .modal-footer,
+  .view-actions
+) {
+  display: flex !important;
+  justify-content: flex-end !important;
+  align-items: center !important;
+  flex-wrap: wrap !important;
+  gap: 12px !important;
+  padding: 20px 32px !important;
+}
+
+.modal-overlay :is(
+  .details-actions,
+  .modal-actions,
+  .modal-footer,
+  .view-actions
+) button {
+  width: auto !important;
+  flex: 0 0 auto !important;
+}
+
+/* Mobile */
+@media (max-width: 600px) {
+  .modal-overlay :is(
+    .detail-row,
+    .details-row,
+    .view-row,
+    .info-row,
+    .modal-detail-row
+  ) {
+    padding: 15px 18px !important;
+    gap: 12px !important;
+  }
+
+  .modal-overlay :is(
+    .details-actions,
+    .modal-actions,
+    .modal-footer,
+    .view-actions
+  ) {
+    padding: 16px 18px !important;
+  }
+}
+

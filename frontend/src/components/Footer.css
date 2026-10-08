@@ -359,3 +359,30 @@
     text-align: center;
   }
 }
+
+/* FOOTER LOGO - BIGGER */
+
+.store-footer .footer-banner {
+  width: 90px !important;
+  height: 90px !important;
+  min-width: 90px !important;
+  min-height: 90px !important;
+  max-width: 90px !important;
+  max-height: 90px !important;
+
+  padding: 0 !important;
+  margin-bottom: 20px;
+
+  border-radius: 12px !important;
+  overflow: hidden !important;
+}
+
+.store-footer .footer-banner img {
+  display: block !important;
+  width: 100% !important;
+  height: 100% !important;
+
+  object-fit: cover !important;
+  object-position: center !important;
+  border-radius: 12px !important;
+}

@@ -1,7 +1,6 @@
+
 import { useEffect, useState } from "react";
-
 import { useNavigate } from "react-router-dom";
-
 import {
   FaShoppingCart,
   FaUser,
@@ -14,128 +13,45 @@ import {
   FaHome,
   FaInfoCircle,
   FaEnvelope,
+  FaBars,
+  FaTimes,
 } from "react-icons/fa";
 
 import { storeTranslations } from "../translations/storeTranslations";
-
 import {
   getStoreLanguage,
   setStoreLanguage,
 } from "../translations/storeLanguage";
 
-/* =========================================================
-   DEFAULT CATEGORIES
-   These are used only if localStorage is empty.
-   After that, Categories.jsx controls everything.
-========================================================= */
-
 const DEFAULT_CATEGORIES = [
-  {
-    id: 1,
-    title: "Food",
-    description: "",
-    image: null,
-    sortOrder: 1,
-  },
-  {
-    id: 2,
-    title: "Care",
-    description: "",
-    image: null,
-    sortOrder: 2,
-  },
-  {
-    id: 3,
-    title: "Hygiene",
-    description: "",
-    image: null,
-    sortOrder: 3,
-  },
-  {
-    id: 4,
-    title: "Accessories",
-    description: "",
-    image: null,
-    sortOrder: 4,
-  },
-  {
-    id: 5,
-    title: "Supplements",
-    description: "",
-    image: null,
-    sortOrder: 5,
-  },
-  {
-    id: 6,
-    title: "Grooming",
-    description: "",
-    image: null,
-    sortOrder: 6,
-  },
-  {
-    id: 7,
-    title: "Toys",
-    description: "",
-    image: null,
-    sortOrder: 7,
-  },
-  {
-    id: 8,
-    title: "Treats",
-    description: "",
-    image: null,
-    sortOrder: 8,
-  },
-  {
-    id: 9,
-    title: "Beds",
-    description: "",
-    image: null,
-    sortOrder: 9,
-  },
-  {
-    id: 10,
-    title: "Bowls",
-    description: "",
-    image: null,
-    sortOrder: 10,
-  },
-  {
-    id: 11,
-    title: "Dental Care",
-    description: "",
-    image: null,
-    sortOrder: 11,
-  },
-  {
-    id: 12,
-    title: "Pet Essentials",
-    description: "",
-    image: null,
-    sortOrder: 12,
-  },
-];
+  "Food",
+  "Care",
+  "Hygiene",
+  "Accessories",
+  "Supplements",
+  "Grooming",
+  "Toys",
+  "Treats",
+  "Beds",
+  "Bowls",
+  "Dental Care",
+  "Pet Essentials",
+].map((title, index) => ({
+  id: index + 1,
+  title,
+  description: "",
+  image: null,
+  sortOrder: index + 1,
+}));
 
-/* =========================================================
-   LOAD CATEGORIES
-========================================================= */
-
-const loadStoredCategories = () => {
+const readCategories = () => {
   try {
-    const savedCategories =
-      localStorage.getItem(
-        "vetClinicCategories"
-      );
+    const saved = localStorage.getItem("vetClinicCategories");
 
-    if (savedCategories) {
-      const parsedCategories =
-        JSON.parse(savedCategories);
-
-      if (
-        Array.isArray(parsedCategories) &&
-        parsedCategories.length > 0
-      ) {
-        return [...parsedCategories].sort(
+    if (saved !== null) {
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed)) {
+        return [...parsed].sort(
           (a, b) =>
             Number(a.sortOrder || 0) -
             Number(b.sortOrder || 0)
@@ -147,1867 +63,924 @@ const loadStoredCategories = () => {
       "vetClinicCategories",
       JSON.stringify(DEFAULT_CATEGORIES)
     );
-
     return DEFAULT_CATEGORIES;
   } catch (error) {
-    console.error(
-      "Could not load categories:",
-      error
-    );
-
+    console.error("Categories error:", error);
     return DEFAULT_CATEGORIES;
   }
 };
 
-/* =========================================================
-   STORE HEADER
-========================================================= */
+const readSettings = () => {
+  try {
+    const saved = JSON.parse(
+      localStorage.getItem("storeSettings") || "{}"
+    );
+
+    return {
+      storeName: saved.storeName || "",
+      storeBanner: saved.storeBanner || null,
+    };
+  } catch (error) {
+    console.error("Settings error:", error);
+    return { storeName: "", storeBanner: null };
+  }
+};
+
+const readCartCount = () => {
+  try {
+    const cart = JSON.parse(
+      localStorage.getItem("vetClinicStoreCart") || "[]"
+    );
+
+    if (!Array.isArray(cart)) return 0;
+
+    return cart.reduce(
+      (total, item) => total + Number(item.quantity || 0),
+      0
+    );
+  } catch {
+    return 0;
+  }
+};
 
 function StoreHeader() {
   const navigate = useNavigate();
 
-  const [categoriesOpen, setCategoriesOpen] =
-    useState(false);
+  const [storeSettings, setStoreSettings] = useState(readSettings);
+  const [categories, setCategories] = useState(readCategories);
+  const [cartCount, setCartCount] = useState(readCartCount);
+  const [language, setLanguageState] = useState(getStoreLanguage);
 
-  const [accountOpen, setAccountOpen] =
-    useState(false);
+  const [categoriesOpen, setCategoriesOpen] = useState(false);
+  const [accountOpen, setAccountOpen] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
 
-  const [storeSettings, setStoreSettings] =
-    useState({
-      storeName: "",
-      storeBanner: null,
-    });
-
-  const [cartCount, setCartCount] =
-    useState(0);
-
-  /*
-    IMPORTANT:
-    Categories are NOT hardcoded anymore.
-
-    They come from:
-
-    Admin
-      → Inventory
-      → Categories
-      → vetClinicCategories
-      → Store Header
-  */
-
-  const [categories, setCategories] =
-    useState(() =>
-      loadStoredCategories()
-    );
-
-  /* =========================================================
-     LOAD CATEGORIES
-  ========================================================= */
+  const t = storeTranslations[language] || storeTranslations.en;
 
   useEffect(() => {
-    const loadCategories = () => {
-      const loadedCategories =
-        loadStoredCategories();
+    const refreshSettings = () => setStoreSettings(readSettings());
+    const refreshCategories = () => setCategories(readCategories());
+    const refreshCart = () => setCartCount(readCartCount());
 
-      setCategories(
-        [...loadedCategories].sort(
-          (a, b) =>
-            Number(a.sortOrder || 0) -
-            Number(b.sortOrder || 0)
-        )
-      );
+    const refreshAll = () => {
+      refreshSettings();
+      refreshCategories();
+      refreshCart();
     };
 
-    loadCategories();
-
-    /*
-      "storage":
-      updates when localStorage changes
-      from another tab/window.
-
-      "vetClinicCategoriesUpdated":
-      updates immediately in the same tab
-      after Add / Edit / Delete.
-    */
-
-    window.addEventListener(
-      "storage",
-      loadCategories
-    );
-
+    window.addEventListener("storage", refreshAll);
+    window.addEventListener("storeSettingsUpdated", refreshSettings);
     window.addEventListener(
       "vetClinicCategoriesUpdated",
-      loadCategories
+      refreshCategories
     );
+    window.addEventListener("cartUpdated", refreshCart);
 
     return () => {
+      window.removeEventListener("storage", refreshAll);
       window.removeEventListener(
-        "storage",
-        loadCategories
+        "storeSettingsUpdated",
+        refreshSettings
       );
-
       window.removeEventListener(
         "vetClinicCategoriesUpdated",
-        loadCategories
+        refreshCategories
       );
+      window.removeEventListener("cartUpdated", refreshCart);
     };
   }, []);
 
-  /* =========================================================
-     LANGUAGE
-  ========================================================= */
-
-  const [language, setLanguageState] =
-    useState(() => getStoreLanguage());
-
-  const t =
-    storeTranslations[language] ||
-    storeTranslations.en;
-
   useEffect(() => {
-    document.documentElement.lang =
-      language;
-
+    document.documentElement.lang = language;
     document.documentElement.dir =
-      language === "ar"
-        ? "rtl"
-        : "ltr";
+      language === "ar" ? "rtl" : "ltr";
 
-    const handleLanguageChange = (
-      event
-    ) => {
-      const newLanguage =
-        event.detail ||
-        getStoreLanguage();
-
-      setLanguageState(newLanguage);
+    const syncLanguage = (event) => {
+      setLanguageState(event.detail || getStoreLanguage());
     };
 
     window.addEventListener(
       "storeLanguageChanged",
-      handleLanguageChange
+      syncLanguage
     );
 
-    return () => {
+    return () =>
       window.removeEventListener(
         "storeLanguageChanged",
-        handleLanguageChange
+        syncLanguage
       );
-    };
   }, [language]);
 
-  const changeLanguage = (
-    newLanguage
-  ) => {
-    setLanguageState(newLanguage);
-
-    setStoreLanguage(newLanguage);
-
+  const closeMenus = () => {
     setCategoriesOpen(false);
-
     setAccountOpen(false);
+    setMobileOpen(false);
   };
 
-  /* =========================================================
-     LOAD STORE SETTINGS
-  ========================================================= */
-
-  useEffect(() => {
-    const loadStoreSettings = () => {
-      try {
-        const saved =
-          localStorage.getItem(
-            "storeSettings"
-          );
-
-        if (!saved) {
-          setStoreSettings({
-            storeName: "",
-            storeBanner: null,
-          });
-
-          return;
-        }
-
-        const settings =
-          JSON.parse(saved);
-
-        setStoreSettings({
-          storeName:
-            settings.storeName || "",
-
-          storeBanner:
-            settings.storeBanner ||
-            null,
-        });
-      } catch (error) {
-        console.error(
-          "Could not load store settings:",
-          error
-        );
-      }
-    };
-
-    loadStoreSettings();
-
-    window.addEventListener(
-      "storage",
-      loadStoreSettings
-    );
-
-    window.addEventListener(
-      "storeSettingsUpdated",
-      loadStoreSettings
-    );
-
-    return () => {
-      window.removeEventListener(
-        "storage",
-        loadStoreSettings
-      );
-
-      window.removeEventListener(
-        "storeSettingsUpdated",
-        loadStoreSettings
-      );
-    };
-  }, []);
-
-  /* =========================================================
-     LOAD CART COUNT
-  ========================================================= */
-
-  useEffect(() => {
-    const loadCart = () => {
-      try {
-        const savedCart =
-          localStorage.getItem(
-            "vetClinicStoreCart"
-          );
-
-        if (!savedCart) {
-          setCartCount(0);
-
-          return;
-        }
-
-        const cart =
-          JSON.parse(savedCart);
-
-        const count =
-          Array.isArray(cart)
-            ? cart.reduce(
-                (total, item) =>
-                  total +
-                  (item.quantity || 0),
-                0
-              )
-            : 0;
-
-        setCartCount(count);
-      } catch (error) {
-        console.error(
-          "Could not load cart:",
-          error
-        );
-
-        setCartCount(0);
-      }
-    };
-
-    loadCart();
-
-    window.addEventListener(
-      "storage",
-      loadCart
-    );
-
-    window.addEventListener(
-      "cartUpdated",
-      loadCart
-    );
-
-    return () => {
-      window.removeEventListener(
-        "storage",
-        loadCart
-      );
-
-      window.removeEventListener(
-        "cartUpdated",
-        loadCart
-      );
-    };
-  }, []);
-
-  /* =========================================================
-     NAVIGATION
-  ========================================================= */
-
-  const goHome = () => {
-    setCategoriesOpen(false);
-
-    setAccountOpen(false);
-
-    navigate("/store");
-
-    window.scrollTo({
-      top: 0,
-      behavior: "smooth",
-    });
+  const goTo = (path) => {
+    closeMenus();
+    navigate(path);
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  /* =========================================================
-     ABOUT US PAGE
-  ========================================================= */
-
-  const goToAbout = () => {
-    setCategoriesOpen(false);
-
-    setAccountOpen(false);
-
-    navigate("/about");
-
-    window.scrollTo({
-      top: 0,
-      behavior: "smooth",
-    });
+  const changeLanguage = (nextLanguage) => {
+    setLanguageState(nextLanguage);
+    setStoreLanguage(nextLanguage);
+    closeMenus();
   };
 
-  /* =========================================================
-     CONTACT US PAGE
-  ========================================================= */
-
-  const goToContact = () => {
-    setCategoriesOpen(false);
-
-    setAccountOpen(false);
-
-    navigate("/contact");
-
-    window.scrollTo({
-      top: 0,
-      behavior: "smooth",
-    });
-  };
-
-  const chooseCategory = (
-    categoryName
-  ) => {
-    setCategoriesOpen(false);
-
-    setAccountOpen(false);
-
-    if (
-      categoryName ===
-      "All categories"
-    ) {
-      navigate("/products");
-
+  const chooseCategory = (category) => {
+    if (category === null) {
+      goTo("/products");
       return;
     }
 
-    navigate(
-      `/products?category=${encodeURIComponent(
-        categoryName
-      )}`
+    goTo(
+      `/products?category=${encodeURIComponent(category)}`
     );
   };
 
-  const openCart = () => {
-    setCategoriesOpen(false);
-
-    setAccountOpen(false);
-
-    navigate("/cart");
-  };
-
-  const handleLogout = () => {
-    setAccountOpen(false);
-
-    setCategoriesOpen(false);
-
-    navigate("/");
-  };
+  const brandName =
+    storeSettings.storeName?.trim() || "Pet Store";
 
   return (
     <>
       <style>{`
-        /* =====================================================
-           HEADER VARIABLES
-        ===================================================== */
-
         .store-header {
-          --teal: #1aa6a6;
-          --teal-dark: #11797b;
-          --teal-deep: #0d6668;
-          --teal-light: #e8f7f7;
-          --border: #dcebea;
-          --text: #263b4f;
-
-          min-height: 84px;
-          width: 100%;
-
-          padding: 0 4%;
-
-          display: grid;
-
-          grid-template-columns:
-            minmax(160px, 1fr)
-            auto
-            minmax(260px, 1fr);
-
-          align-items: center;
-
-          gap: 30px;
-
-          background: var(--teal);
-
-          border-bottom:
-            1px solid
-            rgba(255,255,255,0.18);
-
-          box-shadow:
-            0 7px 25px
-            rgba(17,121,123,0.14);
+          --sh-teal: #1aa6a6;
+          --sh-dark: #11797b;
+          --sh-light: #e8f7f7;
+          --sh-border: #dcebea;
 
           position: sticky;
-
           top: 0;
-
           z-index: 1000;
+          width: 100%;
+          min-height: 84px;
+          padding: 0 4%;
+          display: grid;
+          grid-template-columns:
+            minmax(190px, 1fr)
+            auto
+            minmax(260px, 1fr);
+          align-items: center;
+          gap: 24px;
+          background: var(--sh-teal);
+          box-shadow: 0 7px 25px rgba(17,121,123,.14);
+          box-sizing: border-box;
         }
 
-        /* =====================================================
-           LOGO
-        ===================================================== */
+        .store-header *,
+        .store-header *::before,
+        .store-header *::after {
+          box-sizing: border-box;
+        }
 
         .store-logo {
+          display: inline-flex;
+          align-items: center;
+          gap: 12px;
           width: fit-content;
-
-          min-width: 150px;
-
-          height: 64px;
-
-          display: flex;
-
-          align-items: center;
-
-          gap: 10px;
-
-          cursor: pointer;
-        }
-
-        .store-header-logo-image {
-          display: block;
-
-          width: auto;
-
-          max-width: 190px;
-
-          height: 60px;
-
-          max-height: 60px;
-
-          object-fit: contain;
-
-          object-position: left center;
-
-          border-radius: 10px;
-        }
-
-        .store-logo-fallback {
-          display: flex;
-
-          align-items: center;
-
-          gap: 10px;
-
+          max-width: 100%;
+          min-width: 0;
+          padding: 0;
+          border: 0;
+          background: transparent;
           color: white;
+          cursor: pointer;
+          text-align: start;
+        }
+
+        .store-header .store-header-logo-image {
+          display: block;
+          width: 60px !important;
+          height: 60px !important;
+          min-width: 60px;
+          min-height: 60px;
+          max-width: 60px;
+          max-height: 60px;
+          flex-shrink: 0;
+          object-fit: cover;
+          object-position: center;
+          border-radius: 12px !important;
+          overflow: hidden;
         }
 
         .store-logo-icon {
           font-size: 29px;
-
-          color: white;
+          flex-shrink: 0;
         }
 
         .store-logo-text {
-          margin: 0;
-
           color: white;
-
-          font-size: 20px;
-
+          font-size: 19px;
           font-weight: 800;
-
-          letter-spacing: -0.4px;
-
-          white-space: nowrap;
+          letter-spacing: -.4px;
+          line-height: 1.2;
+          overflow-wrap: anywhere;
         }
 
-        /* =====================================================
-           NAVBAR
-        ===================================================== */
-
         .store-nav {
-          height: 84px;
-
           display: flex;
-
           align-items: center;
-
           justify-content: center;
-
-          gap: 34px;
-
-          background: transparent;
+          gap: 27px;
+          height: 84px;
         }
 
         .store-nav-link {
-          height: 84px;
-
-          padding: 0;
-
-          border: none;
-
-          outline: none;
-
-          background:
-            transparent !important;
-
-          color:
-            rgba(255,255,255,0.88);
-
-          display: flex;
-
-          align-items: center;
-
-          justify-content: center;
-
-          gap: 7px;
-
           position: relative;
-
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 7px;
+          height: 48px;
+          padding: 0;
+          border: 0;
+          background: transparent !important;
+          color: rgba(255,255,255,.91);
           font-size: 13px;
-
           font-weight: 700;
-
           white-space: nowrap;
-
           cursor: pointer;
-
-          transition:
-            color 0.2s ease,
-            transform 0.2s ease;
-        }
-
-        .store-nav-link svg {
-          font-size: 11px;
-
-          color: currentColor;
+          transition: color .2s;
         }
 
         .store-nav-link:hover {
-          color: #ffffff;
+          color: white;
+        }
 
-          transform:
-            translateY(-1px);
+        .store-nav-link svg {
+          font-size: 12px;
         }
 
         .store-nav-link::after {
           content: "";
-
           position: absolute;
-
+          bottom: 5px;
           left: 50%;
-
-          bottom: 19px;
-
           width: 0;
-
           height: 2px;
-
-          border-radius: 20px;
-
-          background: #ffffff;
-
-          transform:
-            translateX(-50%);
-
-          transition:
-            width 0.22s ease;
+          border-radius: 4px;
+          background: white;
+          transform: translateX(-50%);
+          transition: width .2s;
         }
 
         .store-nav-link:hover::after {
           width: 100%;
         }
 
-        .store-nav-link.home {
-          color: #ffffff;
-        }
-
-        /* =====================================================
-           CATEGORY DROPDOWN
-        ===================================================== */
-
-        .store-category-dropdown {
-          height: 84px;
-
-          display: flex;
-
-          align-items: center;
-
-          position: relative;
-        }
-
-        .store-nav-chevron {
-          margin-left: 2px;
-
-          font-size:
-            7px !important;
-
-          transition:
-            transform 0.2s ease;
-        }
-
-        .store-nav-chevron.open {
-          transform:
-            rotate(180deg);
-        }
-
-        .store-category-menu {
-          position: absolute;
-
-          top: 72px;
-
-          left: 50%;
-
-          width: 240px;
-
-          /*
-            All categories remain available.
-
-            If the admin adds many categories,
-            the menu becomes scrollable instead
-            of hiding them.
-          */
-
-          max-height:
-            calc(100vh - 110px);
-
-          overflow-y: auto;
-
-          overflow-x: hidden;
-
-          padding: 8px;
-
-          border:
-            1px solid
-            var(--border);
-
-          border-radius: 14px;
-
-          background: #ffffff;
-
-          box-shadow:
-            0 18px 45px
-            rgba(13,102,104,0.16);
-
-          transform:
-            translateX(-50%);
-
-          z-index: 1300;
-
-          scrollbar-width: thin;
-
-          scrollbar-color:
-            #b7dcda transparent;
-        }
-
-        .store-category-menu::-webkit-scrollbar {
-          width: 6px;
-        }
-
-        .store-category-menu::-webkit-scrollbar-track {
-          background: transparent;
-        }
-
-        .store-category-menu::-webkit-scrollbar-thumb {
-          background: #b7dcda;
-
-          border-radius: 20px;
-        }
-
-        .store-category-menu::-webkit-scrollbar-thumb:hover {
-          background: #8bc8c5;
-        }
-
-        .store-category-menu::before {
-          content: "";
-
-          position: absolute;
-
-          top: -6px;
-
-          left: 50%;
-
-          width: 12px;
-
-          height: 12px;
-
-          background: white;
-
-          border-left:
-            1px solid
-            var(--border);
-
-          border-top:
-            1px solid
-            var(--border);
-
-          transform:
-            translateX(-50%)
-            rotate(45deg);
-        }
-
-        .store-category-menu-title {
-          padding: 8px 10px;
-
-          color: #98a2b3;
-
-          font-size: 9px;
-
-          font-weight: 800;
-
-          text-transform: uppercase;
-
-          letter-spacing: 0.8px;
-
-          position: sticky;
-
-          top: -8px;
-
-          z-index: 2;
-
-          background: #ffffff;
-        }
-
-        .store-category-menu button {
-          width: 100%;
-
-          min-height: 40px;
-
-          padding: 6px 9px;
-
-          border: none;
-
-          border-radius: 9px;
-
-          background: transparent;
-
-          color: #475467;
-
-          display: flex;
-
-          align-items: center;
-
-          gap: 10px;
-
-          text-align: left;
-
-          font-size: 11px;
-
-          font-weight: 650;
-
-          cursor: pointer;
-
-          transition: 0.18s ease;
-        }
-
-        .store-category-menu button:hover {
-          background:
-            var(--teal-light);
-
-          color:
-            var(--teal-dark);
-        }
-
-        .store-dropdown-icon {
-          width: 29px;
-
-          height: 29px;
-
-          border-radius: 8px;
-
-          background:
-            var(--teal-light);
-
-          color: var(--teal);
-
-          display: flex;
-
-          align-items: center;
-
-          justify-content: center;
-
-          flex-shrink: 0;
-
-          font-size: 11px;
-
-          overflow: hidden;
-        }
-
-        /*
-          If a category has an image uploaded
-          from Categories.jsx, show it here.
-        */
-
-        .store-dropdown-category-image {
-          width: 100%;
-          height: 100%;
-
-          display: block;
-
-          object-fit: cover;
-        }
-
-        /* =====================================================
-           HEADER RIGHT
-        ===================================================== */
-
-        .store-header-actions {
-          display: flex;
-
-          align-items: center;
-
-          justify-content:
-            flex-end;
-
-          gap: 10px;
-        }
-
-        /* =====================================================
-           LANGUAGE SWITCHER
-        ===================================================== */
-
-        .store-language-switcher {
-          height: 36px;
-
-          padding: 0 10px;
-
-          display: flex;
-
-          align-items: center;
-
-          justify-content: center;
-
-          gap: 5px;
-
-          border:
-            1px solid
-            rgba(255,255,255,0.35);
-
-          border-radius: 20px;
-
-          background:
-            rgba(255,255,255,0.10);
-
-          white-space: nowrap;
-        }
-
-        .store-language-switcher button {
-          padding: 0;
-
-          border: none;
-
-          outline: none;
-
-          background: transparent;
-
-          color:
-            rgba(255,255,255,0.65);
-
-          font-size: 10px;
-
-          font-weight: 800;
-
-          cursor: pointer;
-
-          transition:
-            color 0.2s ease,
-            transform 0.2s ease;
-        }
-
-        .store-language-switcher button:hover {
-          color: #ffffff;
-        }
-
-        .store-language-switcher button.active {
-          color: #ffffff;
-        }
-
-        .store-language-switcher button:hover {
-          transform:
-            translateY(-1px);
-        }
-
-        .store-language-switcher span {
-          color:
-            rgba(255,255,255,0.4);
-
-          font-size: 10px;
-        }
-
-        /* =====================================================
-           ICON BUTTON
-        ===================================================== */
-
-        .store-icon-button {
-          width: 42px;
-
-          height: 42px;
-
-          padding: 0;
-
-          border:
-            1px solid
-            rgba(255,255,255,0.32);
-
-          border-radius: 50%;
-
-          background:
-            rgba(255,255,255,0.12);
-
-          color: #ffffff;
-
-          display: flex;
-
-          align-items: center;
-
-          justify-content: center;
-
-          position: relative;
-
-          cursor: pointer;
-
-          transition:
-            background 0.2s ease,
-            transform 0.2s ease,
-            border-color 0.2s ease;
-        }
-
-        .store-icon-button:hover {
-          background:
-            rgba(255,255,255,0.23);
-
-          border-color:
-            rgba(255,255,255,0.65);
-
-          transform:
-            translateY(-2px);
-        }
-
-        .store-cart-count {
-          position: absolute;
-
-          top: -5px;
-
-          right: -4px;
-
-          min-width: 18px;
-
-          height: 18px;
-
-          padding: 0 5px;
-
-          border:
-            2px solid
-            var(--teal);
-
-          border-radius: 20px;
-
-          background: #ffffff;
-
-          color:
-            var(--teal-dark);
-
-          display: flex;
-
-          align-items: center;
-
-          justify-content: center;
-
-          font-size: 9px;
-
-          font-weight: 800;
-        }
-
-        /* =====================================================
-           ACCOUNT
-        ===================================================== */
-
+        .store-category-dropdown,
         .store-account-wrapper {
           position: relative;
         }
 
-        .store-account-button {
-          min-width: 135px;
-          height: 42px;
-
-          padding: 0 14px;
-
-          border:
-            1px solid
-            rgba(255,255,255,0.32);
-
-          border-radius: 22px;
-
-          background:
-            rgba(255,255,255,0.12);
-
-          color: #ffffff;
-
-          display: flex;
-
-          align-items: center;
-
-          justify-content: center;
-
-          gap: 9px;
-
-          cursor: pointer;
-
-          transition:
-            background 0.2s ease,
-            border-color 0.2s ease,
-            transform 0.2s ease;
+        .store-nav-chevron {
+          font-size: 9px !important;
+          transition: transform .2s;
         }
 
-        .store-account-button:hover {
-          background:
-            rgba(255,255,255,0.23);
+        .store-nav-chevron.open,
+        .store-account-chevron.open {
+          transform: rotate(180deg);
+        }
 
-          border-color:
-            rgba(255,255,255,0.65);
+        .store-category-menu,
+        .store-account-menu {
+          position: absolute;
+          z-index: 1300;
+          padding: 8px;
+          background: white;
+          border: 1px solid var(--sh-border);
+          border-radius: 14px;
+          box-shadow: 0 18px 45px rgba(13,102,104,.17);
+          color: #344054;
+        }
 
-          transform:
-            translateY(-1px);
+        .store-category-menu {
+          top: calc(100% + 14px);
+          left: 50%;
+          width: 240px;
+          max-height: min(65vh, 480px);
+          overflow-y: auto;
+          transform: translateX(-50%);
+          scrollbar-width: thin;
+        }
+
+        .store-category-menu-title {
+          position: sticky;
+          top: -8px;
+          z-index: 1;
+          padding: 10px;
+          background: white;
+          color: #98a2b3;
+          font-size: 10px;
+          font-weight: 800;
+          text-transform: uppercase;
+        }
+
+        .store-category-menu button,
+        .store-account-menu button {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          width: 100%;
+          min-height: 39px;
+          padding: 7px 9px;
+          border: 0;
+          border-radius: 9px;
+          background: transparent;
+          color: #475467;
+          text-align: start;
+          font-size: 12px;
+          font-weight: 650;
+          cursor: pointer;
+        }
+
+        .store-category-menu button:hover,
+        .store-account-menu button:hover {
+          background: var(--sh-light);
+          color: var(--sh-dark);
+        }
+
+        .store-dropdown-icon {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
+          width: 30px;
+          height: 30px;
+          overflow: hidden;
+          border-radius: 8px;
+          background: var(--sh-light);
+          color: var(--sh-teal);
+        }
+
+        .store-dropdown-category-image {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+        }
+
+        .store-header-actions {
+          display: flex;
+          align-items: center;
+          justify-content: flex-end;
+          gap: 10px;
+        }
+
+        .store-language-switcher {
+          display: flex;
+          align-items: center;
+          gap: 5px;
+          height: 36px;
+          padding: 0 10px;
+          border: 1px solid rgba(255,255,255,.35);
+          border-radius: 20px;
+          background: rgba(255,255,255,.1);
+        }
+
+        .store-language-switcher button {
+          padding: 0;
+          border: 0;
+          background: transparent;
+          color: rgba(255,255,255,.65);
+          font-size: 10px;
+          font-weight: 800;
+          cursor: pointer;
+        }
+
+        .store-language-switcher button.active {
+          color: white;
+        }
+
+        .store-language-switcher span {
+          color: rgba(255,255,255,.4);
+        }
+
+        .store-icon-button,
+        .store-mobile-toggle {
+          position: relative;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
+          width: 42px;
+          height: 42px;
+          padding: 0;
+          border: 1px solid rgba(255,255,255,.32);
+          border-radius: 50%;
+          background: rgba(255,255,255,.12);
+          color: white;
+          cursor: pointer;
+        }
+
+        .store-icon-button:hover,
+        .store-mobile-toggle:hover {
+          background: rgba(255,255,255,.23);
+        }
+
+        .store-cart-count {
+          position: absolute;
+          top: -5px;
+          right: -4px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          min-width: 19px;
+          height: 19px;
+          padding: 0 4px;
+          border: 2px solid var(--sh-teal);
+          border-radius: 20px;
+          background: white;
+          color: var(--sh-dark);
+          font-size: 10px;
+          font-weight: 800;
+        }
+
+        .store-account-button {
+          display: flex;
+          align-items: center;
+          gap: 9px;
+          min-height: 42px;
+          padding: 5px 12px;
+          border: 1px solid rgba(255,255,255,.32);
+          border-radius: 24px;
+          background: rgba(255,255,255,.12);
+          color: white;
+          cursor: pointer;
         }
 
         .store-account-avatar {
-          width: 29px;
-          height: 29px;
-
-          border-radius: 50%;
-
-          background: #ffffff;
-
-          color: var(--teal);
-
           display: flex;
-
           align-items: center;
           justify-content: center;
-
-          flex-shrink: 0;
-
-          font-size: 12px;
+          width: 29px;
+          height: 29px;
+          border-radius: 50%;
+          background: white;
+          color: var(--sh-teal);
         }
 
         .store-account-text {
-          font-size: 10px;
-
+          font-size: 11px;
           font-weight: 750;
-
           white-space: nowrap;
         }
 
         .store-account-chevron {
-          font-size: 7px;
-
-          transition:
-            transform 0.2s ease;
-        }
-
-        .store-account-chevron.open {
-          transform:
-            rotate(180deg);
+          font-size: 9px;
+          transition: transform .2s;
         }
 
         .store-account-menu {
-          position: absolute;
-
-          top: 51px;
-
+          top: calc(100% + 9px);
           right: 0;
-
-          width: 190px;
-
-          padding: 8px;
-
-          border:
-            1px solid
-            var(--border);
-
-          border-radius: 13px;
-
-          background: #ffffff;
-
-          box-shadow:
-            0 18px 45px
-            rgba(13,102,104,0.16);
-
-          z-index: 1300;
-        }
-
-        .store-account-menu button {
-          width: 100%;
-
-          min-height: 40px;
-
-          padding: 7px 10px;
-
-          border: none;
-
-          border-radius: 8px;
-
-          background: transparent;
-
-          color: #475467;
-
-          display: flex;
-
-          align-items: center;
-
-          gap: 10px;
-
-          text-align: left;
-
-          font-size: 10px;
-
-          font-weight: 650;
-
-          cursor: pointer;
-
-          transition:
-            background 0.18s ease,
-            color 0.18s ease;
+          width: 195px;
         }
 
         .store-account-menu button svg {
-          width: 15px;
-
-          color: var(--teal);
-
-          font-size: 12px;
+          color: var(--sh-teal);
         }
 
-        .store-account-menu button:hover {
-          background:
-            var(--teal-light);
-
-          color:
-            var(--teal-dark);
-        }
-
-        .store-account-menu button.logout {
-          margin-top: 4px;
-
-          border-top:
-            1px solid #edf2f2;
-
-          border-radius:
-            0 0 8px 8px;
-
-          color: #d92d20;
-        }
-
+        .store-account-menu button.logout,
         .store-account-menu button.logout svg {
           color: #d92d20;
-        }        /* =====================================================
-        RTL
-     ===================================================== */
-
-     html[dir="rtl"] .store-category-menu button,
-     html[dir="rtl"] .store-account-menu button {
-       text-align: right;
-     }
-
-     html[dir="rtl"] .store-nav-chevron {
-       margin-left: 0;
-       margin-right: 2px;
-     }
-
-     html[dir="rtl"] .store-account-menu {
-       right: auto;
-       left: 0;
-     }
-
-     html[dir="rtl"] .store-header-logo-image {
-       object-position: right center;
-     }
-
-     /* =====================================================
-        RESPONSIVE
-     ===================================================== */
-
-     @media (max-width: 1200px) {
-       .store-header {
-         padding: 0 2.5%;
-
-         grid-template-columns:
-           minmax(130px, 1fr)
-           auto
-           minmax(220px, 1fr);
-
-         gap: 18px;
-       }
-
-       .store-nav {
-         gap: 20px;
-       }
-
-       .store-account-button {
-         min-width: 115px;
-         padding: 0 10px;
-       }
-     }
-
-     @media (max-width: 1000px) {
-       .store-header {
-         min-height: auto;
-
-         padding: 12px 20px;
-
-         grid-template-columns:
-           1fr auto;
-
-         grid-template-areas:
-           "logo actions"
-           "nav nav";
-
-         gap: 10px 20px;
-       }
-
-       .store-logo {
-         grid-area: logo;
-         height: 55px;
-       }
-
-       .store-header-actions {
-         grid-area: actions;
-       }
-
-       .store-nav {
-         grid-area: nav;
-
-         width: 100%;
-         height: 50px;
-
-         gap: 30px;
-       }
-
-       .store-nav-link,
-       .store-category-dropdown {
-         height: 50px;
-       }
-
-       .store-nav-link::after {
-         bottom: 3px;
-       }
-
-       .store-category-menu {
-         top: 47px;
-
-         max-height:
-           calc(100vh - 160px);
-       }
-     }
-
-     @media (max-width: 720px) {
-       .store-header {
-         padding: 10px 14px;
-
-         grid-template-columns:
-           1fr;
-
-         grid-template-areas:
-           "logo"
-           "actions"
-           "nav";
-       }
-
-       .store-logo {
-         width: 100%;
-
-         justify-content: center;
-       }
-
-       .store-header-logo-image {
-         max-width: 160px;
-       }
-
-       .store-header-actions {
-         width: 100%;
-
-         justify-content: center;
-
-         flex-wrap: wrap;
-       }
-
-       .store-nav {
-         width: 100%;
-
-         overflow-x: auto;
-
-         justify-content:
-           flex-start;
-
-         gap: 22px;
-
-         scrollbar-width: none;
-       }
-
-       .store-nav::-webkit-scrollbar {
-         display: none;
-       }
-
-       .store-nav-link {
-         flex-shrink: 0;
-       }
-
-       .store-category-dropdown {
-         flex-shrink: 0;
-       }
-
-       .store-category-menu {
-         position: fixed;
-
-         top: auto;
-
-         left: 50%;
-
-         width:
-           min(
-             92vw,
-             340px
-           );
-
-         max-height: 65vh;
-
-         transform:
-           translateX(-50%);
-       }
-
-       .store-category-menu::before {
-         display: none;
-       }
-     }
-
-     @media (max-width: 480px) {
-       .store-language-switcher {
-         height: 34px;
-       }
-
-       .store-icon-button {
-         width: 38px;
-         height: 38px;
-       }
-
-       .store-account-button {
-         min-width: auto;
-
-         width: 42px;
-         height: 42px;
-
-         padding: 0;
-
-         border-radius: 50%;
-       }
-
-       .store-account-text,
-       .store-account-chevron {
-         display: none;
-       }
-
-       .store-account-avatar {
-         width: auto;
-         height: auto;
-
-         background: transparent;
-
-         color: #ffffff;
-       }
-
-       .store-account-menu {
-         position: fixed;
-
-         top: auto;
-
-         right: 4%;
-
-         width: 190px;
-       }
-
-       html[dir="rtl"] .store-account-menu {
-         right: auto;
-         left: 4%;
-       }
-     }
-   `}</style>
-
-   {/* =====================================================
-       HEADER
-   ===================================================== */}
-
-   <header className="store-header">
-
-     {/* =================================================
-         LOGO
-     ================================================== */}
-
-     <div
-       className="store-logo"
-       onClick={goHome}
-       role="button"
-       tabIndex={0}
-       onKeyDown={(event) => {
-         if (
-           event.key === "Enter" ||
-           event.key === " "
-         ) {
-           goHome();
-         }
-       }}
-     >
-       {storeSettings.storeBanner ? (
-         <img
-           src={
-             storeSettings.storeBanner
-           }
-           alt={
-             storeSettings.storeName ||
-             "Store"
-           }
-           className="store-header-logo-image"
-         />
-       ) : (
-         <div className="store-logo-fallback">
-           <FaPaw className="store-logo-icon" />
-
-           <span className="store-logo-text">
-             {storeSettings.storeName ||
-               "Pet Store"}
-           </span>
-         </div>
-       )}
-     </div>
-
-     {/* =================================================
-         NAVIGATION
-     ================================================== */}
-
-     <nav className="store-nav">
-
-       {/* HOME */}
-
-       <button
-         type="button"
-         className="store-nav-link home"
-         onClick={goHome}
-       >
-         <FaHome />
-
-         <span>
-           {t.home || "Home"}
-         </span>
-       </button>
-
-       {/* ABOUT */}
-
-       <button
-         type="button"
-         className="store-nav-link"
-         onClick={goToAbout}
-       >
-         <FaInfoCircle />
-
-         <span>
-           {t.aboutUs ||
-             "About Us"}
-         </span>
-       </button>
-
-       {/* =============================================
-           DYNAMIC CATEGORIES
-       ============================================== */}
-
-       <div className="store-category-dropdown">
-
-         <button
-           type="button"
-           className="store-nav-link"
-           onClick={() => {
-             setCategoriesOpen(
-               (current) =>
-                 !current
-             );
-
-             setAccountOpen(false);
-           }}
-         >
-           <FaBoxOpen />
-
-           <span>
-             {t.categories ||
-               "Categories"}
-           </span>
-
-           <FaChevronDown
-             className={`store-nav-chevron ${
-               categoriesOpen
-                 ? "open"
-                 : ""
-             }`}
-           />
-         </button>
-
-         {categoriesOpen && (
-           <div className="store-category-menu">
-
-             <div className="store-category-menu-title">
-               {language === "ar"
-                 ? "تسوق حسب الفئة"
-                 : "Shop by Category"}
-             </div>
-
-             {/* ALL PRODUCTS */}
-
-             <button
-               type="button"
-               onClick={() =>
-                 chooseCategory(
-                   "All categories"
-                 )
-               }
-             >
-               <span className="store-dropdown-icon">
-                 <FaBoxOpen />
-               </span>
-
-               <span>
-                 {language === "ar"
-                   ? "كل المنتجات"
-                   : "All Products"}
-               </span>
-             </button>
-
-             {/* =========================================
-                 CATEGORIES FROM Categories.jsx
-
-                 No hardcoded category names here.
-
-                 Add Category:
-                 appears automatically.
-
-                 Edit Category:
-                 updates automatically.
-
-                 Delete Category:
-                 disappears automatically.
-             ========================================== */}
-
-             {categories.map(
-               (category) => {
-                 const categoryName =
-                   String(
-                     category.title ||
-                       category.name ||
-                       ""
-                   ).trim();
-
-                 if (!categoryName) {
-                   return null;
-                 }
-
-                 return (
-                   <button
-                     type="button"
-                     key={
-                       category.id ||
-                       categoryName
-                     }
-                     onClick={() =>
-                       chooseCategory(
-                         categoryName
-                       )
-                     }
-                   >
-                     <span className="store-dropdown-icon">
-                       {category.image ? (
-                         <img
-                           src={
-                             category.image
-                           }
-                           alt={
-                             categoryName
-                           }
-                           className="store-dropdown-category-image"
-                         />
-                       ) : (
-                         <FaPaw />
-                       )}
-                     </span>
-
-                     <span>
-                       {categoryName}
-                     </span>
-                   </button>
-                 );
-               }
-             )}
-           </div>
-         )}
-       </div>
-
-       {/* CONTACT */}
-
-       <button
-         type="button"
-         className="store-nav-link"
-         onClick={goToContact}
-       >
-         <FaEnvelope />
-
-         <span>
-           {t.contactUs ||
-             "Contact Us"}
-         </span>
-       </button>
-     </nav>
-
-     {/* =================================================
-         RIGHT SIDE
-     ================================================== */}
-
-     <div className="store-header-actions">
-
-       {/* ===============================================
-           LANGUAGE
-       ================================================ */}
-
-       <div className="store-language-switcher">
-
-         <button
-           type="button"
-           className={
-             language === "en"
-               ? "active"
-               : ""
-           }
-           onClick={() =>
-             changeLanguage("en")
-           }
-         >
-           EN
-         </button>
-
-         <span>|</span>
-
-         <button
-           type="button"
-           className={
-             language === "ar"
-               ? "active"
-               : ""
-           }
-           onClick={() =>
-             changeLanguage("ar")
-           }
-         >
-           عربي
-         </button>
-       </div>
-
-       {/* ===============================================
-           ORDERS
-       ================================================ */}
-
-       <button
-         type="button"
-         className="store-icon-button"
-         title={
-           language === "ar"
-             ? "طلباتي"
-             : "My Orders"
-         }
-         onClick={() => {
-           setCategoriesOpen(false);
-
-           setAccountOpen(false);
-
-           navigate("/orders");
-         }}
-       >
-         <FaClipboardList />
-       </button>
-
-       {/* ===============================================
-           CART
-       ================================================ */}
-
-       <button
-         type="button"
-         className="store-icon-button"
-         title={
-           t.cart || "Cart"
-         }
-         onClick={openCart}
-       >
-         <FaShoppingCart />
-
-         {cartCount > 0 && (
-           <span className="store-cart-count">
-             {cartCount > 99
-               ? "99+"
-               : cartCount}
-           </span>
-         )}
-       </button>
-
-       {/* ===============================================
-           ACCOUNT
-       ================================================ */}
-
-       <div className="store-account-wrapper">
-
-         <button
-           type="button"
-           className="store-account-button"
-           onClick={() => {
-             setAccountOpen(
-               (current) =>
-                 !current
-             );
-
-             setCategoriesOpen(false);
-           }}
-         >
-           <span className="store-account-avatar">
-             <FaUser />
-           </span>
-
-           <span className="store-account-text">
-             {language === "ar"
-               ? "حسابي"
-               : "My Account"}
-           </span>
-
-           <FaChevronDown
-             className={`store-account-chevron ${
-               accountOpen
-                 ? "open"
-                 : ""
-             }`}
-           />
-         </button>
-
-         {accountOpen && (
-           <div className="store-account-menu">
-
-             {/* MY ORDERS */}
-
-             <button
-               type="button"
-               onClick={() => {
-                 setAccountOpen(
-                   false
-                 );
-
-                 navigate(
-                   "/orders"
-                 );
-               }}
-             >
-               <FaClipboardList />
-
-               <span>
-                 {language === "ar"
-                   ? "طلباتي"
-                   : "My Orders"}
-               </span>
-             </button>
-
-             {/* MY ACCOUNT */}
-
-             <button
-               type="button"
-               onClick={() => {
-                 setAccountOpen(
-                   false
-                 );
-
-                 navigate(
-                   "/account"
-                 );
-               }}
-             >
-               <FaUser />
-
-               <span>
-                 {language === "ar"
-                   ? "حسابي"
-                   : "My Account"}
-               </span>
-             </button>
-
-             {/* ACCOUNT SETTINGS */}
-
-             <button
-               type="button"
-               onClick={() => {
-                 setAccountOpen(
-                   false
-                 );
-
-                 navigate(
-                   "/account/settings"
-                 );
-               }}
-             >
-               <FaCog />
-
-               <span>
-                 {language === "ar"
-                   ? "الإعدادات"
-                   : "Settings"}
-               </span>
-             </button>
-
-             {/* LOGOUT */}
-
-             <button
-               type="button"
-               className="logout"
-               onClick={
-                 handleLogout
-               }
-             >
-               <FaSignOutAlt />
-
-               <span>
-                 {language === "ar"
-                   ? "تسجيل الخروج"
-                   : "Logout"}
-               </span>
-             </button>
-           </div>
-         )}
-       </div>
-     </div>
-   </header>
- </>
-);
+        }
+
+        .store-mobile-toggle {
+          display: none;
+        }
+
+        @media (max-width: 1200px) {
+          .store-header {
+            padding: 0 2.5%;
+            gap: 15px;
+            grid-template-columns:
+              minmax(155px, 1fr)
+              auto
+              minmax(215px, 1fr);
+          }
+
+          .store-nav {
+            gap: 16px;
+          }
+
+          .store-logo-text {
+            font-size: 16px;
+          }
+        }
+
+        @media (max-width: 1000px) {
+          .store-header {
+            min-height: 70px;
+            padding: 10px 20px;
+            grid-template-columns: minmax(0,1fr) auto;
+            gap: 12px;
+          }
+
+          .store-nav {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            display: none;
+            flex-direction: column;
+            align-items: stretch;
+            gap: 2px;
+            height: auto;
+            padding: 12px 20px 18px;
+            background: var(--sh-teal);
+            box-shadow: 0 16px 25px rgba(0,0,0,.12);
+          }
+
+          .store-nav.mobile-open {
+            display: flex;
+          }
+
+          .store-nav-link {
+            justify-content: flex-start;
+            width: 100%;
+            height: 42px;
+            padding: 0 12px;
+          }
+
+          .store-nav-link::after {
+            display: none;
+          }
+
+          .store-category-menu {
+            position: static;
+            width: 100%;
+            max-height: 250px;
+            margin: 4px 0 8px;
+            transform: none;
+          }
+
+          .store-mobile-toggle {
+            display: flex;
+          }
+        }
+
+        @media (max-width: 560px) {
+          .store-header {
+            padding: 10px 12px;
+            gap: 8px;
+          }
+
+          .store-header .store-header-logo-image {
+            width: 38px !important;
+            height: 38px !important;
+            min-width: 38px;
+            min-height: 38px;
+            max-width: 38px;
+            max-height: 38px;
+            border-radius: 10px !important;
+          }
+
+          .store-logo {
+            gap: 7px;
+          }
+
+          .store-logo-text {
+            font-size: 13px;
+          }
+
+          .store-header-actions {
+            gap: 5px;
+          }
+
+          .store-language-switcher {
+            height: 32px;
+            padding: 0 6px;
+          }
+
+          .store-icon-button,
+          .store-mobile-toggle {
+            width: 34px;
+            height: 34px;
+          }
+
+          .store-account-button {
+            width: 34px;
+            height: 34px;
+            min-height: 34px;
+            padding: 0;
+            justify-content: center;
+          }
+
+          .store-account-avatar {
+            width: 22px;
+            height: 22px;
+          }
+
+          .store-account-text,
+          .store-account-chevron {
+            display: none;
+          }
+
+          .store-account-menu {
+            right: 0;
+            width: 185px;
+          }
+        }
+
+        html[dir="rtl"] .store-account-menu {
+          right: auto;
+          left: 0;
+        }
+
+        html[dir="rtl"] .store-nav-link {
+          text-align: right;
+        }
+      `}</style>
+
+      {/* PART 2 CONTINUES HERE */}
+
+      <header className="store-header">
+        {/* LOGO + STORE NAME */}
+        <button
+          type="button"
+          className="store-logo"
+          onClick={() => goTo("/store")}
+          aria-label={`${brandName} home`}
+        >
+          {storeSettings.storeBanner ? (
+            <img
+              src={storeSettings.storeBanner}
+              alt={`${brandName} logo`}
+              className="store-header-logo-image"
+            />
+          ) : (
+            <FaPaw className="store-logo-icon" />
+          )}
+
+          <span className="store-logo-text">
+            {brandName}
+          </span>
+        </button>
+
+        {/* NAVIGATION */}
+        <nav
+          className={`store-nav ${
+            mobileOpen ? "mobile-open" : ""
+          }`}
+          aria-label="Store navigation"
+        >
+          {/* 1. HOME */}
+          <button
+            type="button"
+            className="store-nav-link home"
+            onClick={() => goTo("/store")}
+          >
+            <FaHome />
+            <span>{t.home || "Home"}</span>
+          </button>
+
+          {/* 2. CATEGORIES */}
+          <div className="store-category-dropdown">
+            <button
+              type="button"
+              className="store-nav-link"
+              aria-expanded={categoriesOpen}
+              onClick={() => {
+                setCategoriesOpen(!categoriesOpen);
+                setAccountOpen(false);
+              }}
+            >
+              <FaBoxOpen />
+              <span>{t.categories || "Categories"}</span>
+              <FaChevronDown
+                className={`store-nav-chevron ${
+                  categoriesOpen ? "open" : ""
+                }`}
+              />
+            </button>
+
+            {categoriesOpen && (
+              <div className="store-category-menu">
+                <div className="store-category-menu-title">
+                  {language === "ar"
+                    ? "تسوق حسب الفئة"
+                    : "Shop by Category"}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => chooseCategory(null)}
+                >
+                  <span className="store-dropdown-icon">
+                    <FaBoxOpen />
+                  </span>
+                  <span>
+                    {language === "ar"
+                      ? "كل المنتجات"
+                      : "All Products"}
+                  </span>
+                </button>
+
+                {categories.map((category) => (
+                  <button
+                    type="button"
+                    key={category.id}
+                    onClick={() =>
+                      chooseCategory(category.title)
+                    }
+                  >
+                    <span className="store-dropdown-icon">
+                      {category.image ? (
+                        <img
+                          src={category.image}
+                          alt={category.title}
+                          className="store-dropdown-category-image"
+                        />
+                      ) : (
+                        <FaPaw />
+                      )}
+                    </span>
+
+                    <span>{category.title}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* 3. ABOUT US */}
+          <button
+            type="button"
+            className="store-nav-link"
+            onClick={() => goTo("/about")}
+          >
+            <FaInfoCircle />
+            <span>{t.aboutUs || "About Us"}</span>
+          </button>
+
+          {/* 4. CONTACT US */}
+          <button
+            type="button"
+            className="store-nav-link"
+            onClick={() => goTo("/contact")}
+          >
+            <FaEnvelope />
+            <span>{t.contactUs || "Contact Us"}</span>
+          </button>
+        </nav>
+
+        {/* RIGHT ACTIONS */}
+        <div className="store-header-actions">
+          {/* LANGUAGE */}
+          <div className="store-language-switcher">
+            <button
+              type="button"
+              className={language === "en" ? "active" : ""}
+              onClick={() => changeLanguage("en")}
+            >
+              EN
+            </button>
+
+            <span>/</span>
+
+            <button
+              type="button"
+              className={language === "ar" ? "active" : ""}
+              onClick={() => changeLanguage("ar")}
+            >
+              عربي
+            </button>
+          </div>
+
+          {/* ORDERS */}
+          <button
+            type="button"
+            className="store-icon-button"
+            title="My Orders"
+            aria-label="My Orders"
+            onClick={() => goTo("/orders")}
+          >
+            <FaClipboardList />
+          </button>
+
+          {/* CART */}
+          <button
+            type="button"
+            className="store-icon-button"
+            title="Shopping Cart"
+            aria-label="Shopping Cart"
+            onClick={() => goTo("/cart")}
+          >
+            <FaShoppingCart />
+
+            {cartCount > 0 && (
+              <span className="store-cart-count">
+                {cartCount > 99 ? "99+" : cartCount}
+              </span>
+            )}
+          </button>
+
+          {/* ACCOUNT */}
+          <div className="store-account-wrapper">
+            <button
+              type="button"
+              className="store-account-button"
+              aria-expanded={accountOpen}
+              onClick={() => {
+                setAccountOpen(!accountOpen);
+                setCategoriesOpen(false);
+              }}
+            >
+              <span className="store-account-avatar">
+                <FaUser />
+              </span>
+
+              <span className="store-account-text">
+                {language === "ar"
+                  ? "حسابي"
+                  : "My Account"}
+              </span>
+
+              <FaChevronDown
+                className={`store-account-chevron ${
+                  accountOpen ? "open" : ""
+                }`}
+              />
+            </button>
+
+            {accountOpen && (
+              <div className="store-account-menu">
+                <button
+                  type="button"
+                  onClick={() => goTo("/orders")}
+                >
+                  <FaClipboardList />
+                  <span>
+                    {language === "ar"
+                      ? "طلباتي"
+                      : "My Orders"}
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => goTo("/cart")}
+                >
+                  <FaShoppingCart />
+                  <span>
+                    {language === "ar"
+                      ? "سلة التسوق"
+                      : "My Cart"}
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => goTo("/settings")}
+                >
+                  <FaCog />
+                  <span>
+                    {language === "ar"
+                      ? "الإعدادات"
+                      : "Settings"}
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  className="logout"
+                  onClick={() => goTo("/")}
+                >
+                  <FaSignOutAlt />
+                  <span>
+                    {language === "ar"
+                      ? "تسجيل الخروج"
+                      : "Logout"}
+                  </span>
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* MOBILE HAMBURGER */}
+          <button
+            type="button"
+            className="store-mobile-toggle"
+            aria-label={
+              mobileOpen ? "Close menu" : "Open menu"
+            }
+            aria-expanded={mobileOpen}
+            onClick={() => {
+              setMobileOpen(!mobileOpen);
+              setCategoriesOpen(false);
+              setAccountOpen(false);
+            }}
+          >
+            {mobileOpen ? <FaTimes /> : <FaBars />}
+          </button>
+        </div>
+      </header>
+    </>
+  );
 }
 
 export default StoreHeader;
