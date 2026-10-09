@@ -6589,7 +6589,7 @@ button:hover {
 .owners-add-button {
   background: #55b7b3;
 
-  border: 1px solid #55b7b3;
+  border: 2px solid #55b7b3;
   padding: 10px;
 
   color: #ffffff;
@@ -13714,7 +13714,7 @@ button:hover {
   min-height: 42px !important;
 
   margin: 0 !important;
-  padding: 0 16px !important;
+  padding:  16px !important;
 
   display: inline-flex !important;
   align-items: center !important;
@@ -21560,3 +21560,198 @@ html body #root
   }
 }
 
+
+/* =========================================
+   REPORTS DATE FILTER - COMPACT LAYOUT
+   ========================================= */
+
+   .reports-page .reports-date-box {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+  
+    gap: 14px !important;
+    height: auto !important;
+    min-height: 0 !important;
+    padding: 18px 20px !important;
+  }
+  
+  /* FROM / TO - CENTERED, ORIGINAL SIZE */
+  
+  .reports-page .reports-date-box-left {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    flex-wrap: wrap !important;
+  
+    gap: 12px !important;
+    width: 100% !important;
+    margin: 0 auto !important;
+  }
+  
+  /* FOUR SMALL BUTTONS IN ONE ROW */
+  
+  .reports-page .reports-quick-buttons {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: center !important;
+    flex-wrap: wrap !important;
+  
+    gap: 8px !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  
+  .reports-page .reports-quick-date-button {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  
+    flex: 0 0 auto !important;
+  
+    width: 94px !important;
+    min-width: 0 !important;
+    max-width: 94px !important;
+  
+    height: 30px !important;
+    min-height: 30px !important;
+  
+    margin: 0 !important;
+    padding: 5px 8px !important;
+  
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    line-height: 1.2 !important;
+  
+    border-radius: 7px !important;
+    white-space: nowrap !important;
+  }
+  
+  /* PRINT ICON BUTTON */
+  
+  .reports-page .reports-print-icon-button {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  
+    width: 34px !important;
+    min-width: 34px !important;
+    height: 34px !important;
+    min-height: 34px !important;
+  
+    padding: 0 !important;
+    margin: 0 auto !important;
+  
+    border: 1px solid #cfe5e2;
+    border-radius: 8px;
+  
+    background: #eef9f7;
+    color: #328f89;
+  
+    font-size: 14px;
+    cursor: pointer;
+    transition: background 0.2s ease;
+  }
+  
+  .reports-page .reports-print-icon-button:hover {
+    background: #d8f1ed;
+    color: #217d77;
+  }
+  
+  /* RESPONSIVE */
+  
+  @media (max-width: 600px) {
+    .reports-page .reports-date-box {
+      padding: 14px 12px !important;
+    }
+  
+    .reports-page .reports-date-box-left {
+      gap: 10px !important;
+    }
+  
+    .reports-page .reports-quick-buttons {
+      gap: 6px !important;
+    }
+  }
+  
+/* PRINT ICON ONLY */
+
+.reports-page .reports-print-icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 1px solid #cfe5e2;
+  border-radius: 8px;
+  background: #eef9f7;
+  color: #328f89;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.reports-page .reports-print-icon-button:hover {
+  background: #d8f1ed;
+}
+
+/* PAGINATION: < 1 > */
+
+.reports-page .reports-pagination-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.reports-page .reports-page-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  min-width: 38px;
+  padding: 0;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.reports-page .reports-page-button.active {
+  background: #55b7b2;
+  color: #fff;
+}
+
+.reports-page .reports-page-button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* Print icon button only */
+
+.reports-page .reports-print-icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 42px;
+  height: 42px;
+  min-width: 42px;
+
+  padding: 0;
+  margin: 0;
+
+  background-color: #55b7b2;
+  color: #ffffff;
+
+  border: none;
+  border-radius: 8px;
+
+  font-size: 18px;
+  cursor: pointer;
+}
+
+.reports-page .reports-print-icon-button:hover {
+  background-color: #429f9a;
+}

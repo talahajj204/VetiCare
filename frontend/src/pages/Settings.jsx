@@ -162,7 +162,6 @@ function ImageUploader({
           </button>
 
           <small>PNG, JPG, WEBP · Max 2 MB</small>
-
           {description && <small>{description}</small>}
         </div>
       )}
@@ -183,6 +182,7 @@ function Settings() {
 
   const [newStatus, setNewStatus] = useState("");
   const [saved, setSaved] = useState(false);
+  const [activeTab, setActiveTab] = useState("store");
 
   const updateField = (key, value) => {
     setForm((current) => ({
@@ -649,6 +649,7 @@ function Settings() {
           /* ABOUT TIMELINE */
 
           .settings-timeline {
+
             display: grid;
             grid-template-columns: repeat(3, minmax(0, 1fr));
             gap: 13px;
@@ -845,6 +846,43 @@ function Settings() {
               justify-content: flex-start;
             }
           }
+
+          /* SETTINGS TABS */
+
+          .settings-tabs {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 24px;
+            padding-bottom: 14px;
+            border-bottom: 1px solid #e5ecee;
+          }
+
+          .settings-tab {
+            width: auto;
+            min-height: 39px;
+            padding: 9px 16px;
+            border: 1px solid #dce7e9;
+            border-radius: 9px;
+            background: #ffffff;
+            color: #40565d;
+            font-family: inherit;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: 0.18s ease;
+          }
+
+          .settings-tab:hover {
+            background: #f0f9f7;
+          }
+
+          .settings-tab.active {
+            background: #159d99;
+            border-color: #159d99;
+            color: #ffffff;
+          }
         `}</style>
 
         <div className="settings-container">
@@ -862,362 +900,429 @@ function Settings() {
             </div>
           </div>
 
+          {/* SETTINGS TABS */}
+          <div className="settings-tabs">
+            <button
+              type="button"
+              className={`settings-tab ${
+                activeTab === "store" ? "active" : ""
+              }`}
+              onClick={() => setActiveTab("store")}
+            >
+              Store Settings
+            </button>
+
+            <button
+              type="button"
+              className={`settings-tab ${
+                activeTab === "about" ? "active" : ""
+              }`}
+              onClick={() => setActiveTab("about")}
+            >
+              About Us
+            </button>
+
+            <button
+              type="button"
+              className={`settings-tab ${
+                activeTab === "contact" ? "active" : ""
+              }`}
+              onClick={() => setActiveTab("contact")}
+            >
+              Contact & Social Media
+            </button>
+
+            <button
+              type="button"
+              className={`settings-tab ${
+                activeTab === "options" ? "active" : ""
+              }`}
+              onClick={() => setActiveTab("options")}
+            >
+              Option List
+            </button>
+          </div>
+
           <form
             className="settings-form"
             onSubmit={handleSave}
           >
+            {/* STORE SETTINGS */}
+            {activeTab === "store" && (
+              <>
+                {/* STORE INFORMATION */}
+                <section className="settings-card">
+                  <div className="settings-card-header">
+                    <h2>Store Information</h2>
+                    <p>
+                      Basic contact details and information
+                      displayed across your store.
+                    </p>
+                  </div>
 
-            {/* STORE INFORMATION */}
+                  {renderInput(
+                    "Store Name",
+                    "storeName",
+                    "Enter store name"
+                  )}
 
-            <section className="settings-card">
-              <div className="settings-card-header">
-                <h2>Store Information</h2>
-                <p>
-                  Manage your brand name and store contact
-                  information.
-                </p>
-              </div>
+                  {renderTextarea(
+                    "Store Description",
+                    "storeDescription",
+                    "Write a short description about your store"
+                  )}
 
-              {renderInput(
-                "Store Name",
-                "storeName",
-                "Enter your brand name"
-              )}
-
-              {renderTextarea(
-                "Store Description",
-                "storeDescription",
-                "Write a description about your store"
-              )}
-
-              <div className="settings-row">
-                {renderInput(
-                  "Email",
-                  "email",
-                  "Enter store email",
-                  "email"
-                )}
-
-                {renderInput(
-                  "Phone Number",
-                  "phone",
-                  "Enter phone number",
-                  "tel"
-                )}
-              </div>
-
-              <div className="settings-row">
-                {renderInput(
-                  "WhatsApp",
-                  "whatsapp",
-                  "Example: +961 3 123 456",
-                  "tel"
-                )}
-
-                {renderInput(
-                  "Address",
-                  "address",
-                  "Enter store address"
-                )}
-              </div>
-            </section>
-
-            {/* STORE BRANDING */}
-
-            <section className="settings-card">
-              <div className="settings-card-header">
-                <h2>Store Branding</h2>
-                <p>
-                  Upload your brand logo. Your store name
-                  and logo are managed separately.
-                </p>
-              </div>
-
-              <ImageUploader
-                label="Store Logo"
-                image={form.storeBanner}
-                onChange={(image) =>
-                  updateImage("storeBanner", image)
-                }
-                onRemove={() =>
-                  updateImage("storeBanner", null)
-                }
-              />
-            </section>
-
-            {/* HOME BANNER */}
-
-            <section className="settings-card">
-              <div className="settings-card-header">
-                <h2>Home Banner</h2>
-                <p>
-                  Control all text and images displayed
-                  in the center of your store homepage.
-                  Empty fields will not display text.
-                </p>
-              </div>
-
-              <ImageUploader
-                label="Home Banner"
-                image={form.homeBanner}
-                onChange={(image) =>
-                  updateImage("homeBanner", image)
-                }
-                onRemove={() =>
-                  updateImage("homeBanner", null)
-                }
-              />
-
-              <div className="settings-section-divider" />
-
-              {renderInput(
-                "Banner Badge Text",
-                "homeBannerBadge",
-                "Enter the small text above your banner title"
-              )}
-
-              {renderInput(
-                "Banner Title",
-                "homeBannerTitle",
-                "Enter the main banner title"
-              )}
-
-              {renderTextarea(
-                "Banner Description",
-                "homeBannerDescription",
-                "Enter the banner description"
-              )}
-
-              {renderInput(
-                "Button Text",
-                "homeBannerButtonText",
-                "Enter button text"
-              )}
-            </section>
-
-            {/* ABOUT US */}
-
-            <section className="settings-card">
-              <div className="settings-card-header">
-                <h2>About Us Page</h2>
-                <p>
-                  Customize your story, image and journey
-                  timeline. Content is saved dynamically.
-                </p>
-              </div>
-
-              {renderInput(
-                "About Title",
-                "aboutTitle",
-                "Enter your About Us title"
-              )}
-
-              {renderTextarea(
-                "About Description",
-                "aboutDescription",
-                "Write your clinic or store story"
-              )}
-
-              <ImageUploader
-                label="About Us Image"
-                image={form.aboutImage}
-                onChange={(image) =>
-                  updateImage("aboutImage", image)
-                }
-                onRemove={() =>
-                  updateImage("aboutImage", null)
-                }
-                description="Recommended: 1200 × 900 px"
-              />
-
-              <div className="settings-section-divider" />
-
-              <div className="settings-card-header">
-                <h2>
-                  <FaPaw
-                    style={{
-                      color: "#159c97",
-                      marginRight: 8,
-                      fontSize: 14,
-                    }}
-                  />
-                  Our Journey Timeline
-                </h2>
-
-                <p>
-                  Customize the three milestones displayed
-                  beside your About Us image.
-                </p>
-              </div>
-
-              <div className="settings-timeline">
-                {[1, 2, 3].map((number) => (
-                  <div
-                    className="settings-timeline-card"
-                    key={number}
-                  >
-                    <div className="settings-timeline-heading">
-                      <span className="settings-timeline-number">
-                        {number}
-                      </span>
-
-                      <h3>Timeline Step {number}</h3>
-                    </div>
+                  <div className="settings-row">
+                    {renderInput(
+                      "Email",
+                      "email",
+                      "Enter store email",
+                      "email"
+                    )}
 
                     {renderInput(
-                      `Step ${number} Title`,
-                      `aboutStep${number}Title`,
-                      `Enter step ${number} title`
-                    )}
-
-                    {renderTextarea(
-                      `Step ${number} Description`,
-                      `aboutStep${number}Description`,
-                      `Enter step ${number} description`
+                      "Phone Number",
+                      "phone",
+                      "Enter phone number",
+                      "tel"
                     )}
                   </div>
-                ))}
-              </div>
-            </section>
 
-            {/* CONTACT US */}
+                  <div className="settings-row">
+                    {renderInput(
+                      "WhatsApp",
+                      "whatsapp",
+                      "Example: +961 3 123 456",
+                      "tel"
+                    )}
 
-            <section className="settings-card">
-              <div className="settings-card-header">
-                <h2>Contact Us Page</h2>
-                <p>
-                  Manage the title and description displayed
-                  on your Contact Us page.
-                </p>
-              </div>
+                    {renderInput(
+                      "Address",
+                      "address",
+                      "Enter store address"
+                    )}
+                  </div>
+                </section>
 
-              {renderInput(
-                "Contact Title",
-                "contactTitle",
-                "Enter your contact page title"
-              )}
+                {/* STORE BRANDING */}
+                <section className="settings-card">
+                  <div className="settings-card-header">
+                    <h2>Store Branding</h2>
+                    <p>
+                      Upload the logo displayed in your
+                      store header and footer.
+                    </p>
+                  </div>
 
-              {renderTextarea(
-                "Contact Description",
-                "contactDescription",
-                "Write a message for your customers"
-              )}
-
-              <p
-                style={{
-                  fontSize: 11.5,
-                  lineHeight: 1.7,
-                  color: "#879ca3",
-                  margin: "4px 0 0",
-                }}
-              >
-                Contact email, phone, WhatsApp and address
-                are managed in Store Information above.
-              </p>
-            </section>
-
-            {/* SOCIAL MEDIA */}
-
-            <section className="settings-card">
-              <div className="settings-card-header">
-                <h2>Social Media</h2>
-                <p>
-                  Add your social media links to display
-                  them on the store.
-                </p>
-              </div>
-
-              <div className="settings-row">
-                {renderInput(
-                  "Instagram",
-                  "instagram",
-                  "Instagram username or URL"
-                )}
-
-                {renderInput(
-                  "Facebook",
-                  "facebook",
-                  "Facebook username or URL"
-                )}
-              </div>
-
-              <div className="settings-row">
-                {renderInput(
-                  "TikTok",
-                  "tiktok",
-                  "TikTok username or URL"
-                )}
-              </div>
-
-              <div className="settings-social-icons">
-                <span><FaInstagram /></span>
-                <span><FaFacebookF /></span>
-                <span><FaTiktok /></span>
-                <span><FaWhatsapp /></span>
-              </div>
-            </section>
-
-            {/* STATUS MANAGEMENT */}
-
-            <section className="settings-card">
-              <div className="settings-card-header">
-                <h2>Status Management</h2>
-                <p>
-                  Add or remove the status options
-                  available in your system.
-                </p>
-              </div>
-
-              <div className="settings-status-list">
-                {statuses.map((status) => (
-                  <span
-                    className="settings-status"
-                    key={status}
-                  >
-                    {status}
-
-                    <button
-                      type="button"
-                      title={`Remove ${status}`}
-                      onClick={() =>
-                        removeStatus(status)
-                      }
-                    >
-                      <FaTimes />
-                    </button>
-                  </span>
-                ))}
-              </div>
-
-              <div className="settings-add-status">
-                <input
-                  type="text"
-                  placeholder="Enter new status"
-                  value={newStatus}
-                  onChange={(event) =>
-                    setNewStatus(event.target.value)
-                  }
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter") {
-                      event.preventDefault();
-                      addStatus();
+                  <ImageUploader
+                    label="Store Logo"
+                    image={form.storeBanner}
+                    onChange={(image) =>
+                      updateImage("storeBanner", image)
                     }
-                  }}
+                    onRemove={() =>
+                      updateImage("storeBanner", null)
+                    }
+                  />
+                </section>
+
+                {/* HOME BANNER */}
+                <section className="settings-card">
+                  <div className="settings-card-header">
+                    <h2>Home Banner</h2>
+                    <p>
+                      Control all text and images displayed
+                      in the center of your store homepage.
+                      Empty fields will not display text.
+                    </p>
+                  </div>
+
+                  <ImageUploader
+                    label="Home Banner"
+                    image={form.homeBanner}
+                    onChange={(image) =>
+                      updateImage("homeBanner", image)
+                    }
+                    onRemove={() =>
+                      updateImage("homeBanner", null)
+                    }
+                  />
+
+                  <div className="settings-section-divider" />
+
+                  {renderInput(
+                    "Banner Badge Text",
+                    "homeBannerBadge",
+                    "Enter the small text above your banner title"
+                  )}
+
+                  {renderInput(
+                    "Banner Title",
+                    "homeBannerTitle",
+                    "Enter the main banner title"
+                  )}
+
+                  {renderTextarea(
+                    "Banner Description",
+                    "homeBannerDescription",
+                    "Enter the banner description"
+                  )}
+
+                  {renderInput(
+                    "Button Text",
+                    "homeBannerButtonText",
+                    "Enter button text"
+                  )}
+                </section>
+              </>
+            )}
+
+            {/* ABOUT US - ORIGINAL FIELDS */}
+            {activeTab === "about" && (
+              <section className="settings-card">
+                <div className="settings-card-header">
+                  <h2>About Us Page</h2>
+                  <p>
+                    Customize your story, image and journey
+                    timeline. Content is saved dynamically.
+                  </p>
+                </div>
+
+                {renderInput(
+                  "About Title",
+                  "aboutTitle",
+                  "Enter your About Us title"
+                )}
+
+                {renderTextarea(
+                  "About Description",
+                  "aboutDescription",
+                  "Write your clinic or store story"
+                )}
+
+                <ImageUploader
+                  label="About Us Image"
+                  image={form.aboutImage}
+                  onChange={(image) =>
+                    updateImage("aboutImage", image)
+                  }
+                  onRemove={() =>
+                    updateImage("aboutImage", null)
+                  }
+                  description="Recommended: 1200 × 900 px"
                 />
 
-                <button
-                  type="button"
-                  className="settings-btn settings-btn-primary"
-                  onClick={addStatus}
-                >
-                  <FaPlus />
-                  Add Status
-                </button>
-              </div>
-            </section>
+                <div className="settings-section-divider" />
+
+                <div className="settings-card-header">
+                  <h2>
+                    <FaPaw
+                      style={{
+                        color: "#159c97",
+                        marginRight: 8,
+                        fontSize: 14,
+                      }}
+                    />
+                    Our Journey Timeline
+                  </h2>
+
+                  <p>
+                    Customize the three milestones displayed
+                    beside your About Us image.
+                  </p>
+                </div>
+
+                <div className="settings-timeline">
+                  {[1, 2, 3].map((number) => (
+                    <div
+                      className="settings-timeline-card"
+                      key={number}
+                    >
+                      <div className="settings-timeline-heading">
+                        <span className="settings-timeline-number">
+                          {number}
+                        </span>
+
+                        <h3>Timeline Step {number}</h3>
+                      </div>
+
+                      {renderInput(
+                        `Step ${number} Title`,
+                        `aboutStep${number}Title`,
+                        `Enter step ${number} title`
+                      )}
+
+                      {renderTextarea(
+                        `Step ${number} Description`,
+                        `aboutStep${number}Description`,
+                        `Enter step ${number} description`
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* CONTACT & SOCIAL MEDIA */}
+            {activeTab === "contact" && (
+              <>
+                {/* CONTACT US */}
+                <section className="settings-card">
+                  <div className="settings-card-header">
+                    <h2>Contact Us Page</h2>
+                    <p>
+                      Manage the contact details displayed
+                      on your Contact Us page.
+                    </p>
+                  </div>
+
+                  <div className="settings-row">
+                    {renderInput(
+                      "Contact Email",
+                      "contactEmail",
+                      "Enter contact email",
+                      "email"
+                    )}
+
+                    {renderInput(
+                      "Contact Phone",
+                      "contactPhone",
+                      "Enter contact phone number",
+                      "tel"
+                    )}
+                  </div>
+
+                  {renderInput(
+                    "Contact Address",
+                    "contactAddress",
+                    "Enter clinic address"
+                  )}
+
+                  {renderTextarea(
+                    "Contact Description",
+                    "contactDescription",
+                    "Enter a short message for visitors"
+                  )}
+                </section>
+
+                {/* SOCIAL MEDIA */}
+                <section className="settings-card">
+                  <div className="settings-card-header">
+                    <h2>Social Media</h2>
+                    <p>
+                      Manage your clinic social media links.
+                    </p>
+
+                    <div className="settings-social-icons">
+                      <span>
+                        <FaInstagram />
+                      </span>
+
+                      <span>
+                        <FaFacebookF />
+                      </span>
+
+                      <span>
+                        <FaWhatsapp />
+                      </span>
+
+                      <span>
+                        <FaTiktok />
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="settings-row">
+                    {renderInput(
+                      "Instagram",
+                      "instagram",
+                      "https://instagram.com/..."
+                    )}
+
+                    {renderInput(
+                      "Facebook",
+                      "facebook",
+                      "https://facebook.com/..."
+                    )}
+                  </div>
+
+                  <div className="settings-row">
+                    {renderInput(
+                      "WhatsApp",
+                      "socialWhatsapp",
+                      "Enter WhatsApp link or number"
+                    )}
+
+                    {renderInput(
+                      "TikTok",
+                      "tiktok",
+                      "https://tiktok.com/@..."
+                    )}
+                  </div>
+                </section>
+              </>
+            )}
+
+            {/* OPTION LIST */}
+            {activeTab === "options" && (
+              <section className="settings-card">
+                <div className="settings-card-header">
+                  <h2>Option List</h2>
+                  <p>
+                    Manage the available status options
+                    used across your system.
+                  </p>
+                </div>
+
+                <div className="settings-status-list">
+                  {statuses.map((status) => (
+                    <div
+                      className="settings-status"
+                      key={status}
+                    >
+                      <span>{status}</span>
+
+                      <button
+                        type="button"
+                        onClick={() => removeStatus(status)}
+                        title={`Remove ${status}`}
+                        aria-label={`Remove ${status}`}
+                      >
+                        <FaTimes />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="settings-add-status">
+                  <input
+                    type="text"
+                    placeholder="Enter new status"
+                    value={newStatus}
+                    onChange={(event) =>
+                      setNewStatus(event.target.value)
+                    }
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") {
+                        event.preventDefault();
+                        addStatus();
+                      }
+                    }}
+                  />
+
+                  <button
+                    type="button"
+                    className="settings-btn settings-btn-outline"
+                    onClick={addStatus}
+                  >
+                    <FaPlus />
+                    Add Status
+                  </button>
+                </div>
+              </section>
+            )}
 
             {/* SAVE SETTINGS */}
-
             <div className="settings-save-bar">
               {saved && (
                 <span className="settings-saved">

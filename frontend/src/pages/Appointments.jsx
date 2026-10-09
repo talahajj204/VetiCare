@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
@@ -67,7 +68,8 @@ function Appointments() {
   const [showViewModal, setShowViewModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
 
-  const [selectedAppointment, setSelectedAppointment] = useState(null);
+  const [selectedAppointment, setSelectedAppointment] =
+    useState(null);
 
   /* =====================================================
      NEW APPOINTMENT
@@ -88,7 +90,9 @@ function Appointments() {
      CALENDAR
   ===================================================== */
 
-  const [currentDate, setCurrentDate] = useState(new Date(2026, 8, 1));
+  const [currentDate, setCurrentDate] = useState(
+    new Date(2026, 8, 1)
+  );
 
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
@@ -99,7 +103,11 @@ function Appointments() {
   });
 
   const firstDay = new Date(year, month, 1).getDay();
-  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const daysInMonth = new Date(
+    year,
+    month + 1,
+    0
+  ).getDate();
 
   /* =====================================================
      FILTER + SORT
@@ -111,19 +119,29 @@ function Appointments() {
 
       const matchesSearch =
         appointment.pet.toLowerCase().includes(value) ||
-        (appointment.owner || "").toLowerCase().includes(value) ||
-        (appointment.type || "").toLowerCase().includes(value) ||
-        appointment.veterinarian.toLowerCase().includes(value) ||
+        (appointment.owner || "")
+          .toLowerCase()
+          .includes(value) ||
+        (appointment.type || "")
+          .toLowerCase()
+          .includes(value) ||
+        appointment.veterinarian
+          .toLowerCase()
+          .includes(value) ||
         appointment.reason.toLowerCase().includes(value) ||
         appointment.status.toLowerCase().includes(value) ||
         appointment.date.includes(value) ||
         appointment.time.includes(value);
 
       const matchesStatus =
-        statusFilter === "All" || appointment.status === statusFilter;
+        statusFilter === "All" ||
+        appointment.status === statusFilter;
 
-      const matchesFromDate = !fromDate || appointment.date >= fromDate;
-      const matchesToDate = !toDate || appointment.date <= toDate;
+      const matchesFromDate =
+        !fromDate || appointment.date >= fromDate;
+
+      const matchesToDate =
+        !toDate || appointment.date <= toDate;
 
       return (
         matchesSearch &&
@@ -255,10 +273,6 @@ function Appointments() {
     setCurrentDate(new Date(year, month + 1, 1));
   };
 
-  const goToToday = () => {
-    setCurrentDate(new Date());
-  };
-
   const getDateString = (day) => {
     const monthNumber = String(month + 1).padStart(2, "0");
     const dayNumber = String(day).padStart(2, "0");
@@ -318,7 +332,10 @@ function Appointments() {
       ...newAppointment,
     };
 
-    setAppointments((previous) => [...previous, appointment]);
+    setAppointments((previous) => [
+      ...previous,
+      appointment,
+    ]);
 
     if (appointment.date) {
       const [appointmentYear, appointmentMonth] =
@@ -449,7 +466,9 @@ function Appointments() {
     if (!confirmDelete) return;
 
     setAppointments((previous) =>
-      previous.filter((appointment) => appointment.id !== id)
+      previous.filter(
+        (appointment) => appointment.id !== id
+      )
     );
 
     setShowViewModal(false);
@@ -465,6 +484,7 @@ function Appointments() {
     if (!date) return "";
 
     const [, m, d] = date.split("-");
+
     return `${d}/${m}/${date.split("-")[0]}`;
   };
 
@@ -542,6 +562,8 @@ function Appointments() {
     boxSizing: "border-box",
   };
 
+  // PART 2 CONTINUES WITH: return (
+
   return (
     <div className="dashboard-layout">
       <style>{`
@@ -558,32 +580,23 @@ function Appointments() {
           width: auto !important;
           min-width: 0 !important;
           max-width: none !important;
-
           height: 34px !important;
           min-height: 34px !important;
           max-height: 34px !important;
-
           padding: 0 12px !important;
           margin: 0 !important;
-
           flex: 0 0 auto !important;
-
           border-radius: 7px !important;
-
           font-size: 12px !important;
           font-weight: 600 !important;
           line-height: 1 !important;
-
           display: inline-flex !important;
           align-items: center !important;
           justify-content: center !important;
-
           white-space: nowrap !important;
           box-sizing: border-box !important;
-
           cursor: pointer !important;
           box-shadow: none !important;
-
           font-family: inherit !important;
         }
 
@@ -638,7 +651,9 @@ function Appointments() {
 
         <div style={headerStyle}>
           <div>
-            <h1 style={{ margin: "0 0 5px" }}>Appointments</h1>
+            <h1 style={{ margin: "0 0 5px" }}>
+              Appointments
+            </h1>
 
             <p
               style={{
@@ -757,7 +772,9 @@ function Appointments() {
 
           <select
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
+            onChange={(e) =>
+              setStatusFilter(e.target.value)
+            }
             style={{
               width: "165px",
               minWidth: "165px",
@@ -782,7 +799,9 @@ function Appointments() {
             type="date"
             value={fromDate}
             title="From Date"
-            onChange={(e) => setFromDate(e.target.value)}
+            onChange={(e) =>
+              setFromDate(e.target.value)
+            }
             style={{
               width: "165px",
               minWidth: "165px",
@@ -800,7 +819,9 @@ function Appointments() {
             type="date"
             value={toDate}
             title="To Date"
-            onChange={(e) => setToDate(e.target.value)}
+            onChange={(e) =>
+              setToDate(e.target.value)
+            }
             style={{
               width: "165px",
               minWidth: "165px",
@@ -824,12 +845,22 @@ function Appointments() {
             <div className="appointment-sort">
               <select
                 value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
+                onChange={(e) =>
+                  setSortBy(e.target.value)
+                }
               >
-                <option value="newest">Sort by Newest</option>
-                <option value="oldest">Sort by Oldest</option>
-                <option value="pet">Sort by Pet Name</option>
-                <option value="time">Sort by Time</option>
+                <option value="newest">
+                  Sort by Newest
+                </option>
+                <option value="oldest">
+                  Sort by Oldest
+                </option>
+                <option value="pet">
+                  Sort by Pet Name
+                </option>
+                <option value="time">
+                  Sort by Time
+                </option>
               </select>
             </div>
 
@@ -837,7 +868,9 @@ function Appointments() {
               <button
                 type="button"
                 title="List View"
-                className={viewMode === "list" ? "active" : ""}
+                className={
+                  viewMode === "list" ? "active" : ""
+                }
                 onClick={() => setViewMode("list")}
               >
                 <FaList />
@@ -846,8 +879,12 @@ function Appointments() {
               <button
                 type="button"
                 title="Calendar View"
-                className={viewMode === "calendar" ? "active" : ""}
-                onClick={() => setViewMode("calendar")}
+                className={
+                  viewMode === "calendar" ? "active" : ""
+                }
+                onClick={() =>
+                  setViewMode("calendar")
+                }
               >
                 <FaTableCellsLarge />
               </button>
@@ -860,7 +897,8 @@ function Appointments() {
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(3, minmax(180px, 1fr))",
+            gridTemplateColumns:
+              "repeat(3, minmax(180px, 1fr))",
             gap: "16px",
             marginBottom: "20px",
           }}
@@ -883,7 +921,9 @@ function Appointments() {
               Total This View
             </p>
 
-            <h2 style={{ margin: 0 }}>{totalThisView}</h2>
+            <h2 style={{ margin: 0 }}>
+              {totalThisView}
+            </h2>
           </div>
 
           <div
@@ -942,9 +982,10 @@ function Appointments() {
             </h2>
           </div>
         </div>
-                {/* CALENDAR */}
 
-                {viewMode === "calendar" && (
+        {/* CALENDAR */}
+
+        {viewMode === "calendar" && (
           <div className="compact-calendar">
             <div className="compact-calendar-header">
               <div>
@@ -952,9 +993,13 @@ function Appointments() {
 
                 <p>
                   {filteredAppointments.length} appointment
-                  {filteredAppointments.length !== 1 ? "s" : ""}
+                  {filteredAppointments.length !== 1
+                    ? "s"
+                    : ""}
                 </p>
               </div>
+
+              {/* TODAY BUTTON REMOVED */}
 
               <div className="compact-calendar-navigation">
                 <button
@@ -963,14 +1008,6 @@ function Appointments() {
                   title="Previous month"
                 >
                   <FaChevronLeft />
-                </button>
-
-                <button
-                  type="button"
-                  className="calendar-today-btn"
-                  onClick={goToToday}
-                >
-                  Today
                 </button>
 
                 <button
@@ -1017,6 +1054,10 @@ function Appointments() {
                     className={`compact-calendar-day ${
                       isToday(day) ? "today" : ""
                     }`}
+                    style={{ cursor: "pointer" }}
+                    onClick={() =>
+                      openAddModal(getDateString(day))
+                    }
                   >
                     <div className="compact-day-header">
                       <span className="compact-day-number">
@@ -1027,9 +1068,10 @@ function Appointments() {
                         type="button"
                         className="compact-day-add"
                         title="Add appointment"
-                        onClick={() =>
-                          openAddModal(getDateString(day))
-                        }
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openAddModal(getDateString(day));
+                        }}
                       >
                         <FaPlus />
                       </button>
@@ -1043,11 +1085,12 @@ function Appointments() {
                             type="button"
                             key={appointment.id}
                             className={`compact-event ${appointment.status.toLowerCase()}`}
-                            onClick={() =>
+                            onClick={(e) => {
+                              e.stopPropagation();
                               handleViewAppointment(
                                 appointment
-                              )
-                            }
+                              );
+                            }}
                           >
                             <span className="compact-event-time">
                               {formatTime(
@@ -1471,7 +1514,6 @@ function Appointments() {
                   <h2>
                     {selectedAppointment.pet}
                   </h2>
-
                   <p>Appointment details</p>
                 </div>
 
@@ -1480,9 +1522,7 @@ function Appointments() {
                   className="modal-close"
                   onClick={() => {
                     setShowViewModal(false);
-                    setSelectedAppointment(
-                      null
-                    );
+                    setSelectedAppointment(null);
                   }}
                 >
                   ×
@@ -1503,10 +1543,8 @@ function Appointments() {
 
               <div className="detail-row">
                 <span>Owner</span>
-
                 <strong>
-                  {selectedAppointment.owner ||
-                    "—"}
+                  {selectedAppointment.owner || "—"}
                 </strong>
               </div>
 
@@ -1514,10 +1552,8 @@ function Appointments() {
 
               <div className="detail-row">
                 <span>Appointment Type</span>
-
                 <strong>
-                  {selectedAppointment.type ||
-                    "—"}
+                  {selectedAppointment.type || "—"}
                 </strong>
               </div>
 
@@ -1525,7 +1561,6 @@ function Appointments() {
 
               <div className="detail-row">
                 <span>Date</span>
-
                 <strong>
                   {formatDate(
                     selectedAppointment.date
@@ -1539,7 +1574,6 @@ function Appointments() {
                 <span>
                   <FaClock /> Time
                 </span>
-
                 <strong>
                   {formatTime(
                     selectedAppointment.time
@@ -1553,11 +1587,8 @@ function Appointments() {
                 <span>
                   <FaUserDoctor /> Veterinarian
                 </span>
-
                 <strong>
-                  {
-                    selectedAppointment.veterinarian
-                  }
+                  {selectedAppointment.veterinarian}
                 </strong>
               </div>
 
@@ -1565,7 +1596,6 @@ function Appointments() {
 
               <div className="detail-row">
                 <span>Reason</span>
-
                 <strong>
                   {selectedAppointment.reason}
                 </strong>
@@ -1598,8 +1628,6 @@ function Appointments() {
                   <FaPen />
                   Edit
                 </button>
-
-                {/* NEW REQUIRED BUTTON */}
 
                 <button
                   type="button"
@@ -1638,20 +1666,14 @@ function Appointments() {
                   className="modal-close"
                   onClick={() => {
                     setShowEditModal(false);
-                    setSelectedAppointment(
-                      null
-                    );
+                    setSelectedAppointment(null);
                   }}
                 >
                   ×
                 </button>
               </div>
 
-              <form
-                onSubmit={
-                  handleUpdateAppointment
-                }
-              >
+              <form onSubmit={handleUpdateAppointment}>
                 {/* PET + OWNER */}
 
                 <div className="form-row">
@@ -1661,12 +1683,8 @@ function Appointments() {
                     <input
                       type="text"
                       name="pet"
-                      value={
-                        selectedAppointment.pet
-                      }
-                      onChange={
-                        handleEditChange
-                      }
+                      value={selectedAppointment.pet}
+                      onChange={handleEditChange}
                       required
                     />
                   </div>
@@ -1678,12 +1696,9 @@ function Appointments() {
                       type="text"
                       name="owner"
                       value={
-                        selectedAppointment.owner ||
-                        ""
+                        selectedAppointment.owner || ""
                       }
-                      onChange={
-                        handleEditChange
-                      }
+                      onChange={handleEditChange}
                       required
                     />
                   </div>
@@ -1701,17 +1716,13 @@ function Appointments() {
                       value={
                         selectedAppointment.veterinarian
                       }
-                      onChange={
-                        handleEditChange
-                      }
+                      onChange={handleEditChange}
                       required
                     />
                   </div>
 
                   <div className="form-field">
-                    <label>
-                      Appointment Type
-                    </label>
+                    <label>Appointment Type</label>
 
                     <select
                       name="type"
@@ -1719,9 +1730,7 @@ function Appointments() {
                         selectedAppointment.type ||
                         "Consultation"
                       }
-                      onChange={
-                        handleEditChange
-                      }
+                      onChange={handleEditChange}
                       required
                     >
                       <option value="Consultation">
@@ -1764,12 +1773,8 @@ function Appointments() {
                     <input
                       type="date"
                       name="date"
-                      value={
-                        selectedAppointment.date
-                      }
-                      onChange={
-                        handleEditChange
-                      }
+                      value={selectedAppointment.date}
+                      onChange={handleEditChange}
                       required
                     />
                   </div>
@@ -1780,12 +1785,8 @@ function Appointments() {
                     <input
                       type="time"
                       name="time"
-                      value={
-                        selectedAppointment.time
-                      }
-                      onChange={
-                        handleEditChange
-                      }
+                      value={selectedAppointment.time}
+                      onChange={handleEditChange}
                       required
                     />
                   </div>
@@ -1799,12 +1800,8 @@ function Appointments() {
                   <input
                     type="text"
                     name="reason"
-                    value={
-                      selectedAppointment.reason
-                    }
-                    onChange={
-                      handleEditChange
-                    }
+                    value={selectedAppointment.reason}
+                    onChange={handleEditChange}
                     required
                   />
                 </div>
@@ -1816,12 +1813,8 @@ function Appointments() {
 
                   <select
                     name="status"
-                    value={
-                      selectedAppointment.status
-                    }
-                    onChange={
-                      handleEditChange
-                    }
+                    value={selectedAppointment.status}
+                    onChange={handleEditChange}
                   >
                     <option value="Pending">
                       Pending
@@ -1847,9 +1840,7 @@ function Appointments() {
                     className="workflow-button workflow-button-secondary"
                     onClick={() => {
                       setShowEditModal(false);
-                      setSelectedAppointment(
-                        null
-                      );
+                      setSelectedAppointment(null);
                     }}
                   >
                     Cancel

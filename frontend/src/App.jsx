@@ -1,3 +1,4 @@
+
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 
 import Login from "./pages/Login";
@@ -42,15 +43,24 @@ import Sales from "./pages/Sales";
 import About from "./pages/About";
 import Contact from "./pages/Contact";
 
+// SUPER ADMIN
+import SuperAdminDashboard from "./superAdmin/pages/SuperAdminDashboard";
+import SuperAdminClinics from "./superAdmin/pages/SuperAdminClinics";
+import SuperAdminUsers from "./superAdmin/pages/SuperAdminUsers";
+// import SuperAdminPlans from "./superAdmin/pages/SuperAdminPlans";
+// import SuperAdminSubscriptions from "./superAdmin/pages/SuperAdminSubscriptions";
+import SuperAdminPlans from "./superAdmin/pages/SuperAdminPlans";
+import SuperAdminSubscriptions from "./superAdmin/pages/SuperAdminSubscriptions";
+
 import "./App.css";
 
 function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* =====================================
-            LOGIN
-        ===================================== */}
+        {/* ================================
+            AUTHENTICATION
+        ================================= */}
 
         <Route path="/" element={<Login />} />
 
@@ -59,18 +69,27 @@ function App() {
           element={<ForgotPassword />}
         />
 
-        {/* =====================================
-            DASHBOARD
-        ===================================== */}
+        {/* ================================
+            SUPER ADMIN
+        ================================= */}
+
+        <Route
+          path="/super-admin/dashboard"
+          element={<SuperAdminDashboard />}
+        />
+
+        {/* ================================
+            CLINIC ADMIN DASHBOARD
+        ================================= */}
 
         <Route
           path="/dashboard"
           element={<AdminDashboard />}
         />
 
-        {/* =====================================
+        {/* ================================
             OWNERS
-        ===================================== */}
+        ================================= */}
 
         <Route
           path="/owners"
@@ -82,9 +101,9 @@ function App() {
           element={<OwnerProfile />}
         />
 
-        {/* =====================================
+        {/* ================================
             PETS
-        ===================================== */}
+        ================================= */}
 
         <Route
           path="/pets"
@@ -96,63 +115,63 @@ function App() {
           element={<PetProfile />}
         />
 
-        {/* =====================================
+        {/* ================================
             APPOINTMENTS
-        ===================================== */}
+        ================================= */}
 
         <Route
           path="/appointments"
           element={<Appointments />}
         />
 
-        {/* =====================================
+        {/* ================================
             MEDICAL RECORDS
-        ===================================== */}
+        ================================= */}
 
         <Route
           path="/medical-records"
           element={<MedicalRecords />}
         />
 
-        {/* =====================================
+        {/* ================================
             VACCINATIONS
-        ===================================== */}
+        ================================= */}
 
         <Route
           path="/vaccinations"
           element={<Vaccinations />}
         />
 
-        {/* =====================================
+        {/* ================================
             REMINDERS
-        ===================================== */}
+        ================================= */}
 
         <Route
           path="/reminders"
           element={<Reminders />}
         />
 
-        {/* =====================================
+        {/* ================================
             MEDICATIONS
-        ===================================== */}
+        ================================= */}
 
         <Route
           path="/medications"
           element={<Medications />}
         />
 
-        {/* =====================================
+        {/* ================================
             PRESCRIPTIONS
-        ===================================== */}
+        ================================= */}
 
         <Route
           path="/prescriptions"
           element={<Prescriptions />}
         />
 
-        {/* =====================================
-            INVENTORY - PRODUCTS
-        ===================================== */}
+        {/* ================================
+            INVENTORY
+        ================================= */}
 
         <Route
           path="/inventory"
@@ -164,99 +183,95 @@ function App() {
           element={<Inventory />}
         />
 
-        {/* =====================================
-            INVENTORY - CATEGORIES
-        ===================================== */}
-
         <Route
           path="/inventory/categories"
           element={<Categories />}
         />
 
-        {/* =====================================
+        {/* ================================
             BILLING
-        ===================================== */}
+        ================================= */}
 
         <Route
           path="/billing"
           element={<Billing />}
         />
 
-        {/* =====================================
+        {/* ================================
             FINANCIAL
-        ===================================== */}
+        ================================= */}
 
         <Route
           path="/financial"
           element={<Financial />}
         />
 
-        {/* =====================================
+        {/* ================================
             REPORTS
-        ===================================== */}
+        ================================= */}
 
         <Route
           path="/reports"
           element={<Reports />}
         />
 
-        {/* =====================================
+        {/* ================================
             USERS
-        ===================================== */}
+        ================================= */}
 
         <Route
           path="/users"
           element={<Users />}
         />
 
-        {/* =====================================
+        {/* ================================
             AUDIT LOG
-        ===================================== */}
+        ================================= */}
 
         <Route
           path="/audit-log"
           element={<AuditLog />}
         />
 
-        {/* =====================================
+        {/* ================================
             SETTINGS
-        ===================================== */}
+        ================================= */}
 
         <Route
           path="/settings"
           element={<Settings />}
         />
 
-        {/* =====================================
+        {/* ================================
             POS
-        ===================================== */}
+        ================================= */}
 
         <Route
           path="/pos"
           element={<POS />}
         />
 
-        {/* =====================================
+        {/* ================================
             ADMIN ORDERS
-        ===================================== */}
+        ================================= */}
 
         <Route
           path="/admin/orders"
           element={<AdminOrders />}
         />
 
-        {/* =====================================
+        {/* ================================
             ADMIN SALES
-        ===================================== */}
+        ================================= */}
 
         <Route
           path="/admin/sales"
           element={<Sales />}
         />
 
-        {/* =====================================
+        {/* ================================
             STORE HOME
-        ===================================== */}
+        ================================= */}
 
         <Route
           path="/store"
@@ -268,9 +283,9 @@ function App() {
           }
         />
 
-        {/* =====================================
+        {/* ================================
             ABOUT US
-        ===================================== */}
+        ================================= */}
 
         <Route
           path="/about"
@@ -282,9 +297,9 @@ function App() {
           }
         />
 
-        {/* =====================================
+        {/* ================================
             CONTACT US
-        ===================================== */}
+        ================================= */}
 
         <Route
           path="/contact"
@@ -296,9 +311,9 @@ function App() {
           }
         />
 
-        {/* =====================================
-            STORE - ALL PRODUCTS
-        ===================================== */}
+        {/* ================================
+            STORE PRODUCTS
+        ================================= */}
 
         <Route
           path="/products"
@@ -310,18 +325,18 @@ function App() {
           }
         />
 
-        {/* =====================================
+        {/* ================================
             PRODUCT DETAILS
-        ===================================== */}
+        ================================= */}
 
         <Route
           path="/products/:id"
           element={<ProductDetails />}
         />
 
-        {/* =====================================
+        {/* ================================
             CART
-        ===================================== */}
+        ================================= */}
 
         <Route
           path="/cart"
@@ -333,14 +348,50 @@ function App() {
           }
         />
 
-        {/* =====================================
+        {/* ================================
             CUSTOMER ORDERS
-        ===================================== */}
+        ================================= */}
 
         <Route
           path="/orders"
           element={<Orders />}
         />
+        <Route
+  path="/super-admin/clinics"
+  element={<SuperAdminClinics />}
+/>
+<Route
+  path="/super-admin/users"
+  element={<SuperAdminUsers />}
+/>
+{/* <Route
+  path="/super-admin/plans"
+  element={<SuperAdminPlans />}
+/>
+
+<Route
+  path="/super-admin/subscriptions"
+  element={<SuperAdminPlans />}
+/> */}
+{/* <Route
+  path="/super-admin/plans"
+  element={<SuperAdminPlans />}
+/>
+
+<Route
+  path="/super-admin/subscriptions"
+  element={<SuperAdminSubscriptions />}
+/> */}
+
+<Route
+  path="/super-admin/plans"
+  element={<SuperAdminPlans />}
+/>
+
+<Route
+  path="/super-admin/subscriptions"
+  element={<SuperAdminSubscriptions />}
+/>
       </Routes>
     </BrowserRouter>
   );

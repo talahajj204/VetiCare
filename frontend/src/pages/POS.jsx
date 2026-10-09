@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
 
@@ -9,216 +10,278 @@ import {
   FaMinus,
   FaPlus,
   FaBoxOpen,
-  FaUserPlus,
   FaTimes,
-  FaCreditCard,
   FaCheckCircle,
-  FaReceipt,
   FaChevronDown,
   FaUser,
   FaCog,
   FaSignOutAlt,
 } from "react-icons/fa";
 
-const POS_SALES_STORAGE_KEY = "vetClinicPOSSales";
+// ==========================================
+// LOCAL STORAGE KEYS
+// ==========================================
 
-const savePOSSale = (sale) => {
+const PRODUCTS_KEY = "vetClinicProducts";
+const CATEGORIES_KEY = "vetClinicCategories";
+const SALES_KEY = "vetClinicPOSSales";
+
+// ==========================================
+// READ LOCAL STORAGE
+// ==========================================
+
+const readStoredArray = (key) => {
   try {
-    const savedSales = localStorage.getItem(
-      POS_SALES_STORAGE_KEY
-    );
+    const saved = localStorage.getItem(key);
 
-    let currentSales = [];
+    if (!saved) return [];
 
-    if (savedSales) {
-      const parsedSales = JSON.parse(savedSales);
+    const parsed = JSON.parse(saved);
 
-      if (Array.isArray(parsedSales)) {
-        currentSales = parsedSales;
-      }
-    }
-
-    const updatedSales = [
-      sale,
-      ...currentSales,
-    ];
-
-    localStorage.setItem(
-      POS_SALES_STORAGE_KEY,
-      JSON.stringify(updatedSales)
-    );
-
-    window.dispatchEvent(
-      new Event(
-        "vetClinicPOSSalesUpdated"
-      )
-    );
-
-    return true;
+    return Array.isArray(parsed) ? parsed : [];
   } catch (error) {
-    console.error(
-      "Could not save POS sale:",
-      error
-    );
-
-    return false;
+    console.error(`Failed to read ${key}:`, error);
+    return [];
   }
 };
 
-
-const initialProducts = [
-  {
-    id: 1,
-    name: "Royal Canin Adult Dog",
-    category: "Food",
-    price: 28.5,
-    stock: 14,
-    image: "",
-  },
-  {
-    id: 2,
-    name: "Royal Canin Kitten",
-    category: "Food",
-    price: 24,
-    stock: 8,
-    image: "",
-  },
-  {
-    id: 3,
-    name: "Dental Care Chews",
-    category: "Dental",
-    price: 12.5,
-    stock: 21,
-    image: "",
-  },
-  {
-    id: 4,
-    name: "Pet Shampoo",
-    category: "Grooming",
-    price: 9.75,
-    stock: 12,
-    image: "",
-  },
-  {
-    id: 5,
-    name: "Flea & Tick Collar",
-    category: "Accessories",
-    price: 18,
-    stock: 7,
-    image: "",
-  },
-  {
-    id: 6,
-    name: "Vitamin Supplement",
-    category: "Supplements",
-    price: 16.25,
-    stock: 5,
-    image: "",
-  },
-  {
-    id: 7,
-    name: "Cat Litter",
-    category: "Hygiene",
-    price: 11,
-    stock: 18,
-    image: "",
-  },
-  {
-    id: 8,
-    name: "Ear Cleaning Solution",
-    category: "Hygiene",
-    price: 8.5,
-    stock: 9,
-    image: "",
-  },
-  {
-    id: 9,
-    name: "Pet Travel Bowl",
-    category: "Accessories",
-    price: 7.25,
-    stock: 3,
-    image: "",
-  },
-  {
-    id: 10,
-    name: "Puppy Training Pads",
-    category: "Hygiene",
-    price: 14,
-    stock: 22,
-    image: "",
-  },
-  {
-    id: 11,
-    name: "Dog Toy Ball",
-    category: "Accessories",
-    price: 6.5,
-    stock: 15,
-    image: "",
-  },
-  {
-    id: 12,
-    name: "Eye Drops",
-    category: "Care",
-    price: 10,
-    stock: 11,
-    image: "",
-  },
-];
-
-
-const owners = [
-  {
-    id: 1,
-    name: "John Smith",
-    phone: "+961 70 123 456",
-  },
-  {
-    id: 2,
-    name: "Sarah Khalil",
-    phone: "+961 71 234 567",
-  },
-  {
-    id: 3,
-    name: "Maya Haddad",
-    phone: "+961 76 345 678",
-  },
-  {
-    id: 4,
-    name: "Omar Nassar",
-    phone: "+961 81 456 789",
-  },
-];
-
+// ==========================================
+// POS COMPONENT
+// ==========================================
 
 function POS() {
   const navigate = useNavigate();
 
-  const [products, setProducts] =
-    useState(initialProducts);
+  // ========================================
+  // INVENTORY PRODUCTS AND CATEGORIES
+  // ========================================
 
-  const [search, setSearch] =
-    useState("");
+  const [inventoryProducts, setInventoryProducts] =
+    useState(() => readStoredArray(PRODUCTS_KEY));
+
+  const [inventoryCategories, setInventoryCategories] =
+    useState(() => readStoredArray(CATEGORIES_KEY));
+
+  // ========================================
+  // SEARCH AND CATEGORY FILTER
+  // ========================================
+
+  const [search, setSearch] = useState("");
 
   const [category, setCategory] =
     useState("All categories");
 
-  const [
-    selectedOwner,
-    setSelectedOwner,
-  ] = useState("");
+  // ========================================
+  // SYNC WITH INVENTORY AND CATEGORIES
+  // ========================================
 
-  const [cart, setCart] =
-    useState([]);
+  useEffect(() => {
+    const refreshInventory = () => {
+      setInventoryProducts(
+        readStoredArray(PRODUCTS_KEY)
+      );
 
-  const [
-    checkoutOpen,
-    setCheckoutOpen,
-  ] = useState(false);
+      setInventoryCategories(
+        readStoredArray(CATEGORIES_KEY)
+      );
+    };
 
-  const [
-    amountReceived,
-    setAmountReceived,
-  ] = useState("");
+    const onStorage = (event) => {
+      if (
+        !event.key ||
+        event.key === PRODUCTS_KEY ||
+        event.key === CATEGORIES_KEY
+      ) {
+        refreshInventory();
+      }
+    };
+
+    const onProductsUpdated = (event) => {
+      if (Array.isArray(event.detail)) {
+        setInventoryProducts(event.detail);
+      } else {
+        setInventoryProducts(
+          readStoredArray(PRODUCTS_KEY)
+        );
+      }
+    };
+
+    const onCategoriesUpdated = (event) => {
+      if (Array.isArray(event.detail)) {
+        setInventoryCategories(event.detail);
+      } else {
+        setInventoryCategories(
+          readStoredArray(CATEGORIES_KEY)
+        );
+      }
+    };
+
+    window.addEventListener(
+      "storage",
+      onStorage
+    );
+
+    window.addEventListener(
+      "focus",
+      refreshInventory
+    );
+
+    window.addEventListener(
+      "vetClinicProductsUpdated",
+      onProductsUpdated
+    );
+
+    window.addEventListener(
+      "vetClinicCategoriesUpdated",
+      onCategoriesUpdated
+    );
+
+    refreshInventory();
+
+    return () => {
+      window.removeEventListener(
+        "storage",
+        onStorage
+      );
+
+      window.removeEventListener(
+        "focus",
+        refreshInventory
+      );
+
+      window.removeEventListener(
+        "vetClinicProductsUpdated",
+        onProductsUpdated
+      );
+
+      window.removeEventListener(
+        "vetClinicCategoriesUpdated",
+        onCategoriesUpdated
+      );
+    };
+  }, []);
+
+  // ========================================
+  // PRODUCTS DISPLAYED ON POS
+  // ========================================
+
+  const products = useMemo(() => {
+    return inventoryProducts
+      .filter(
+        (product) =>
+          product.showOnPOS === true
+      )
+      .map((product) => ({
+        id: product.id,
+        name: String(product.name || ""),
+        category: String(
+          product.category || ""
+        ),
+        price:
+          Number(product.sellingPrice) || 0,
+        stock: Math.max(
+          0,
+          Number(product.quantity) || 0
+        ),
+        image: product.image || "",
+      }));
+  }, [inventoryProducts]);
+
+  // ========================================
+  // DYNAMIC CATEGORIES
+  // SOURCE: Categories.jsx / Inventory.jsx
+  // localStorage: vetClinicCategories
+  // ========================================
+
+  const categories = useMemo(() => {
+    const sortedCategories = [
+      ...inventoryCategories,
+    ].sort((a, b) => {
+      const orderA =
+        Number(a?.sortOrder) || 0;
+
+      const orderB =
+        Number(b?.sortOrder) || 0;
+
+      if (orderA !== orderB) {
+        return orderA - orderB;
+      }
+
+      return String(
+        a?.title || ""
+      ).localeCompare(
+        String(b?.title || "")
+      );
+    });
+
+    const categoryNames = sortedCategories
+      .map((item) =>
+        String(item?.title || "").trim()
+      )
+      .filter(Boolean);
+
+    return [
+      "All categories",
+      ...new Set(categoryNames),
+    ];
+  }, [inventoryCategories]);
+
+  // Reset category when deleted
+
+  useEffect(() => {
+    if (!categories.includes(category)) {
+      setCategory("All categories");
+    }
+  }, [categories, category]);
+
+  // ========================================
+  // FILTER PRODUCTS
+  // SEARCH + CATEGORY WORK TOGETHER
+  // ========================================
+
+  const filteredProducts = useMemo(() => {
+    const searchValue =
+      search.toLowerCase().trim();
+
+    return products.filter((product) => {
+      const matchesSearch =
+        !searchValue ||
+        product.name
+          .toLowerCase()
+          .includes(searchValue) ||
+        product.category
+          .toLowerCase()
+          .includes(searchValue);
+
+      const matchesCategory =
+        category === "All categories" ||
+        product.category === category;
+
+      return (
+        matchesSearch &&
+        matchesCategory
+      );
+    });
+  }, [products, search, category]);
+
+  // ========================================
+  // OWNER INPUT
+  // ========================================
+
+  const [ownerSearch, setOwnerSearch] =
+    useState("");
+
+  // ========================================
+  // CART STATES
+  // ========================================
+
+  const [cart, setCart] = useState([]);
+
+  const [checkoutOpen, setCheckoutOpen] =
+    useState(false);
+
+  const [amountReceived, setAmountReceived] =
+    useState("");
 
   const [
     amountReceivedLbp,
@@ -228,531 +291,515 @@ function POS() {
   const [discount, setDiscount] =
     useState("0");
 
-  const [
-    paymentMethod,
-    setPaymentMethod,
-  ] = useState("Cash");
+  const [paymentMethod, setPaymentMethod] =
+    useState("Cash");
 
-  const [
-    hasDelivery,
-    setHasDelivery,
-  ] = useState(false);
+  const [hasDelivery, setHasDelivery] =
+    useState(false);
 
-  const [
-    saleComplete,
-    setSaleComplete,
-  ] = useState(false);
+  const [saleComplete, setSaleComplete] =
+    useState(false);
 
-  const [
-    lastSale,
-    setLastSale,
-  ] = useState(null);
+  const [lastSale, setLastSale] =
+    useState(null);
 
-  const [
-    accountOpen,
-    setAccountOpen,
-  ] = useState(false);
+  const [accountOpen, setAccountOpen] =
+    useState(false);
 
   const USD_TO_LBP = 89500;
 
-
-  const categories = useMemo(() => {
-    return [
-      "All categories",
-      ...Array.from(
-        new Set(
-          products.map(
-            (product) =>
-              product.category
-          )
-        )
-      ),
-    ];
-  }, [products]);
-
-
-  const filteredProducts =
-    useMemo(() => {
-      const value = search
-        .toLowerCase()
-        .trim();
-
-      return products.filter(
-        (product) => {
-          const searchMatch =
-            !value ||
-            product.name
-              .toLowerCase()
-              .includes(value) ||
-            product.category
-              .toLowerCase()
-              .includes(value);
-
-          const categoryMatch =
-            category ===
-              "All categories" ||
-            product.category ===
-              category;
-
-          return (
-            searchMatch &&
-            categoryMatch
-          );
-        }
-      );
-    }, [
-      products,
-      search,
-      category,
-    ]);
-
+  // ========================================
+  // TOTAL CALCULATIONS
+  // ========================================
 
   const subtotal = cart.reduce(
     (sum, item) =>
-      sum +
-      item.price *
-        item.quantity,
+      sum + item.price * item.quantity,
     0
   );
 
-
-  const discountNumber =
-    Math.min(
-      Math.max(
-        Number(discount) || 0,
-        0
-      ),
-      subtotal
-    );
-
+  const discountNumber = Math.min(
+    Math.max(Number(discount) || 0, 0),
+    subtotal
+  );
 
   const total = Math.max(
     subtotal - discountNumber,
     0
   );
 
+  const received = Math.max(
+    Number(amountReceived) || 0,
+    0
+  );
 
-  const received =
-    Number(amountReceived) || 0;
-
-  const receivedLbp =
-    Number(amountReceivedLbp) || 0;
-
+  const receivedLbp = Math.max(
+    Number(amountReceivedLbp) || 0,
+    0
+  );
 
   const totalPaid =
     received +
     receivedLbp / USD_TO_LBP;
-
 
   const change = Math.max(
     totalPaid - total,
     0
   );
 
-
   const totalLbp =
     total * USD_TO_LBP;
 
+  // ========================================
+  // ADD PRODUCT TO CART
+  // ========================================
 
-  const totalItems =
-    cart.reduce(
-      (sum, item) =>
-        sum + item.quantity,
-      0
-    );
+  const addToCart = (product) => {
+    if (product.stock <= 0) return;
 
-
-  const addToCart = (
-    product
-  ) => {
-    if (product.stock <= 0) {
-      return;
-    }
-
-    const existing =
-      cart.find(
+    setCart((current) => {
+      const existing = current.find(
         (item) =>
-          item.id === product.id
+          String(item.id) ===
+          String(product.id)
       );
 
-    if (existing) {
-      if (
-        existing.quantity >=
-        product.stock
-      ) {
-        return;
-      }
+      if (existing) {
+        if (
+          existing.quantity >= product.stock
+        ) {
+          return current;
+        }
 
-      setCart((current) =>
-        current.map((item) =>
-          item.id === product.id
+        return current.map((item) =>
+          String(item.id) ===
+          String(product.id)
             ? {
                 ...item,
                 quantity:
-                  item.quantity +
-                  1,
+                  item.quantity + 1,
               }
             : item
-        )
-      );
+        );
+      }
 
-      return;
-    }
-
-    setCart((current) => [
-      ...current,
-      {
-        ...product,
-        quantity: 1,
-      },
-    ]);
+      return [
+        ...current,
+        {
+          ...product,
+          quantity: 1,
+        },
+      ];
+    });
   };
 
+  // ========================================
+  // INCREASE CART QUANTITY
+  // ========================================
 
-  const increaseQuantity = (
-    id
-  ) => {
+  const increaseQuantity = (id) => {
     setCart((current) =>
       current.map((item) => {
-        if (item.id !== id) {
+        if (
+          String(item.id) !== String(id)
+        ) {
           return item;
         }
 
-        const product =
-          products.find(
-            (productItem) =>
-              productItem.id ===
-              id
-          );
+        const product = products.find(
+          (productItem) =>
+            String(productItem.id) ===
+            String(id)
+        );
 
         if (
           !product ||
-          item.quantity >=
-            product.stock
+          item.quantity >= product.stock
         ) {
           return item;
         }
 
         return {
           ...item,
-          quantity:
-            item.quantity + 1,
+          quantity: item.quantity + 1,
         };
       })
     );
   };
 
+  // ========================================
+  // DECREASE CART QUANTITY
+  // ========================================
 
-  const decreaseQuantity = (
-    id
-  ) => {
+  const decreaseQuantity = (id) => {
     setCart((current) =>
       current
         .map((item) =>
-          item.id === id
+          String(item.id) === String(id)
             ? {
                 ...item,
                 quantity:
-                  item.quantity -
-                  1,
+                  item.quantity - 1,
               }
             : item
         )
         .filter(
-          (item) =>
-            item.quantity > 0
+          (item) => item.quantity > 0
         )
     );
   };
 
+  // ========================================
+  // DELETE ITEM FROM CART
+  // ========================================
 
   const deleteItem = (id) => {
     setCart((current) =>
       current.filter(
         (item) =>
-          item.id !== id
+          String(item.id) !== String(id)
       )
     );
   };
 
+  // ========================================
+  // CLEAR CART
+  // ========================================
 
   const clearCart = () => {
     setCart([]);
-
-    setSelectedOwner("");
-
+    setOwnerSearch("");
     setDiscount("0");
-
     setAmountReceived("");
-
     setAmountReceivedLbp("");
-
     setHasDelivery(false);
   };
 
+  // ========================================
+  // OPEN CHECKOUT
+  // ========================================
 
   const openCheckout = () => {
-    if (cart.length === 0) {
+    if (cart.length === 0) return;
+
+    const latestInventory =
+      readStoredArray(PRODUCTS_KEY);
+
+    const unavailable = cart.find(
+      (item) => {
+        const product =
+          latestInventory.find(
+            (inventoryItem) =>
+              String(inventoryItem.id) ===
+              String(item.id)
+          );
+
+        return (
+          !product ||
+          product.showOnPOS !== true ||
+          Number(product.quantity) <
+            item.quantity
+        );
+      }
+    );
+
+    if (unavailable) {
+      setInventoryProducts(
+        latestInventory
+      );
+
+      alert(
+        `Not enough stock for ${unavailable.name}.`
+      );
+
       return;
     }
 
     setDiscount("0");
-
     setAmountReceived("");
-
     setAmountReceivedLbp("");
-
     setPaymentMethod("Cash");
-
     setCheckoutOpen(true);
   };
 
+  // ========================================
+  // PAYMENT HELPERS
+  // ========================================
 
-  const handleExactPayment =
-    () => {
-      setAmountReceived(
-        total.toFixed(2)
-      );
-
-      setAmountReceivedLbp("");
-    };
-
-
-  const addQuickUsd = (
-    amount
-  ) => {
+  const handleExactPayment = () => {
     setAmountReceived(
-      (current) =>
-        (
-          (Number(current) ||
-            0) +
+      total.toFixed(2)
+    );
+
+    setAmountReceivedLbp("");
+  };
+
+  const addQuickUsd = (amount) => {
+    setAmountReceived((current) =>
+      (
+        (Number(current) || 0) +
+        amount
+      ).toFixed(2)
+    );
+  };
+
+  const addQuickLbp = (amount) => {
+    setAmountReceivedLbp((current) =>
+      String(
+        (Number(current) || 0) +
           amount
-        ).toFixed(2)
+      )
     );
   };
 
-
-  const addQuickLbp = (
-    amount
-  ) => {
-    setAmountReceivedLbp(
-      (current) =>
-        String(
-          (Number(current) ||
-            0) +
-            amount
-        )
-    );
-  };
-
+  // ========================================
+  // RECALL / REFUND
+  // ========================================
 
   const handleRecall = () => {
     alert("Recall selected");
   };
 
-
   const handleRefund = () => {
     alert("Refund selected");
   };
 
-
-  // =========================================================
-  // FINISH SALE + AUTOMATICALLY SAVE TO SALES PAGE
-  // =========================================================
+  // ========================================
+  // COMPLETE SALE
+  // ========================================
 
   const finishSale = () => {
-    if (totalPaid < total) {
+    if (cart.length === 0) return;
+
+    if (totalPaid + 0.000001 < total) {
       alert(
         "Amount received is less than the amount due."
       );
-
       return;
     }
 
+    const latestInventory =
+      readStoredArray(PRODUCTS_KEY);
 
-    const owner = owners.find(
-      (ownerItem) =>
-        String(ownerItem.id) ===
-        String(selectedOwner)
-    );
+    // Verify stock
 
+    for (const item of cart) {
+      const product =
+        latestInventory.find(
+          (inventoryItem) =>
+            String(inventoryItem.id) ===
+            String(item.id)
+        );
 
-    const saleDate =
-      new Date().toISOString();
+      if (
+        !product ||
+        product.showOnPOS !== true ||
+        Number(product.quantity) <
+          item.quantity
+      ) {
+        setInventoryProducts(
+          latestInventory
+        );
 
+        alert(
+          `Not enough stock for ${item.name}.`
+        );
+
+        return;
+      }
+    }
+
+    // Prepare sale
 
     const sale = {
       id: `POS-${Date.now()}`,
-
       owner:
-        owner?.name ||
-        "Unknown Owner",
-
-      ownerId:
-        owner?.id || null,
-
-      ownerPhone:
-        owner?.phone || "",
-
-      customer: {
-        id:
-          owner?.id || null,
-
-        name:
-          owner?.name ||
-          "Unknown Owner",
-
-        phone:
-          owner?.phone || "",
-      },
-
-      items: cart.map(
-        (item) => ({
-          id: item.id,
-
-          name: item.name,
-
-          category:
-            item.category || "",
-
-          image:
-            item.image || "",
-
-          price:
-            Number(
-              item.price || 0
-            ),
-
-          quantity:
-            Number(
-              item.quantity || 1
-            ),
-        })
-      ),
-
-      subtotal:
-        Number(subtotal),
-
-      discount:
-        Number(
-          discountNumber
-        ),
-
-      total:
-        Number(total),
-
-      received:
-        Number(totalPaid),
-
-      change:
-        Number(change),
-
+        ownerSearch.trim() ||
+        "Walk-in Customer",
+      ownerId: null,
+      items: cart.map((item) => ({
+        ...item,
+      })),
+      subtotal,
+      discount: discountNumber,
+      total,
+      received: totalPaid,
+      change,
       paymentMethod,
-
       hasDelivery,
-
-      cashier:
-        "Admin",
-
-      date:
-        saleDate,
-
-      createdAt:
-        saleDate,
+      date: new Date().toISOString(),
     };
 
+    // Deduct purchased quantities
 
-    // =========================================
-    // SAVE SALE TO vetClinicPOSSales
-    // =========================================
+    const updatedInventory =
+      latestInventory.map((product) => {
+        const soldProduct = cart.find(
+          (item) =>
+            String(item.id) ===
+            String(product.id)
+        );
 
-    const saved =
-      savePOSSale(sale);
+        if (!soldProduct) {
+          return product;
+        }
 
+        return {
+          ...product,
+          quantity: Math.max(
+            Number(product.quantity) -
+              soldProduct.quantity,
+            0
+          ),
+        };
+      });
 
-    if (!saved) {
+    // Read sales history
+
+    let previousSales;
+
+    try {
+      const savedSales =
+        localStorage.getItem(
+          SALES_KEY
+        );
+
+      const parsed = savedSales
+        ? JSON.parse(savedSales)
+        : [];
+
+      if (!Array.isArray(parsed)) {
+        throw new Error(
+          "Invalid sales history"
+        );
+      }
+
+      previousSales = parsed;
+    } catch (error) {
+      console.error(error);
+
       alert(
-        "The sale could not be saved. Please try again."
+        "Could not read sales history."
       );
 
       return;
     }
 
+    // Save sale and inventory
 
-    // =========================================
-    // REDUCE STOCK
-    // =========================================
+    const oldProducts =
+      localStorage.getItem(
+        PRODUCTS_KEY
+      );
 
-    setProducts((current) =>
-      current.map(
-        (product) => {
-          const soldProduct =
-            cart.find(
-              (item) =>
-                item.id ===
-                product.id
-            );
+    const oldSales =
+      localStorage.getItem(
+        SALES_KEY
+      );
 
-          if (!soldProduct) {
-            return product;
-          }
+    try {
+      localStorage.setItem(
+        PRODUCTS_KEY,
+        JSON.stringify(
+          updatedInventory
+        )
+      );
 
-          return {
-            ...product,
+      localStorage.setItem(
+        SALES_KEY,
+        JSON.stringify([
+          sale,
+          ...previousSales,
+        ])
+      );
+    } catch (error) {
+      console.error(
+        "Could not save sale:",
+        error
+      );
 
-            stock: Math.max(
-              product.stock -
-                soldProduct.quantity,
-              0
-            ),
-          };
+      // Restore previous data
+
+      try {
+        if (oldProducts === null) {
+          localStorage.removeItem(
+            PRODUCTS_KEY
+          );
+        } else {
+          localStorage.setItem(
+            PRODUCTS_KEY,
+            oldProducts
+          );
+        }
+
+        if (oldSales === null) {
+          localStorage.removeItem(
+            SALES_KEY
+          );
+        } else {
+          localStorage.setItem(
+            SALES_KEY,
+            oldSales
+          );
+        }
+      } catch (restoreError) {
+        console.error(
+          "Could not restore saved data:",
+          restoreError
+        );
+      }
+
+      alert("Could not save sale.");
+      return;
+    }
+
+    // Update inventory immediately
+
+    setInventoryProducts(
+      updatedInventory
+    );
+
+    window.dispatchEvent(
+      new CustomEvent(
+        "vetClinicProductsUpdated",
+        {
+          detail: updatedInventory,
         }
       )
     );
 
-
-    // =========================================
-    // SUCCESS
-    // =========================================
+    window.dispatchEvent(
+      new Event(
+        "vetClinicPOSSalesUpdated"
+      )
+    );
 
     setLastSale(sale);
-
     setCheckoutOpen(false);
-
     setSaleComplete(true);
 
-
-    // =========================================
-    // RESET POS
-    // =========================================
-
-    setCart([]);
-
-    setSelectedOwner("");
-
-    setAmountReceived("");
-
-    setAmountReceivedLbp("");
-
-    setDiscount("0");
-
-    setHasDelivery(false);
+    clearCart();
   };
 
+  // ========================================
+  // ACCOUNT / LOGOUT
+  // ========================================
 
   const handleLogout = () => {
     setAccountOpen(false);
-
     navigate("/");
   };
 
+  // ========================================
+  // PART 2 STARTS WITH return (
+  // ========================================
 
   return (
     <div className="dashboard-layout pos-dashboard-layout">
       <Sidebar />
 
       <main className="pos-main">
-      <style>{`
+        <style>{`
           .pos-dashboard-layout {
             min-height: 100vh;
             display: flex;
@@ -775,11 +822,6 @@ function POS() {
           .pos-dashboard-layout > .sidebar .sidebar-brand,
           .pos-dashboard-layout > .sidebar .sidebar-logo {
             justify-content: center !important;
-          }
-
-          .pos-dashboard-layout > .sidebar .sidebar-logo {
-            padding-left: 0 !important;
-            padding-right: 0 !important;
           }
 
           .pos-dashboard-layout > .sidebar .sidebar-nav a,
@@ -812,13 +854,15 @@ function POS() {
             box-sizing: border-box;
           }
 
+          /* HEADER */
+
           .pos-topbar {
             height: 64px;
             padding: 0 20px;
             display: flex;
             align-items: center;
             justify-content: space-between;
-            background: #fff;
+            background: #ffffff;
             border-bottom: 1px solid #e5eceb;
             position: relative;
             z-index: 50;
@@ -891,7 +935,7 @@ function POS() {
             right: 0;
             width: 190px;
             padding: 6px;
-            background: #fff;
+            background: #ffffff;
             border: 1px solid #e3eae9;
             border-radius: 9px;
             box-shadow: 0 12px 35px rgba(16,24,40,.13);
@@ -921,6 +965,8 @@ function POS() {
             background: #f5f9f8;
           }
 
+          /* MAIN LAYOUT - CART WIDTH UNCHANGED */
+
           .pos-content {
             height: calc(100vh - 64px);
             display: grid;
@@ -932,6 +978,8 @@ function POS() {
             padding: 14px 16px 20px;
             overflow-y: auto;
           }
+
+          /* SEARCH AND CATEGORIES */
 
           .pos-tools {
             display: flex;
@@ -949,12 +997,13 @@ function POS() {
             gap: 8px;
             border: 1px solid #dce7e6;
             border-radius: 8px;
-            background: #fff;
+            background: #ffffff;
           }
 
           .pos-search-box svg {
             color: #159f9f;
             font-size: 12px;
+            flex-shrink: 0;
           }
 
           .pos-search-box input {
@@ -972,11 +1021,13 @@ function POS() {
             padding: 0 10px;
             border: 1px solid #dce7e6;
             border-radius: 8px;
-            background: #fff;
+            background: #ffffff;
             color: #475467;
             outline: none;
             font-size: 10px;
           }
+
+          /* PRODUCTS - 4 PER ROW */
 
           .pos-products-grid {
             display: grid;
@@ -986,11 +1037,11 @@ function POS() {
 
           .pos-product-card {
             min-width: 0;
-            min-height: 154px;
+            min-height: 205px;
             padding: 11px;
             border: 1px solid #dfe8e7;
             border-radius: 10px;
-            background: #fff;
+            background: #ffffff;
             display: flex;
             flex-direction: column;
             transition: .15s ease;
@@ -1001,8 +1052,11 @@ function POS() {
             box-shadow: 0 5px 15px rgba(16,24,40,.06);
           }
 
+          /* BIGGER IMAGE AREA */
+
           .pos-product-image {
-            height: 55px;
+            height: 105px;
+            width: 100%;
             border-radius: 7px;
             background: #f4f8f8;
             display: flex;
@@ -1014,9 +1068,10 @@ function POS() {
           }
 
           .pos-product-image img {
+            display: block;
             width: 100%;
             height: 100%;
-            object-fit: cover;
+            object-fit: contain;
           }
 
           .pos-product-name {
@@ -1025,6 +1080,7 @@ function POS() {
             font-size: 10px;
             font-weight: 700;
             line-height: 1.3;
+            overflow-wrap: anywhere;
           }
 
           .pos-product-category {
@@ -1039,6 +1095,7 @@ function POS() {
             display: flex;
             align-items: center;
             justify-content: space-between;
+            gap: 5px;
           }
 
           .pos-product-price {
@@ -1072,10 +1129,12 @@ function POS() {
             cursor: not-allowed;
           }
 
+          /* CART - SAME LAYOUT */
+
           .pos-cart-panel {
             min-width: 0;
             height: 100%;
-            background: #fff;
+            background: #ffffff;
             border-left: 1px solid #e3eae9;
             display: flex;
             flex-direction: column;
@@ -1098,7 +1157,7 @@ function POS() {
             padding: 0 9px;
             border: 1px solid #dfe7e7;
             border-radius: 7px;
-            background: #fff;
+            background: #ffffff;
             color: #475467;
             outline: none;
             font-size: 9px;
@@ -1184,7 +1243,7 @@ function POS() {
             padding: 0 !important;
             border: 1px solid #dfe7e7 !important;
             border-radius: 5px !important;
-            background: #fff !important;
+            background: #ffffff !important;
             display: flex !important;
             align-items: center;
             justify-content: center;
@@ -1211,7 +1270,7 @@ function POS() {
           .pos-cart-footer {
             padding: 12px 13px;
             border-top: 1px solid #e3eae9;
-            background: #fff;
+            background: #ffffff;
           }
 
           .pos-summary-row {
@@ -1242,15 +1301,19 @@ function POS() {
 
           .pos-checkout-btn {
             width: 100% !important;
-            height: 39px !important;
-            margin-top: 10px;
-            border: 0 !important;
+            height: 38px !important;
+            margin-top: 8px;
+            border: 1px solid #159f9f !important;
             border-radius: 7px !important;
             background: #159f9f !important;
-            color: #fff !important;
+            color: #ffffff !important;
+            display: flex !important;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            cursor: pointer;
             font-size: 10px !important;
             font-weight: 700;
-            cursor: pointer;
           }
 
           .pos-checkout-btn:disabled {
@@ -1258,102 +1321,236 @@ function POS() {
             cursor: not-allowed;
           }
 
-          .pos-cart-actions {
-            display: flex;
-            gap: 6px;
-            margin-top: 7px;
+          .pos-clear-btn {
+            width: 100% !important;
+            height: 34px !important;
+            margin-top: 6px;
+            border: 1px solid #e3eae9 !important;
+            border-radius: 7px !important;
+            background: #ffffff !important;
+            color: #667085 !important;
+            cursor: pointer;
+            font-size: 9px !important;
           }
 
-          .pos-cart-actions button {
-            flex: 1;
-            height: 31px;
-            border: 1px solid #dfe7e7;
-            border-radius: 6px;
-            background: #fff;
-            color: #667085;
-            font-size: 8px;
-            cursor: pointer;
+          .pos-clear-btn:disabled {
+            opacity: .45;
+            cursor: not-allowed;
           }
+
+          .pos-bottom-actions {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 6px;
+            margin-top: 8px;
+          }
+
+          .pos-bottom-action {
+            min-width: 0;
+            min-height: 54px;
+            padding: 7px 4px !important;
+            border: 1px solid #dfe7e7 !important;
+            border-radius: 8px !important;
+            background: #ffffff !important;
+            color: #475467 !important;
+            display: flex !important;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 3px;
+            cursor: pointer;
+            font-size: 9px !important;
+            font-weight: 700 !important;
+            transition: .15s ease;
+          }
+
+          .pos-bottom-action:hover,
+          .pos-bottom-action.active {
+            border-color: #159f9f !important;
+            background: #eff9f8 !important;
+            color: #159f9f !important;
+          }
+
+          .pos-bottom-action-emoji {
+            font-size: 17px;
+            line-height: 1;
+          }
+
+          /* CHECKOUT MODAL */
 
           .pos-modal-overlay {
             position: fixed;
             inset: 0;
-            z-index: 5000;
-            background: rgba(16,24,40,.48);
+            z-index: 9999;
+            padding: 24px;
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 16px;
+            background: rgba(16,24,40,.42);
           }
 
-          .pos-checkout-modal {
-            width: min(780px, 96vw);
-            max-height: 94vh;
+          .pos-checkout-reference {
+            width: min(1020px, 95vw);
+            max-height: 90vh;
             overflow: hidden;
-            border-radius: 12px;
-            background: #fff;
+            border-radius: 13px;
+            background: #ffffff;
             box-shadow: 0 24px 70px rgba(16,24,40,.22);
-            display: flex;
-            flex-direction: column;
           }
 
-          .pos-checkout-header {
-            padding: 14px 16px;
+          .pos-reference-checkout-header {
+            min-height: 66px;
+            padding: 13px 17px;
             display: flex;
-            align-items: center;
+            align-items: flex-start;
             justify-content: space-between;
             border-bottom: 1px solid #e7ecec;
           }
 
-          .pos-checkout-header h2 {
+          .pos-reference-checkout-header h2 {
             margin: 0;
             color: #344054;
-            font-size: 15px;
+            font-size: 16px;
           }
 
-          .pos-checkout-close {
-            width: 30px;
-            height: 30px;
-            padding: 0;
-            border: 0;
-            border-radius: 50%;
-            background: #f4f7f7;
-            color: #667085;
-            cursor: pointer;
-            display: flex;
+          .pos-reference-checkout-header p {
+            margin: 4px 0 0;
+            color: #98a2b3;
+            font-size: 10px;
+          }
+
+          .pos-reference-close {
+            width: 30px !important;
+            min-width: 30px !important;
+            height: 30px !important;
+            padding: 0 !important;
+            border: 1px solid #e2e8e7 !important;
+            border-radius: 8px !important;
+            background: #ffffff !important;
+            color: #667085 !important;
+            display: flex !important;
             align-items: center;
             justify-content: center;
+            cursor: pointer;
           }
 
           .pos-reference-checkout-body {
-            min-height: 0;
-            overflow-y: auto;
             display: grid;
-            grid-template-columns: 1fr 1fr;
+            grid-template-columns: 1fr 1.05fr;
+            max-height: calc(90vh - 132px);
+            overflow-y: auto;
           }
 
           .pos-financial-panel,
-          .pos-checkout-order-panel {
-            padding: 16px;
+          .pos-reference-payment {
+            padding: 15px;
           }
 
           .pos-financial-panel {
             border-right: 1px solid #e6eceb;
           }
 
-          .pos-checkout-section-title {
-            margin: 0 0 10px;
+          .pos-financial-panel h3,
+          .pos-reference-payment h3 {
+            margin: 0 0 14px;
             color: #344054;
-            font-size: 11px;
+            font-size: 12px;
+          }
+
+          .pos-financial-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+          }
+
+          .pos-financial-field label,
+          .pos-reference-field label,
+          .pos-received-title {
+            display: block;
+            margin-bottom: 5px;
+            color: #667085;
+            font-size: 8px;
             font-weight: 700;
+          }
+
+          .pos-financial-field input,
+          .pos-financial-value,
+          .pos-reference-field input {
+            width: 100%;
+            height: 39px;
+            padding: 0 10px;
+            border: 1px solid #e0e7e6;
+            border-radius: 7px;
+            background: #fafcfc;
+            color: #475467;
+            font-size: 10px;
+          }
+
+          .pos-financial-value {
+            display: flex;
+            align-items: center;
+          }
+
+          .pos-financial-field input,
+          .pos-reference-field input {
+            background: #ffffff;
+            outline: none;
+          }
+
+          .pos-financial-field input:focus,
+          .pos-reference-field input:focus {
+            border-color: #159f9f;
+          }
+
+          .pos-reference-total-box {
+            margin-top: 12px;
+            padding: 11px 12px;
+            border: 1px solid #a9deda;
+            border-radius: 8px;
+            background: #eff9f8;
+          }
+
+          .pos-reference-total-box span {
+            display: block;
+            margin-bottom: 5px;
+            color: #667085;
+            font-size: 8px;
+            font-weight: 700;
+          }
+
+          .pos-reference-total-box strong {
+            color: #159f9f;
+            font-size: 18px;
+          }
+
+          .pos-delivery-checkbox {
+            margin-top: 13px;
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            color: #475467;
+            font-size: 10px;
+            cursor: pointer;
+          }
+
+          .pos-delivery-checkbox input {
+            accent-color: #159f9f;
+          }
+
+          .pos-checkout-items-mini {
+            margin-top: 14px;
+            padding-top: 8px;
+            border-top: 1px solid #edf1f1;
           }
 
           .pos-checkout-mini-item {
             padding: 8px 0;
-            border-bottom: 1px solid #edf1f1;
             display: flex;
             justify-content: space-between;
-            gap: 10px;
+            gap: 12px;
+            border-bottom: 1px solid #f0f3f3;
+            color: #475467;
+            font-size: 9px;
           }
 
           .pos-checkout-mini-item div > strong {
@@ -1378,277 +1575,177 @@ function POS() {
             border: 1px solid #a9deda;
             border-radius: 9px;
             background: #eff9f8;
-          }
-
-          .pos-reference-amount-due span {
-            color: #667085;
-            font-size: 8px;
-            font-weight: 700;
-          }
-
-          .pos-reference-amount-due > div:last-child {
-            text-align: right;
+            color: #344054;
+            font-size: 11px;
           }
 
           .pos-reference-amount-due strong {
-            display: block;
             color: #159f9f;
-            font-size: 20px;
+            font-size: 18px;
           }
 
-          .pos-reference-amount-due small {
-            display: block;
-            margin-top: 2px;
-            color: #667085;
-            font-size: 8px;
+          .pos-reference-field {
+            margin-bottom: 12px;
           }
 
-          .pos-payment-method-row {
+          .pos-reference-payment-methods {
             display: flex;
-            gap: 7px;
+            gap: 8px;
+            margin-bottom: 13px;
           }
 
-          .pos-payment-method-row select {
+          .pos-reference-payment-methods button {
             flex: 1;
-            height: 38px;
-            padding: 0 10px;
+            padding: 10px;
             border: 1px solid #dfe7e7;
             border-radius: 7px;
-            background: #fff;
+            background: white;
             color: #475467;
-            outline: none;
+            cursor: pointer;
             font-size: 10px;
           }
 
-          .pos-payment-method-row button {
-            width: 38px !important;
-            min-width: 38px !important;
-            height: 38px !important;
-            padding: 0 !important;
-            border: 1px solid #b8dfdc !important;
-            border-radius: 7px !important;
-            background: #eff9f8 !important;
-            color: #159f9f !important;
-          }
-
-          .pos-received-title {
-            margin-top: 14px;
-          }
-
-          .pos-received-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 8px;
-          }
-
-          .pos-reference-field input {
-            width: 100%;
-            height: 43px;
-            padding: 0 11px;
-            border: 1px solid #dfe7e7;
-            border-radius: 7px;
-            background: #fff;
-            color: #344054;
-            outline: none;
-            font-size: 14px;
-            font-weight: 700;
-          }
-
-          .pos-reference-field input:focus {
+          .pos-reference-payment-methods button.active {
+            background: #eff9f8;
+            color: #159f9f;
             border-color: #159f9f;
-            box-shadow: 0 0 0 2px rgba(21,159,159,.08);
           }
 
-          .pos-exchange-rate {
-            margin-top: 6px;
-            color: #98a2b3;
-            font-size: 8px;
-          }
-
-          .pos-quick-payments {
-            margin-top: 11px;
+          .pos-reference-quick-payments {
             display: flex;
             flex-wrap: wrap;
             gap: 6px;
+            margin-top: 7px;
           }
 
-          .pos-quick-payments button {
-            min-width: auto !important;
-            padding: 7px 10px !important;
-            border: 1px solid #dce6e5 !important;
-            border-radius: 18px !important;
-            background: #fff !important;
-            color: #475467 !important;
+          .pos-reference-quick-payments button {
+            padding: 7px 10px;
+            border: 1px solid #dfe7e7;
+            border-radius: 6px;
+            background: #ffffff;
+            color: #475467;
             cursor: pointer;
-            font-size: 9px !important;
-            font-weight: 700;
+            font-size: 9px;
           }
 
-          .pos-quick-payments button:hover {
-            border-color: #159f9f !important;
-            background: #eff9f8 !important;
-            color: #159f9f !important;
+          .pos-reference-quick-payments button:hover {
+            border-color: #159f9f;
+            color: #159f9f;
           }
 
           .pos-reference-payment-summary {
-            margin-top: 16px;
+            margin-top: 13px;
             padding: 12px;
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 8px;
+            background: #f8fafb;
             border-radius: 8px;
-            background: #f7f9f9;
           }
 
           .pos-reference-payment-summary > div {
             display: flex;
-            flex-direction: column;
-            gap: 4px;
-          }
-
-          .pos-reference-payment-summary span {
+            justify-content: space-between;
+            padding: 5px 0;
             color: #667085;
-            font-size: 8px;
+            font-size: 10px;
           }
 
           .pos-reference-payment-summary strong {
             color: #344054;
-            font-size: 14px;
-          }
-
-          .pos-payment-error {
-            margin-top: 9px;
-            padding: 8px 10px;
-            border-radius: 6px;
-            background: #fff2f1;
-            color: #d92d20;
-            font-size: 9px;
           }
 
           .pos-reference-checkout-footer {
-            min-height: 66px;
-            padding: 10px 16px;
+            padding: 13px 17px;
             display: flex;
-            align-items: center;
-            justify-content: space-between;
+            justify-content: flex-end;
+            gap: 8px;
             border-top: 1px solid #e7ecec;
+            background: #ffffff;
           }
 
-          .pos-reference-cancel {
-            padding: 9px 15px !important;
-            border: 1px solid #dfe7e7 !important;
-            border-radius: 7px !important;
-            background: #fff !important;
-            color: #475467 !important;
+          .pos-reference-checkout-footer button,
+          .pos-success-button {
+            min-height: 38px;
+            padding: 0 18px;
+            border-radius: 7px;
+            border: 1px solid #dfe7e7;
+            background: #ffffff;
+            color: #475467;
             cursor: pointer;
-            font-size: 10px !important;
+            font-size: 10px;
             font-weight: 700;
           }
 
-          .pos-reference-complete {
-            padding: 10px 17px !important;
-            border: 1px solid #159f9f !important;
-            border-radius: 7px !important;
-            background: #159f9f !important;
-            color: #fff !important;
-            display: flex !important;
-            align-items: center;
-            gap: 6px;
-            cursor: pointer;
-            font-size: 10px !important;
-            font-weight: 700;
+          .pos-reference-checkout-footer .pos-complete-sale,
+          .pos-success-button {
+            border-color: #159f9f;
+            background: #159f9f;
+            color: #ffffff;
           }
 
-          .pos-reference-complete:disabled {
-            opacity: .45;
+          .pos-reference-checkout-footer .pos-complete-sale:disabled {
+            opacity: .5;
             cursor: not-allowed;
           }
 
-          .pos-success-modal {
-            width: min(380px, 94vw);
-            padding: 26px;
-            border-radius: 12px;
-            background: #fff;
+          .pos-success-card {
+            width: min(390px, 95vw);
+            padding: 30px;
+            border-radius: 13px;
+            background: white;
             text-align: center;
             box-shadow: 0 24px 70px rgba(16,24,40,.22);
           }
 
           .pos-success-icon {
-            width: 55px;
-            height: 55px;
-            margin: 0 auto 12px;
-            border-radius: 50%;
-            background: #e9f8f6;
+            font-size: 46px;
             color: #159f9f;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 26px;
           }
 
-          .pos-success-modal h3 {
-            margin: 0;
+          .pos-success-card h2 {
             color: #344054;
-            font-size: 16px;
+            font-size: 19px;
           }
 
-          .pos-success-modal > p {
-            margin: 6px 0 16px;
-            color: #98a2b3;
-            font-size: 10px;
-          }
-
-          .pos-success-details {
-            padding: 10px 12px;
-            border-radius: 8px;
-            background: #f7f9f9;
-          }
-
-          .pos-success-row {
-            padding: 6px 0;
-            display: flex;
-            justify-content: space-between;
+          .pos-success-card p {
             color: #667085;
-            font-size: 9px;
+            font-size: 11px;
           }
 
-          .pos-success-row strong {
-            color: #344054;
-          }
-
-          .pos-success-close {
-            width: 100% !important;
-            height: 37px !important;
+          .pos-success-button {
             margin-top: 14px;
-            border: 0 !important;
-            border-radius: 7px !important;
-            background: #159f9f !important;
-            color: #fff !important;
-            cursor: pointer;
-            font-size: 10px !important;
-            font-weight: 700;
           }
 
-          @media (max-width: 1100px) {
+          @media (max-width: 1050px) {
+            .pos-content {
+              grid-template-columns: minmax(0, 1fr) 300px;
+            }
+
             .pos-products-grid {
-              grid-template-columns: repeat(3, minmax(0, 1fr));
+              grid-template-columns: repeat(4, minmax(0, 1fr));
             }
           }
 
-          @media (max-width: 850px) {
+          @media (max-width: 760px) {
+            .pos-main {
+              height: auto;
+              min-height: 100vh;
+              overflow: visible;
+            }
+
             .pos-content {
-              grid-template-columns: 1fr;
-              overflow-y: auto;
+              height: auto;
+              grid-template-columns: minmax(0, 1fr);
+            }
+
+            .pos-products-section {
+              overflow: visible;
             }
 
             .pos-cart-panel {
-              min-height: 500px;
-              border-left: 0;
-              border-top: 1px solid #e3eae9;
+              min-height: 400px;
             }
 
-            .pos-main {
-              overflow-y: auto;
+            .pos-products-grid {
+              grid-template-columns: repeat(4, minmax(0, 1fr));
             }
 
             .pos-reference-checkout-body {
@@ -1662,7 +1759,6 @@ function POS() {
           }
         `}</style>
 
-
         {/* HEADER */}
 
         <header className="pos-topbar">
@@ -1675,9 +1771,7 @@ function POS() {
               type="button"
               className="pos-account-button"
               onClick={() =>
-                setAccountOpen(
-                  (current) => !current
-                )
+                setAccountOpen(!accountOpen)
               }
             >
               <div className="pos-staff-avatar">
@@ -1688,13 +1782,14 @@ function POS() {
                 <div className="pos-staff-name">
                   Clinic Staff
                 </div>
-
                 <div className="pos-staff-role">
-                  Staff account
+                  Staff
                 </div>
               </div>
 
-              <FaChevronDown className="pos-account-arrow" />
+              <FaChevronDown
+                className="pos-account-arrow"
+              />
             </button>
 
             {accountOpen && (
@@ -1703,20 +1798,29 @@ function POS() {
                   <div className="pos-staff-name">
                     Clinic Staff
                   </div>
-
                   <div className="pos-staff-role">
-                    staff@vetclinic.com
+                    Staff Account
                   </div>
                 </div>
 
-                <button type="button">
+                <button
+                  type="button"
+                  onClick={() =>
+                    setAccountOpen(false)
+                  }
+                >
                   <FaUser />
-                  My account
+                  Profile
                 </button>
 
-                <button type="button">
+                <button
+                  type="button"
+                  onClick={() =>
+                    setAccountOpen(false)
+                  }
+                >
                   <FaCog />
-                  Account settings
+                  Settings
                 </button>
 
                 <button
@@ -1731,13 +1835,13 @@ function POS() {
           </div>
         </header>
 
-
         <div className="pos-content">
-
-          {/* PRODUCTS */}
+          {/* PRODUCTS SECTION */}
 
           <section className="pos-products-section">
             <div className="pos-tools">
+              {/* SEARCH WITH ICON */}
+
               <div className="pos-search-box">
                 <FaSearch />
 
@@ -1745,17 +1849,19 @@ function POS() {
                   type="text"
                   placeholder="Search products..."
                   value={search}
-                  onChange={(e) =>
-                    setSearch(e.target.value)
+                  onChange={(event) =>
+                    setSearch(event.target.value)
                   }
                 />
               </div>
 
+              {/* DYNAMIC CATEGORIES */}
+
               <select
                 className="pos-category-select"
                 value={category}
-                onChange={(e) =>
-                  setCategory(e.target.value)
+                onChange={(event) =>
+                  setCategory(event.target.value)
                 }
               >
                 {categories.map((item) => (
@@ -1769,10 +1875,24 @@ function POS() {
               </select>
             </div>
 
+            {/* FOUR PRODUCTS PER ROW */}
 
             <div className="pos-products-grid">
-              {filteredProducts.map(
-                (product) => (
+              {filteredProducts.map((product) => {
+                const cartItem = cart.find(
+                  (item) =>
+                    String(item.id) ===
+                    String(product.id)
+                );
+
+                const quantityInCart =
+                  cartItem?.quantity || 0;
+
+                const canAdd =
+                  product.stock >
+                  quantityInCart;
+
+                return (
                   <div
                     className="pos-product-card"
                     key={product.id}
@@ -1800,68 +1920,74 @@ function POS() {
                       <div>
                         <div className="pos-product-price">
                           $
-                          {product.price.toFixed(
-                            2
-                          )}
+                          {product.price.toFixed(2)}
                         </div>
 
                         <div className="pos-product-stock">
-                          Stock:{" "}
-                          {product.stock}
+                          Stock: {product.stock}
                         </div>
                       </div>
 
                       <button
                         type="button"
                         className="pos-add-button"
-                        disabled={
-                          product.stock <= 0
-                        }
                         onClick={() =>
                           addToCart(product)
+                        }
+                        disabled={!canAdd}
+                        title={
+                          canAdd
+                            ? "Add to cart"
+                            : "Out of stock"
                         }
                       >
                         <FaPlus />
                       </button>
                     </div>
                   </div>
-                )
-              )}
+                );
+              })}
             </div>
+
+            {filteredProducts.length === 0 && (
+              <div
+                style={{
+                  padding: "45px 15px",
+                  textAlign: "center",
+                  color: "#98a2b3",
+                  fontSize: "12px",
+                }}
+              >
+                <FaBoxOpen
+                  style={{
+                    fontSize: "28px",
+                    marginBottom: "10px",
+                  }}
+                />
+
+                <div>
+                  No products found.
+                </div>
+              </div>
+            )}
           </section>
 
-
-          {/* CART */}
+          {/* CART - SAME POSITION AND DESIGN */}
 
           <aside className="pos-cart-panel">
             <div className="pos-cart-header">
               <h2>Cart</h2>
 
-              <select
+              <input
+                type="text"
                 className="pos-owner-select"
-                value={selectedOwner}
-                onChange={(e) =>
-                  setSelectedOwner(
-                    e.target.value
-                  )
+                placeholder="Enter owner name"
+                value={ownerSearch}
+                onChange={(event) =>
+                  setOwnerSearch(event.target.value)
                 }
-              >
-                <option value="">
-                  Select owner
-                </option>
-
-                {owners.map((owner) => (
-                  <option
-                    key={owner.id}
-                    value={owner.id}
-                  >
-                    {owner.name} —{" "}
-                    {owner.phone}
-                  </option>
-                ))}
-              </select>
+              />
             </div>
-
 
             <div className="pos-cart-body">
               {cart.length === 0 ? (
@@ -1875,7 +2001,7 @@ function POS() {
                   </strong>
 
                   <span>
-                    Tap a product to add it.
+                    Add products to get started
                   </span>
                 </div>
               ) : (
@@ -1889,13 +2015,12 @@ function POS() {
                     </div>
 
                     <div className="pos-cart-item-row">
-                      <span className="pos-cart-price">
+                      <div className="pos-cart-price">
                         $
-                        {(
-                          item.price *
-                          item.quantity
-                        ).toFixed(2)}
-                      </span>
+                        {item.price.toFixed(2)}
+                        {" x "}
+                        {item.quantity}
+                      </div>
 
                       <div className="pos-cart-controls">
                         <button
@@ -1922,6 +2047,18 @@ function POS() {
                               item.id
                             )
                           }
+                          disabled={
+                            item.quantity >=
+                            (
+                              products.find(
+                                (product) =>
+                                  String(
+                                    product.id
+                                  ) ===
+                                  String(item.id)
+                              )?.stock || 0
+                            )
+                          }
                         >
                           <FaPlus />
                         </button>
@@ -1942,15 +2079,10 @@ function POS() {
               )}
             </div>
 
-
             <div className="pos-cart-footer">
               <div className="pos-summary-row">
-                <span>Items</span>
-                <strong>{totalItems}</strong>
-              </div>
-
-              <div className="pos-summary-row">
                 <span>Subtotal</span>
+
                 <strong>
                   ${subtotal.toFixed(2)}
                 </strong>
@@ -1958,39 +2090,68 @@ function POS() {
 
               <div className="pos-summary-row total">
                 <span>Total</span>
+
                 <strong>
-                  ${total.toFixed(2)}
+                  ${subtotal.toFixed(2)}
                 </strong>
               </div>
 
               <button
                 type="button"
                 className="pos-checkout-btn"
-                disabled={cart.length === 0}
                 onClick={openCheckout}
+                disabled={cart.length === 0}
               >
+                <FaShoppingCart />
                 Checkout
               </button>
 
-              <div className="pos-cart-actions">
+              <button
+                type="button"
+                className="pos-clear-btn"
+                onClick={clearCart}
+                disabled={cart.length === 0}
+              >
+                Clear cart
+              </button>
+
+              <div className="pos-bottom-actions">
                 <button
                   type="button"
-                  onClick={clearCart}
+                  className={`pos-bottom-action ${
+                    hasDelivery ? "active" : ""
+                  }`}
+                  onClick={() =>
+                    setHasDelivery(
+                      !hasDelivery
+                    )
+                  }
                 >
-                  Clear
+                  <span className="pos-bottom-action-emoji">
+                    🚚
+                  </span>
+                  Delivery
                 </button>
 
                 <button
                   type="button"
+                  className="pos-bottom-action"
                   onClick={handleRecall}
                 >
+                  <span className="pos-bottom-action-emoji">
+                    ↩️
+                  </span>
                   Recall
                 </button>
 
                 <button
                   type="button"
+                  className="pos-bottom-action"
                   onClick={handleRefund}
                 >
+                  <span className="pos-bottom-action-emoji">
+                    ↪️
+                  </span>
                   Refund
                 </button>
               </div>
@@ -1998,21 +2159,22 @@ function POS() {
           </aside>
         </div>
 
-
         {/* CHECKOUT MODAL */}
 
         {checkoutOpen && (
           <div className="pos-modal-overlay">
-            <div className="pos-checkout-modal">
-
-              <div className="pos-checkout-header">
-                <h2>
-                  <FaCreditCard /> Checkout
-                </h2>
+            <div className="pos-checkout-reference">
+              <div className="pos-reference-checkout-header">
+                <div>
+                  <h2>Checkout</h2>
+                  <p>
+                    Complete your transaction
+                  </p>
+                </div>
 
                 <button
                   type="button"
-                  className="pos-checkout-close"
+                  className="pos-reference-close"
                   onClick={() =>
                     setCheckoutOpen(false)
                   }
@@ -2021,262 +2183,23 @@ function POS() {
                 </button>
               </div>
 
-
               <div className="pos-reference-checkout-body">
-
-                {/* LEFT */}
+                {/* FINANCIAL SUMMARY */}
 
                 <div className="pos-financial-panel">
-                  <div className="pos-reference-amount-due">
-                    <span>
-                      AMOUNT DUE
-                    </span>
+                  <h3>Financial Summary</h3>
 
-                    <div>
-                      <strong>
-                        ${total.toFixed(2)}
-                      </strong>
+                  <div className="pos-financial-grid">
+                    <div className="pos-financial-field">
+                      <label>Subtotal (USD)</label>
 
-                      <small>
-                        LBP{" "}
-                        {Math.round(
-                          totalLbp
-                        ).toLocaleString()}
-                      </small>
-                    </div>
-                  </div>
-
-
-                  <h3 className="pos-checkout-section-title">
-                    Payment Method
-                  </h3>
-
-                  <div className="pos-payment-method-row">
-                    <select
-                      value={paymentMethod}
-                      onChange={(e) =>
-                        setPaymentMethod(
-                          e.target.value
-                        )
-                      }
-                    >
-                      <option value="Cash">
-                        Cash
-                      </option>
-
-                      <option value="Card">
-                        Card
-                      </option>
-                    </select>
-
-                    <button
-                      type="button"
-                      onClick={
-                        handleExactPayment
-                      }
-                      title="Exact payment"
-                    >
-                      <FaCreditCard />
-                    </button>
-                  </div>
-
-
-                  <h3 className="pos-checkout-section-title pos-received-title">
-                    Amount Received
-                  </h3>
-
-                  <div className="pos-received-grid">
-                    <div className="pos-reference-field">
-                      <input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        placeholder="USD"
-                        value={amountReceived}
-                        onChange={(e) =>
-                          setAmountReceived(
-                            e.target.value
-                          )
-                        }
-                      />
-                    </div>
-
-                    <div className="pos-reference-field">
-                      <input
-                        type="number"
-                        min="0"
-                        placeholder="LBP"
-                        value={
-                          amountReceivedLbp
-                        }
-                        onChange={(e) =>
-                          setAmountReceivedLbp(
-                            e.target.value
-                          )
-                        }
-                      />
-                    </div>
-                  </div>
-
-                  <div className="pos-exchange-rate">
-                    Exchange rate: $1 = LBP{" "}
-                    {USD_TO_LBP.toLocaleString()}
-                  </div>
-
-
-                  <div className="pos-quick-payments">
-                    <button
-                      type="button"
-                      onClick={
-                        handleExactPayment
-                      }
-                    >
-                      Exact
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() =>
-                        addQuickUsd(5)
-                      }
-                    >
-                      +$5
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() =>
-                        addQuickUsd(10)
-                      }
-                    >
-                      +$10
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() =>
-                        addQuickUsd(20)
-                      }
-                    >
-                      +$20
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() =>
-                        addQuickLbp(100000)
-                      }
-                    >
-                      +100K LBP
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() =>
-                        addQuickLbp(500000)
-                      }
-                    >
-                      +500K LBP
-                    </button>
-                  </div>
-
-
-                  <div className="pos-reference-payment-summary">
-                    <div>
-                      <span>
-                        Amount Paid
-                      </span>
-
-                      <strong>
-                        $
-                        {totalPaid.toFixed(
-                          2
-                        )}
-                      </strong>
-                    </div>
-
-                    <div>
-                      <span>Change</span>
-
-                      <strong>
-                        $
-                        {change.toFixed(2)}
-                      </strong>
-                    </div>
-                  </div>
-
-
-                  {totalPaid < total && (
-                    <div className="pos-payment-error">
-                      Remaining: $
-                      {(
-                        total -
-                        totalPaid
-                      ).toFixed(2)}
-                    </div>
-                  )}
-                </div>
-
-
-                {/* RIGHT */}
-
-                <div className="pos-checkout-order-panel">
-                  <h3 className="pos-checkout-section-title">
-                    Order Summary
-                  </h3>
-
-                  {cart.map((item) => (
-                    <div
-                      className="pos-checkout-mini-item"
-                      key={item.id}
-                    >
-                      <div>
-                        <strong>
-                          {item.name}
-                        </strong>
-
-                        <span>
-                          {item.quantity} × $
-                          {item.price.toFixed(
-                            2
-                          )}
-                        </span>
+                      <div className="pos-financial-value">
+                        ${subtotal.toFixed(2)}
                       </div>
-
-                      <strong>
-                        $
-                        {(
-                          item.quantity *
-                          item.price
-                        ).toFixed(2)}
-                      </strong>
-                    </div>
-                  ))}
-
-
-                  <div
-                    style={{
-                      marginTop: "14px",
-                    }}
-                  >
-                    <div className="pos-summary-row">
-                      <span>
-                        Subtotal
-                      </span>
-
-                      <strong>
-                        $
-                        {subtotal.toFixed(
-                          2
-                        )}
-                      </strong>
                     </div>
 
-
-                    <div className="pos-summary-row">
-                      <span>
-                        Discount
-                      </span>
+                    <div className="pos-financial-field">
+                      <label>Discount (USD)</label>
 
                       <input
                         type="number"
@@ -2284,69 +2207,260 @@ function POS() {
                         max={subtotal}
                         step="0.01"
                         value={discount}
-                        onChange={(e) =>
+                        onChange={(event) =>
                           setDiscount(
-                            e.target.value
+                            event.target.value
                           )
                         }
-                        style={{
-                          width: "90px",
-                          height: "30px",
-                          border:
-                            "1px solid #dfe7e7",
-                          borderRadius:
-                            "6px",
-                          padding:
-                            "0 8px",
-                          outline: "none",
-                          fontSize: "9px",
-                        }}
                       />
                     </div>
 
+                    <div className="pos-financial-field">
+                      <label>Discount Applied</label>
 
-                    <div className="pos-summary-row total">
-                      <span>Total</span>
+                      <div className="pos-financial-value">
+                        $
+                        {discountNumber.toFixed(2)}
+                      </div>
+                    </div>
 
-                      <strong>
-                        ${total.toFixed(2)}
-                      </strong>
+                    <div className="pos-financial-field">
+                      <label>Total (LBP)</label>
+
+                      <div className="pos-financial-value">
+                        {totalLbp.toLocaleString(
+                          "en-US",
+                          {
+                            maximumFractionDigits: 0,
+                          }
+                        )}
+                        {" LBP"}
+                      </div>
                     </div>
                   </div>
 
+                  <div className="pos-reference-total-box">
+                    <span>
+                      Total Amount Due
+                    </span>
 
-                  <label
-                    style={{
-                      marginTop: "18px",
-                      display: "flex",
-                      alignItems:
-                        "center",
-                      gap: "7px",
-                      color: "#475467",
-                      fontSize: "9px",
-                      cursor: "pointer",
-                    }}
-                  >
+                    <strong>
+                      ${total.toFixed(2)}
+                    </strong>
+                  </div>
+
+                  <label className="pos-delivery-checkbox">
                     <input
                       type="checkbox"
                       checked={hasDelivery}
-                      onChange={(e) =>
+                      onChange={(event) =>
                         setHasDelivery(
-                          e.target.checked
+                          event.target.checked
                         )
                       }
                     />
 
-                    Delivery required
+                    Delivery Order
                   </label>
+
+                  <div className="pos-checkout-items-mini">
+                    <h3>Order Items</h3>
+
+                    {cart.map((item) => (
+                      <div
+                        key={item.id}
+                        className="pos-checkout-mini-item"
+                      >
+                        <div>
+                          <strong>
+                            {item.name}
+                          </strong>
+
+                          <span>
+                            $
+                            {item.price.toFixed(2)}
+                            {" x "}
+                            {item.quantity}
+                          </span>
+                        </div>
+
+                        <strong>
+                          $
+                          {(
+                            item.price *
+                            item.quantity
+                          ).toFixed(2)}
+                        </strong>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* PAYMENT */}
+
+                <div className="pos-reference-payment">
+                  <h3>Payment Details</h3>
+
+                  <div className="pos-reference-amount-due">
+                    <span>Amount Due</span>
+
+                    <strong>
+                      ${total.toFixed(2)}
+                    </strong>
+                  </div>
+
+                  <div className="pos-received-title">
+                    Payment Method
+                  </div>
+
+                  <div className="pos-reference-payment-methods">
+                    {[
+                      "Cash",
+                      "Card",
+                    ].map((method) => (
+                      <button
+                        key={method}
+                        type="button"
+                        className={
+                          paymentMethod ===
+                          method
+                            ? "active"
+                            : ""
+                        }
+                        onClick={() =>
+                          setPaymentMethod(
+                            method
+                          )
+                        }
+                      >
+                        {method}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="pos-reference-field">
+                    <label>
+                      Amount Received (USD)
+                    </label>
+
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      placeholder="0.00"
+                      value={amountReceived}
+                      onChange={(event) =>
+                        setAmountReceived(
+                          event.target.value
+                        )
+                      }
+                    />
+
+                    <div className="pos-reference-quick-payments">
+                      <button
+                        type="button"
+                        onClick={
+                          handleExactPayment
+                        }
+                      >
+                        Exact
+                      </button>
+
+                      {[5, 10, 20, 50, 100].map(
+                        (amount) => (
+                          <button
+                            key={amount}
+                            type="button"
+                            onClick={() =>
+                              addQuickUsd(
+                                amount
+                              )
+                            }
+                          >
+                            +${amount}
+                          </button>
+                        )
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="pos-reference-field">
+                    <label>
+                      Amount Received (LBP)
+                    </label>
+
+                    <input
+                      type="number"
+                      min="0"
+                      placeholder="0"
+                      value={amountReceivedLbp}
+                      onChange={(event) =>
+                        setAmountReceivedLbp(
+                          event.target.value
+                        )
+                      }
+                    />
+
+                    <div className="pos-reference-quick-payments">
+                      {[
+                        100000,
+                        500000,
+                        1000000,
+                      ].map((amount) => (
+                        <button
+                          key={amount}
+                          type="button"
+                          onClick={() =>
+                            addQuickLbp(
+                              amount
+                            )
+                          }
+                        >
+                          +
+                          {amount.toLocaleString(
+                            "en-US"
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="pos-reference-payment-summary">
+                    <div>
+                      <span>Total Paid</span>
+
+                      <strong>
+                        $
+                        {totalPaid.toFixed(2)}
+                      </strong>
+                    </div>
+
+                    <div>
+                      <span>Remaining</span>
+
+                      <strong>
+                        $
+                        {Math.max(
+                          total - totalPaid,
+                          0
+                        ).toFixed(2)}
+                      </strong>
+                    </div>
+
+                    <div>
+                      <span>Change</span>
+
+                      <strong>
+                        ${change.toFixed(2)}
+                      </strong>
+                    </div>
+                  </div>
                 </div>
               </div>
-
 
               <div className="pos-reference-checkout-footer">
                 <button
                   type="button"
-                  className="pos-reference-cancel"
                   onClick={() =>
                     setCheckoutOpen(false)
                   }
@@ -2356,13 +2470,13 @@ function POS() {
 
                 <button
                   type="button"
-                  className="pos-reference-complete"
-                  disabled={
-                    totalPaid < total
-                  }
+                  className="pos-complete-sale"
                   onClick={finishSale}
+                  disabled={
+                    totalPaid + 0.000001 <
+                    total
+                  }
                 >
-                  <FaCheckCircle />
                   Complete Sale
                 </button>
               </div>
@@ -2370,104 +2484,45 @@ function POS() {
           </div>
         )}
 
-
         {/* SALE SUCCESS */}
 
-        {saleComplete && lastSale && (
+        {saleComplete && (
           <div className="pos-modal-overlay">
-            <div className="pos-success-modal">
+            <div className="pos-success-card">
+              <FaCheckCircle className="pos-success-icon" />
 
-              <div className="pos-success-icon">
-                <FaCheckCircle />
-              </div>
-
-              <h3>
-                Sale Completed
-              </h3>
+              <h2>Sale Completed!</h2>
 
               <p>
-                The transaction was completed
-                successfully.
+                Your transaction was
+                completed successfully.
               </p>
 
+              {lastSale && (
+                <>
+                  <p>
+                    Sale ID: {lastSale.id}
+                  </p>
 
-              <div className="pos-success-details">
-                <div className="pos-success-row">
-                  <span>Sale ID</span>
-
-                  <strong>
-                    {lastSale.id}
-                  </strong>
-                </div>
-
-                <div className="pos-success-row">
-                  <span>Owner</span>
-
-                  <strong>
-                    {lastSale.owner}
-                  </strong>
-                </div>
-
-                <div className="pos-success-row">
-                  <span>Payment</span>
-
-                  <strong>
-                    {
-                      lastSale.paymentMethod
-                    }
-                  </strong>
-                </div>
-
-                <div className="pos-success-row">
-                  <span>Total</span>
-
-                  <strong>
-                    $
-                    {Number(
-                      lastSale.total
-                    ).toFixed(2)}
-                  </strong>
-                </div>
-
-                <div className="pos-success-row">
-                  <span>Received</span>
-
-                  <strong>
-                    $
-                    {Number(
-                      lastSale.received
-                    ).toFixed(2)}
-                  </strong>
-                </div>
-
-                <div className="pos-success-row">
-                  <span>Change</span>
-
-                  <strong>
-                    $
-                    {Number(
-                      lastSale.change
-                    ).toFixed(2)}
-                  </strong>
-                </div>
-              </div>
-
+                  <p>
+                    Total: $
+                    {lastSale.total.toFixed(2)}
+                  </p>
+                </>
+              )}
 
               <button
                 type="button"
-                className="pos-success-close"
-                onClick={() => {
-                  setSaleComplete(false);
-                  setLastSale(null);
-                }}
+                className="pos-success-button"
+                onClick={() =>
+                  setSaleComplete(false)
+                }
               >
                 Done
               </button>
-
             </div>
           </div>
         )}
-
       </main>
     </div>
   );

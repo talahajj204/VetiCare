@@ -1,3 +1,4 @@
+
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import {
   FaArrowLeft,
@@ -17,12 +18,9 @@ import {
   FaPrescriptionBottleAlt,
   FaBell,
   FaStethoscope,
-  FaCamera,
   FaFileInvoiceDollar,
-  FaClock,
   FaUserMd,
   FaMoneyBillWave,
-  FaCheckCircle,
 } from "react-icons/fa";
 
 import Sidebar from "../components/Sidebar";
@@ -42,10 +40,6 @@ function PetProfile() {
 
   const passedPet = location.state?.pet;
 
-  // =====================================================
-  // FALLBACK PET DATA
-  // =====================================================
-
   const fallbackPets = {
     1: {
       id: 1,
@@ -54,22 +48,17 @@ function PetProfile() {
       species: "Dog",
       breed: "Golden Retriever",
       age: "4 years",
-
       sex: "Female",
       dateOfBirth: "2022-04-15",
       color: "Golden",
       weight: "28 kg",
-
       microchipNumber: "985141000123456",
       bloodType: "DEA 1.1 Positive",
-
       allergies: "Chicken",
       chronicConditions: "None",
-
       notes: "Friendly pet. Prefers calm handling.",
       profilePhoto: "",
     },
-
     2: {
       id: 2,
       name: "Luna",
@@ -77,18 +66,14 @@ function PetProfile() {
       species: "Bird",
       breed: "Love Birds",
       age: "2 years",
-
       sex: "Female",
       dateOfBirth: "2024-03-10",
       color: "Green / Yellow",
       weight: "55 g",
-
       microchipNumber: "Not available",
       bloodType: "Not recorded",
-
       allergies: "None known",
       chronicConditions: "None",
-
       notes: "Routine checkups only.",
       profilePhoto: "",
     },
@@ -96,107 +81,37 @@ function PetProfile() {
 
   const fallbackPet = fallbackPets[petId];
 
-  // =====================================================
-  // PET
-  // =====================================================
-
   const pet = passedPet
-    ? {
-        ...(fallbackPet || {}),
-        ...passedPet,
-      }
+    ? { ...(fallbackPet || {}), ...passedPet }
     : fallbackPet;
-
-  // =====================================================
-  // PET NOT FOUND
-  // =====================================================
-
-  if (!pet) {
-    return (
-      <div className="dashboard-layout">
-        <Sidebar />
-
-        <main className="dashboard-main">
-          <div className="page-header">
-            <div>
-              <h1>Pet Not Found</h1>
-              <p>The requested pet could not be found.</p>
-            </div>
-          </div>
-
-          <button
-            type="button"
-            className="save-button"
-            onClick={() => navigate("/pets")}
-            style={{
-              width: "auto",
-              padding: "10px 18px",
-            }}
-          >
-            <FaArrowLeft />
-
-            <span style={{ marginLeft: "7px" }}>
-              Back to Pets
-            </span>
-          </button>
-        </main>
-      </div>
-    );
-  }
-
-  // =====================================================
-  // RECORDS
-  // =====================================================
-
-  const records = getPetRecords(pet.name);
-
-  const billingSummary = getPetBillingSummary(pet.name);
-
-  const nextAppointment = getNextAppointment(pet.name);
-
-  const nextVaccination = getNextVaccinationDue(pet.name);
-
-  const timeline = getPetTimeline(pet.name);
-
-  // =====================================================
-  // HELPERS
-  // =====================================================
 
   const formatDate = (date) => {
     if (!date) return "—";
 
     const parts = String(date).split("-");
 
-    if (parts.length !== 3) {
-      return date;
-    }
+    if (parts.length !== 3) return String(date);
 
     const [year, month, day] = parts;
-
     return `${day}/${month}/${year}`;
   };
 
   const formatTime = (time) => {
     if (!time) return "—";
 
-    const [hours, minutes] = time.split(":");
+    const [hours, minutes] = String(time).split(":");
+
+    if (!minutes) return String(time);
 
     let hour = Number(hours);
-
     const period = hour >= 12 ? "PM" : "AM";
-
     hour = hour % 12 || 12;
 
     return `${hour}:${minutes} ${period}`;
   };
 
-  const formatMoney = (amount) => {
-    return `$${Number(amount || 0).toFixed(2)}`;
-  };
-
-  // =====================================================
-  // STYLES
-  // =====================================================
+  const formatMoney = (amount) =>
+    `$${Number(amount || 0).toFixed(2)}`;
 
   const cardStyle = {
     background: "#ffffff",
@@ -207,8 +122,7 @@ function PetProfile() {
   };
 
   const sectionTitleStyle = {
-    margin: 0,
-    marginBottom: "20px",
+    margin: "0 0 20px",
     fontSize: "18px",
     color: "#333333",
     display: "flex",
@@ -286,19 +200,13 @@ function PetProfile() {
     verticalAlign: "middle",
   };
 
-  // =====================================================
-  // STATUS
-  // =====================================================
-
   const getStatusStyle = (status) => {
-    const normalizedStatus =
-      String(status || "").toLowerCase();
+    const normalized = String(status || "").toLowerCase();
 
     if (
-      normalizedStatus === "paid" ||
-      normalizedStatus === "completed" ||
-      normalizedStatus === "confirmed" ||
-      normalizedStatus === "active"
+      ["paid", "completed", "confirmed", "active"].includes(
+        normalized
+      )
     ) {
       return {
         background: "#e5f7ef",
@@ -307,10 +215,9 @@ function PetProfile() {
     }
 
     if (
-      normalizedStatus === "pending" ||
-      normalizedStatus === "due" ||
-      normalizedStatus === "partially paid" ||
-      normalizedStatus === "upcoming"
+      ["pending", "due", "partially paid", "upcoming"].includes(
+        normalized
+      )
     ) {
       return {
         background: "#fff5dc",
@@ -318,10 +225,7 @@ function PetProfile() {
       };
     }
 
-    if (
-      normalizedStatus === "overdue" ||
-      normalizedStatus === "cancelled"
-    ) {
+    if (["overdue", "cancelled"].includes(normalized)) {
       return {
         background: "#fdeaea",
         color: "#b34d4d",
@@ -334,93 +238,57 @@ function PetProfile() {
     };
   };
 
-  const StatusBadge = ({ status }) => {
-    const style = getStatusStyle(status);
-
-    return (
-      <span
-        style={{
-          ...style,
-          display: "inline-flex",
-          alignItems: "center",
-          justifyContent: "center",
-          padding: "5px 10px",
-          borderRadius: "20px",
-          fontSize: "12px",
-          fontWeight: "700",
-          whiteSpace: "nowrap",
-        }}
-      >
-        {status || "—"}
-      </span>
-    );
-  };
-
-  // =====================================================
-  // TIMELINE
-  // =====================================================
+  const StatusBadge = ({ status }) => (
+    <span
+      style={{
+        ...getStatusStyle(status),
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: "5px 10px",
+        borderRadius: "20px",
+        fontSize: "12px",
+        fontWeight: 700,
+        whiteSpace: "nowrap",
+      }}
+    >
+      {status || "—"}
+    </span>
+  );
 
   const getTimelineIcon = (type) => {
-    if (type === "medical") {
-      return <FaStethoscope />;
-    }
+    const icons = {
+      medical: <FaStethoscope />,
+      appointment: <FaCalendarCheck />,
+      vaccination: <FaSyringe />,
+      medication: <FaPills />,
+      prescription: <FaPrescriptionBottleAlt />,
+      reminder: <FaBell />,
+      billing: <FaFileInvoiceDollar />,
+    };
 
-    if (type === "appointment") {
-      return <FaCalendarCheck />;
-    }
-
-    if (type === "vaccination") {
-      return <FaSyringe />;
-    }
-
-    if (type === "medication") {
-      return <FaPills />;
-    }
-
-    if (type === "prescription") {
-      return <FaPrescriptionBottleAlt />;
-    }
-
-    if (type === "reminder") {
-      return <FaBell />;
-    }
-
-    if (type === "billing") {
-      return <FaFileInvoiceDollar />;
-    }
-
-    return <FaCalendarCheck />;
+    return icons[type] || <FaCalendarCheck />;
   };
 
   const getTimelineLabel = (type) => {
-    if (type === "medical") return "Medical Record";
+    const labels = {
+      medical: "Medical Record",
+      appointment: "Appointment",
+      vaccination: "Vaccination",
+      medication: "Medication",
+      prescription: "Prescription",
+      reminder: "Reminder",
+      billing: "Billing",
+    };
 
-    if (type === "appointment") return "Appointment";
-
-    if (type === "vaccination") return "Vaccination";
-
-    if (type === "medication") return "Medication";
-
-    if (type === "prescription") return "Prescription";
-
-    if (type === "reminder") return "Reminder";
-
-    if (type === "billing") return "Billing";
-
-    return "Activity";
+    return labels[type] || "Activity";
   };
 
   const getTimelineDescription = (item) => {
     if (item.timelineType === "appointment") {
       return `${item.reason || item.type || "Appointment"}${
-        item.veterinarian
-          ? ` • ${item.veterinarian}`
-          : ""
-      }${
-        item.time
-          ? ` • ${formatTime(item.time)}`
-          : ""
-      }`;
+        item.veterinarian ? ` • ${item.veterinarian}` : ""
+      }${item.time ? ` • ${formatTime(item.time)}` : ""}`;
     }
 
     if (item.timelineType === "vaccination") {
@@ -431,20 +299,14 @@ function PetProfile() {
 
     if (item.timelineType === "medical") {
       return `${item.diagnosis || item.reason || "Medical record"}${
-        item.veterinarian
-          ? ` • ${item.veterinarian}`
-          : ""
+        item.veterinarian ? ` • ${item.veterinarian}` : ""
       }`;
     }
 
     if (item.timelineType === "medication") {
       return `${item.name || "Medication"}${
         item.dosage ? ` • ${item.dosage}` : ""
-      }${
-        item.frequency
-          ? ` • ${item.frequency}`
-          : ""
-      }`;
+      }${item.frequency ? ` • ${item.frequency}` : ""}`;
     }
 
     if (item.timelineType === "prescription") {
@@ -466,24 +328,93 @@ function PetProfile() {
     return "";
   };
 
-  // =====================================================
-  // RETURN
-  // =====================================================
+  if (!pet) {
+    return (
+      <div className="dashboard-layout">
+        <Sidebar />
+
+        <main className="dashboard-main">
+          <h1>Pet Not Found</h1>
+          <p>The requested pet could not be found.</p>
+
+          <button
+            type="button"
+            onClick={() => navigate("/pets")}
+          >
+            <FaArrowLeft /> Back to Pets
+          </button>
+        </main>
+      </div>
+    );
+  }
+
+  const records = getPetRecords(pet.name);
+  const billingSummary = getPetBillingSummary(pet.name);
+  const nextAppointment = getNextAppointment(pet.name);
+  const nextVaccination = getNextVaccinationDue(pet.name);
+  const timeline = getPetTimeline(pet.name);
+
+  const appointments = records.appointments || [];
+  const medicalRecords = records.medicalRecords || [];
+  const vaccinations = records.vaccinations || [];
+  const medications = records.medications || [];
+  const prescriptions = records.prescriptions || [];
+  const reminders = records.reminders || [];
+  const billing = records.billing || [];
 
   return (
     <div className="dashboard-layout">
       <Sidebar />
 
-      <main className="dashboard-main pets-page">
+      <main className="dashboard-main pets-page pet-profile-main">
+        <style>{`
+          /* Give the profile its full available content width */
+          .pet-profile-main {
+            flex: 1 1 0 !important;
+            min-width: 0 !important;
+            width: auto !important;
+            max-width: none !important;
+            box-sizing: border-box !important;
+          }
 
-        {/* =====================================================
-            HEADER
-        ===================================================== */}
+          /* Do not let existing page-header CSS center the button */
+          .pet-profile-main .pet-profile-top-row {
+            display: flex !important;
+            align-items: center !important;
+            justify-content: space-between !important;
+            width: 100% !important;
+            max-width: none !important;
+            min-width: 0 !important;
+            box-sizing: border-box !important;
+            margin: 0 0 30px !important;
+            padding: 0 !important;
+            gap: 20px !important;
+            flex-wrap: wrap !important;
+          }
+
+          .pet-profile-main .pet-profile-back-btn {
+            margin-left: auto !important;
+            margin-right: 0 !important;
+            position: static !important;
+            transform: none !important;
+            flex-shrink: 0 !important;
+          }
+
+          @media (max-width: 600px) {
+            .pet-profile-main .pet-profile-top-row {
+              align-items: flex-start !important;
+            }
+          }
+        `}</style>
+
+        {/* HEADER - BACK BUTTON AT FAR RIGHT */}
 
         <div
-          className="page-header pets-page-header"
+          className="pet-profile-top-row"
           style={{
             display: "flex",
+            width: "100%",
+            maxWidth: "none",
             justifyContent: "space-between",
             alignItems: "center",
             gap: "20px",
@@ -492,7 +423,6 @@ function PetProfile() {
         >
           <div className="pets-title-area">
             <h1>{pet.name}</h1>
-
             <p>
               Complete patient profile and medical history
             </p>
@@ -500,6 +430,7 @@ function PetProfile() {
 
           <button
             type="button"
+            className="pet-profile-back-btn"
             onClick={() => navigate("/pets")}
             style={{
               width: "auto",
@@ -515,19 +446,19 @@ function PetProfile() {
               alignItems: "center",
               justifyContent: "center",
               gap: "7px",
-              fontWeight: "600",
+              fontWeight: 600,
               whiteSpace: "nowrap",
+              marginLeft: "auto",
+              marginRight: 0,
+              flexShrink: 0,
             }}
           >
             <FaArrowLeft />
-
             Back to Pets
           </button>
         </div>
 
-        {/* =====================================================
-            PET HERO
-        ===================================================== */}
+        {/* PET HERO */}
 
         <div style={cardStyle}>
           <div
@@ -564,19 +495,11 @@ function PetProfile() {
                   }}
                 />
               ) : (
-                <FaPaw
-                  style={{
-                    fontSize: "44px",
-                  }}
-                />
+                <FaPaw style={{ fontSize: "44px" }} />
               )}
             </div>
 
-            <div
-              style={{
-                flex: "1 1 300px",
-              }}
-            >
+            <div style={{ flex: "1 1 300px" }}>
               <h2
                 style={{
                   margin: "0 0 6px",
@@ -593,8 +516,7 @@ function PetProfile() {
                   color: "#718181",
                 }}
               >
-                {pet.species || "—"} •{" "}
-                {pet.breed || "—"}
+                {pet.species || "—"} • {pet.breed || "—"}
               </p>
 
               <div
@@ -607,20 +529,17 @@ function PetProfile() {
                   background: "#e1f5f3",
                   color: "#319c97",
                   fontSize: "13px",
-                  fontWeight: "600",
+                  fontWeight: 600,
                 }}
               >
                 <FaUser />
-
                 Owner: {pet.owner || "—"}
               </div>
             </div>
           </div>
         </div>
 
-        {/* =====================================================
-            SUMMARY CARDS
-        ===================================================== */}
+        {/* SUMMARY CARDS */}
 
         <div
           style={{
@@ -631,378 +550,143 @@ function PetProfile() {
             marginBottom: "20px",
           }}
         >
-          {/* NEXT APPOINTMENT */}
-
-          <div style={cardStyle}>
-            <div
-              style={{
-                width: "42px",
-                height: "42px",
-                borderRadius: "10px",
-                background: "#e1f5f3",
-                color: "#319c97",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                marginBottom: "14px",
-              }}
-            >
-              <FaCalendarCheck />
-            </div>
-
-            <div
-              style={{
-                color: "#718181",
-                fontSize: "13px",
-                marginBottom: "6px",
-              }}
-            >
-              Next Appointment
-            </div>
-
-            <div
-              style={{
-                fontSize: "18px",
-                fontWeight: "700",
-                color: "#333333",
-              }}
-            >
-              {nextAppointment
+          {[
+            {
+              title: "Next Appointment",
+              icon: <FaCalendarCheck />,
+              value: nextAppointment
                 ? formatDate(nextAppointment.date)
-                : "No appointment"}
-            </div>
-
-            {nextAppointment && (
+                : "No appointment",
+              detail: nextAppointment
+                ? formatTime(nextAppointment.time)
+                : null,
+            },
+            {
+              title: "Next Vaccine Due",
+              icon: <FaSyringe />,
+              value: nextVaccination
+                ? formatDate(nextVaccination.nextDueDate)
+                : "No vaccine due",
+              detail: nextVaccination?.vaccine,
+            },
+            {
+              title: "Total Billing",
+              icon: <FaFileInvoiceDollar />,
+              value: formatMoney(billingSummary.total),
+              detail: `Paid ${formatMoney(billingSummary.paid)}`,
+            },
+            {
+              title: "Outstanding Balance",
+              icon: <FaMoneyBillWave />,
+              value: formatMoney(billingSummary.balance),
+              detail:
+                billingSummary.balance > 0
+                  ? "Payment remaining"
+                  : "Fully paid",
+              balance: true,
+            },
+          ].map((card) => (
+            <div key={card.title} style={cardStyle}>
               <div
                 style={{
-                  marginTop: "5px",
-                  color: "#718181",
-                  fontSize: "13px",
+                  width: "42px",
+                  height: "42px",
+                  borderRadius: "10px",
+                  background: "#e1f5f3",
+                  color: "#319c97",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  marginBottom: "14px",
                 }}
               >
-                {formatTime(nextAppointment.time)}
+                {card.icon}
               </div>
-            )}
-          </div>
 
-          {/* NEXT VACCINE */}
-
-          <div style={cardStyle}>
-            <div
-              style={{
-                width: "42px",
-                height: "42px",
-                borderRadius: "10px",
-                background: "#e1f5f3",
-                color: "#319c97",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                marginBottom: "14px",
-              }}
-            >
-              <FaSyringe />
-            </div>
-
-            <div
-              style={{
-                color: "#718181",
-                fontSize: "13px",
-                marginBottom: "6px",
-              }}
-            >
-              Next Vaccine Due
-            </div>
-
-            <div
-              style={{
-                fontSize: "18px",
-                fontWeight: "700",
-                color: "#333333",
-              }}
-            >
-              {nextVaccination
-                ? formatDate(
-                    nextVaccination.nextDueDate
-                  )
-                : "No vaccine due"}
-            </div>
-
-            {nextVaccination && (
               <div
                 style={{
-                  marginTop: "5px",
                   color: "#718181",
                   fontSize: "13px",
+                  marginBottom: "6px",
                 }}
               >
-                {nextVaccination.vaccine}
+                {card.title}
               </div>
-            )}
-          </div>
 
-          {/* TOTAL BILLING */}
+              <div
+                style={{
+                  fontSize: "18px",
+                  fontWeight: 700,
+                  color: "#333333",
+                }}
+              >
+                {card.value}
+              </div>
 
-          <div style={cardStyle}>
-            <div
-              style={{
-                width: "42px",
-                height: "42px",
-                borderRadius: "10px",
-                background: "#e1f5f3",
-                color: "#319c97",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                marginBottom: "14px",
-              }}
-            >
-              <FaFileInvoiceDollar />
-            </div>
-
-            <div
-              style={{
-                color: "#718181",
-                fontSize: "13px",
-                marginBottom: "6px",
-              }}
-            >
-              Total Billing
-            </div>
-
-            <div
-              style={{
-                fontSize: "18px",
-                fontWeight: "700",
-                color: "#333333",
-              }}
-            >
-              {formatMoney(billingSummary.total)}
-            </div>
-
-            <div
-              style={{
-                marginTop: "5px",
-                color: "#718181",
-                fontSize: "13px",
-              }}
-            >
-              Paid {formatMoney(billingSummary.paid)}
-            </div>
-          </div>
-
-          {/* BALANCE */}
-
-          <div style={cardStyle}>
-            <div
-              style={{
-                width: "42px",
-                height: "42px",
-                borderRadius: "10px",
-                background:
-                  billingSummary.balance > 0
-                    ? "#fff5dc"
-                    : "#e5f7ef",
-                color:
-                  billingSummary.balance > 0
-                    ? "#9a7117"
-                    : "#27845f",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                marginBottom: "14px",
-              }}
-            >
-              <FaMoneyBillWave />
-            </div>
-
-            <div
-              style={{
-                color: "#718181",
-                fontSize: "13px",
-                marginBottom: "6px",
-              }}
-            >
-              Outstanding Balance
-            </div>
-
-            <div
-              style={{
-                fontSize: "18px",
-                fontWeight: "700",
-                color:
-                  billingSummary.balance > 0
-                    ? "#9a7117"
-                    : "#27845f",
-              }}
-            >
-              {formatMoney(
-                billingSummary.balance
+              {card.detail && (
+                <div
+                  style={{
+                    marginTop: "5px",
+                    color: "#718181",
+                    fontSize: "13px",
+                  }}
+                >
+                  {card.detail}
+                </div>
               )}
             </div>
-
-            <div
-              style={{
-                marginTop: "5px",
-                color: "#718181",
-                fontSize: "13px",
-              }}
-            >
-              {billingSummary.balance > 0
-                ? "Payment remaining"
-                : "Fully paid"}
-            </div>
-          </div>
+          ))}
         </div>
 
-        {/* =====================================================
-            PET INFORMATION
-        ===================================================== */}
+        {/* PET INFORMATION */}
 
         <div style={cardStyle}>
           <h2 style={sectionTitleStyle}>
-            <FaPaw
-              style={{
-                color: "#319c97",
-              }}
-            />
-
+            <FaPaw style={{ color: "#319c97" }} />
             Pet Information
           </h2>
 
           <div style={infoGridStyle}>
-            <div style={infoRowStyle}>
-              <span style={labelStyle}>
-                Pet Name
-              </span>
+            {[
+              ["Pet Name", pet.name],
+              ["Owner", pet.owner, <FaUser />],
+              ["Species", pet.species],
+              ["Breed", pet.breed],
+              ["Sex", pet.sex],
+              [
+                "Date of Birth",
+                formatDate(pet.dateOfBirth),
+                <FaBirthdayCake />,
+              ],
+              ["Age", pet.age],
+              ["Color", pet.color, <FaPalette />],
+              ["Weight", pet.weight, <FaWeightHanging />],
+              [
+                "Microchip Number",
+                pet.microchipNumber,
+                <FaMicrochip />,
+              ],
+              ["Blood Type", pet.bloodType, <FaTint />],
+            ].map(([label, value, icon]) => (
+              <div key={label} style={infoRowStyle}>
+                <span style={labelStyle}>
+                  {icon}
+                  {label}
+                </span>
 
-              <span style={valueStyle}>
-                {pet.name || "—"}
-              </span>
-            </div>
-
-            <div style={infoRowStyle}>
-              <span style={labelStyle}>
-                <FaUser />
-                Owner
-              </span>
-
-              <span style={valueStyle}>
-                {pet.owner || "—"}
-              </span>
-            </div>
-
-            <div style={infoRowStyle}>
-              <span style={labelStyle}>
-                Species
-              </span>
-
-              <span style={valueStyle}>
-                {pet.species || "—"}
-              </span>
-            </div>
-
-            <div style={infoRowStyle}>
-              <span style={labelStyle}>
-                Breed
-              </span>
-
-              <span style={valueStyle}>
-                {pet.breed || "—"}
-              </span>
-            </div>
-
-            <div style={infoRowStyle}>
-              <span style={labelStyle}>
-                Sex
-              </span>
-
-              <span style={valueStyle}>
-                {pet.sex || "—"}
-              </span>
-            </div>
-
-            <div style={infoRowStyle}>
-              <span style={labelStyle}>
-                <FaBirthdayCake />
-                Date of Birth
-              </span>
-
-              <span style={valueStyle}>
-                {formatDate(
-                  pet.dateOfBirth
-                )}
-              </span>
-            </div>
-
-            <div style={infoRowStyle}>
-              <span style={labelStyle}>
-                Age
-              </span>
-
-              <span style={valueStyle}>
-                {pet.age || "—"}
-              </span>
-            </div>
-
-            <div style={infoRowStyle}>
-              <span style={labelStyle}>
-                <FaPalette />
-                Color
-              </span>
-
-              <span style={valueStyle}>
-                {pet.color || "—"}
-              </span>
-            </div>
-
-            <div style={infoRowStyle}>
-              <span style={labelStyle}>
-                <FaWeightHanging />
-                Weight
-              </span>
-
-              <span style={valueStyle}>
-                {pet.weight || "—"}
-              </span>
-            </div>
-
-            <div style={infoRowStyle}>
-              <span style={labelStyle}>
-                <FaMicrochip />
-                Microchip Number
-              </span>
-
-              <span style={valueStyle}>
-                {pet.microchipNumber || "—"}
-              </span>
-            </div>
-
-            <div style={infoRowStyle}>
-              <span style={labelStyle}>
-                <FaTint />
-                Blood Type
-              </span>
-
-              <span style={valueStyle}>
-                {pet.bloodType || "—"}
-              </span>
-            </div>
+                <span style={valueStyle}>
+                  {value || "—"}
+                </span>
+              </div>
+            ))}
           </div>
         </div>
 
-        {/* =====================================================
-            MEDICAL INFORMATION
-        ===================================================== */}
+        {/* MEDICAL INFORMATION */}
 
         <div style={cardStyle}>
           <h2 style={sectionTitleStyle}>
-            <FaNotesMedical
-              style={{
-                color: "#319c97",
-              }}
-            />
-
+            <FaNotesMedical style={{ color: "#319c97" }} />
             Medical Information
           </h2>
 
@@ -1014,317 +698,221 @@ function PetProfile() {
               gap: "16px",
             }}
           >
-            <div>
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "8px",
-                  color: "#718181",
-                  fontSize: "14px",
-                  marginBottom: "7px",
-                }}
-              >
-                <FaExclamationTriangle />
+            {[
+              {
+                title: "Allergies",
+                icon: <FaExclamationTriangle />,
+                value: pet.allergies || "No known allergies.",
+              },
+              {
+                title: "Chronic Conditions",
+                icon: <FaNotesMedical />,
+                value:
+                  pet.chronicConditions ||
+                  "No chronic conditions recorded.",
+              },
+            ].map((item) => (
+              <div key={item.title}>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    color: "#718181",
+                    fontSize: "14px",
+                    marginBottom: "7px",
+                  }}
+                >
+                  {item.icon}
+                  {item.title}
+                </div>
 
-                Allergies
+                <div
+                  style={{
+                    background: "#f7fbfa",
+                    border: "1px solid #e1eceb",
+                    borderRadius: "8px",
+                    padding: "14px",
+                    color: "#52605f",
+                    minHeight: "50px",
+                  }}
+                >
+                  {item.value}
+                </div>
               </div>
-
-              <div
-                style={{
-                  background: "#f7fbfa",
-                  border:
-                    "1px solid #e1eceb",
-                  borderRadius: "8px",
-                  padding: "14px",
-                  color: "#52605f",
-                  minHeight: "50px",
-                }}
-              >
-                {pet.allergies ||
-                  "No known allergies."}
-              </div>
-            </div>
-
-            <div>
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "8px",
-                  color: "#718181",
-                  fontSize: "14px",
-                  marginBottom: "7px",
-                }}
-              >
-                <FaNotesMedical />
-
-                Chronic Conditions
-              </div>
-
-              <div
-                style={{
-                  background: "#f7fbfa",
-                  border:
-                    "1px solid #e1eceb",
-                  borderRadius: "8px",
-                  padding: "14px",
-                  color: "#52605f",
-                  minHeight: "50px",
-                }}
-              >
-                {pet.chronicConditions ||
-                  "No chronic conditions recorded."}
-              </div>
-            </div>
+            ))}
           </div>
         </div>
 
-        {/* =====================================================
-            APPOINTMENTS
-        ===================================================== */}
+        {/* PART 2 CONTINUES HERE */}
+
+        {/* APPOINTMENTS */}
 
         <div style={cardStyle}>
           <h2 style={sectionTitleStyle}>
-            <FaCalendarCheck
-              style={{
-                color: "#319c97",
-              }}
-            />
-
+            <FaCalendarCheck style={{ color: "#319c97" }} />
             Appointments
           </h2>
 
-          {records.appointments.length > 0 ? (
+          {appointments.length > 0 ? (
             <div style={tableWrapperStyle}>
               <table style={tableStyle}>
                 <thead>
                   <tr>
-                    <th style={thStyle}>Type</th>
-                    <th style={thStyle}>Date</th>
-                    <th style={thStyle}>Time</th>
-                    <th style={thStyle}>
-                      Veterinarian
-                    </th>
-                    <th style={thStyle}>
-                      Reason
-                    </th>
-                    <th style={thStyle}>
-                      Status
-                    </th>
+                    {[
+                      "Type",
+                      "Date",
+                      "Time",
+                      "Veterinarian",
+                      "Reason",
+                      "Status",
+                    ].map((heading) => (
+                      <th key={heading} style={thStyle}>
+                        {heading}
+                      </th>
+                    ))}
                   </tr>
                 </thead>
 
                 <tbody>
-                  {records.appointments.map(
-                    (appointment) => (
-                      <tr key={appointment.id}>
-                        <td style={tdStyle}>
-                          {appointment.type ||
-                            "—"}
-                        </td>
-
-                        <td style={tdStyle}>
-                          {formatDate(
-                            appointment.date
-                          )}
-                        </td>
-
-                        <td style={tdStyle}>
-                          {formatTime(
-                            appointment.time
-                          )}
-                        </td>
-
-                        <td style={tdStyle}>
-                          {appointment.veterinarian ||
-                            "—"}
-                        </td>
-
-                        <td style={tdStyle}>
-                          {appointment.reason ||
-                            "—"}
-                        </td>
-
-                        <td style={tdStyle}>
-                          <StatusBadge
-                            status={
-                              appointment.status
-                            }
-                          />
-                        </td>
-                      </tr>
-                    )
-                  )}
+                  {appointments.map((appointment) => (
+                    <tr key={appointment.id}>
+                      <td style={tdStyle}>
+                        {appointment.type || "—"}
+                      </td>
+                      <td style={tdStyle}>
+                        {formatDate(appointment.date)}
+                      </td>
+                      <td style={tdStyle}>
+                        {formatTime(appointment.time)}
+                      </td>
+                      <td style={tdStyle}>
+                        {appointment.veterinarian || "—"}
+                      </td>
+                      <td style={tdStyle}>
+                        {appointment.reason || "—"}
+                      </td>
+                      <td style={tdStyle}>
+                        <StatusBadge status={appointment.status} />
+                      </td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>
           ) : (
             <div style={emptyStyle}>
-              No appointments recorded for{" "}
-              {pet.name}.
+              No appointments recorded for {pet.name}.
             </div>
           )}
         </div>
 
-        {/* =====================================================
-            MEDICAL RECORDS
-        ===================================================== */}
+        {/* MEDICAL RECORDS */}
 
         <div style={cardStyle}>
           <h2 style={sectionTitleStyle}>
-            <FaStethoscope
-              style={{
-                color: "#319c97",
-              }}
-            />
-
+            <FaStethoscope style={{ color: "#319c97" }} />
             Medical Records
           </h2>
 
-          {records.medicalRecords.length >
-          0 ? (
-            <div
-              style={{
-                display: "grid",
-                gap: "14px",
-              }}
-            >
-              {records.medicalRecords.map(
-                (record) => (
+          {medicalRecords.length > 0 ? (
+            <div style={{ display: "grid", gap: "14px" }}>
+              {medicalRecords.map((record) => (
+                <div
+                  key={record.id}
+                  style={{
+                    border: "1px solid #e1eceb",
+                    borderRadius: "9px",
+                    padding: "16px",
+                    background: "#f9fcfc",
+                  }}
+                >
                   <div
-                    key={record.id}
                     style={{
-                      border:
-                        "1px solid #e1eceb",
-                      borderRadius: "9px",
-                      padding: "16px",
-                      background: "#f9fcfc",
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "flex-start",
+                      gap: "15px",
+                      flexWrap: "wrap",
+                      marginBottom: "14px",
                     }}
                   >
-                    <div
-                      style={{
-                        display: "flex",
-                        justifyContent:
-                          "space-between",
-                        alignItems:
-                          "flex-start",
-                        gap: "15px",
-                        flexWrap: "wrap",
-                        marginBottom: "14px",
-                      }}
-                    >
-                      <div>
-                        <h3
-                          style={{
-                            margin:
-                              "0 0 5px",
-                            fontSize: "16px",
-                            color: "#333333",
-                          }}
-                        >
-                          {record.reason ||
-                            "Medical Visit"}
-                        </h3>
+                    <div>
+                      <h3
+                        style={{
+                          margin: "0 0 5px",
+                          fontSize: "16px",
+                          color: "#333333",
+                        }}
+                      >
+                        {record.reason || "Medical Visit"}
+                      </h3>
 
-                        <div
-                          style={{
-                            color:
-                              "#718181",
-                            fontSize:
-                              "13px",
-                          }}
-                        >
-                          <FaUserMd
-                            style={{
-                              marginRight:
-                                "6px",
-                            }}
-                          />
-
-                          {record.veterinarian ||
-                            "Veterinarian not recorded"}
-                        </div>
-                      </div>
-
-                      <span
+                      <div
                         style={{
                           color: "#718181",
                           fontSize: "13px",
                         }}
                       >
-                        {formatDate(
-                          record.date
-                        )}
-                      </span>
+                        <FaUserMd style={{ marginRight: "6px" }} />
+                        {record.veterinarian ||
+                          "Veterinarian not recorded"}
+                      </div>
                     </div>
 
-                    <div
+                    <span
                       style={{
-                        display: "grid",
-                        gridTemplateColumns:
-                          "repeat(auto-fit, minmax(220px, 1fr))",
-                        gap: "12px",
+                        color: "#718181",
+                        fontSize: "13px",
                       }}
                     >
-                      <div>
-                        <div
-                          style={{
-                            color:
-                              "#718181",
-                            fontSize:
-                              "12px",
-                            marginBottom:
-                              "4px",
-                          }}
-                        >
-                          Diagnosis
-                        </div>
-
-                        <strong>
-                          {record.diagnosis ||
-                            "—"}
-                        </strong>
-                      </div>
-
-                      <div>
-                        <div
-                          style={{
-                            color:
-                              "#718181",
-                            fontSize:
-                              "12px",
-                            marginBottom:
-                              "4px",
-                          }}
-                        >
-                          Treatment
-                        </div>
-
-                        <strong>
-                          {record.treatment ||
-                            "—"}
-                        </strong>
-                      </div>
-                    </div>
-
-                    {record.notes && (
-                      <div
-                        style={{
-                          marginTop: "14px",
-                          paddingTop: "14px",
-                          borderTop:
-                            "1px solid #e4eeee",
-                          color: "#52605f",
-                          fontSize: "14px",
-                        }}
-                      >
-                        {record.notes}
-                      </div>
-                    )}
+                      {formatDate(record.date)}
+                    </span>
                   </div>
-                )
-              )}
+
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns:
+                        "repeat(auto-fit, minmax(220px, 1fr))",
+                      gap: "12px",
+                    }}
+                  >
+                    {[
+                      ["Diagnosis", record.diagnosis],
+                      ["Treatment", record.treatment],
+                    ].map(([label, value]) => (
+                      <div key={label}>
+                        <div
+                          style={{
+                            color: "#718181",
+                            fontSize: "12px",
+                            marginBottom: "4px",
+                          }}
+                        >
+                          {label}
+                        </div>
+
+                        <strong>{value || "—"}</strong>
+                      </div>
+                    ))}
+                  </div>
+
+                  {record.notes && (
+                    <div
+                      style={{
+                        marginTop: "14px",
+                        paddingTop: "14px",
+                        borderTop: "1px solid #e4eeee",
+                        color: "#52605f",
+                        fontSize: "14px",
+                      }}
+                    >
+                      {record.notes}
+                    </div>
+                  )}
+                </div>
+              ))}
             </div>
           ) : (
             <div style={emptyStyle}>
@@ -1333,203 +921,122 @@ function PetProfile() {
           )}
         </div>
 
-        {/* =====================================================
-            VACCINATIONS
-        ===================================================== */}
+        {/* VACCINATIONS */}
 
         <div style={cardStyle}>
           <h2 style={sectionTitleStyle}>
-            <FaSyringe
-              style={{
-                color: "#319c97",
-              }}
-            />
-
+            <FaSyringe style={{ color: "#319c97" }} />
             Vaccinations
           </h2>
 
-          {records.vaccinations.length >
-          0 ? (
+          {vaccinations.length > 0 ? (
             <div style={tableWrapperStyle}>
               <table style={tableStyle}>
                 <thead>
                   <tr>
-                    <th style={thStyle}>
-                      Vaccine
-                    </th>
-
-                    <th style={thStyle}>
-                      Date Given
-                    </th>
-
-                    <th style={thStyle}>
-                      Next Due
-                    </th>
-
-                    <th style={thStyle}>
-                      Status
-                    </th>
-
-                    <th style={thStyle}>
-                      Notes
-                    </th>
+                    {[
+                      "Vaccine",
+                      "Date Given",
+                      "Next Due",
+                      "Status",
+                      "Notes",
+                    ].map((heading) => (
+                      <th key={heading} style={thStyle}>
+                        {heading}
+                      </th>
+                    ))}
                   </tr>
                 </thead>
 
                 <tbody>
-                  {records.vaccinations.map(
-                    (vaccination) => (
-                      <tr
-                        key={
-                          vaccination.id
-                        }
-                      >
-                        <td style={tdStyle}>
-                          <strong>
-                            {vaccination.vaccine ||
-                              "—"}
-                          </strong>
-                        </td>
-
-                        <td style={tdStyle}>
-                          {formatDate(
-                            vaccination.dateGiven
-                          )}
-                        </td>
-
-                        <td style={tdStyle}>
-                          {formatDate(
-                            vaccination.nextDueDate
-                          )}
-                        </td>
-
-                        <td style={tdStyle}>
-                          <StatusBadge
-                            status={
-                              vaccination.status
-                            }
-                          />
-                        </td>
-
-                        <td style={tdStyle}>
-                          {vaccination.notes ||
-                            "—"}
-                        </td>
-                      </tr>
-                    )
-                  )}
+                  {vaccinations.map((vaccination) => (
+                    <tr key={vaccination.id}>
+                      <td style={tdStyle}>
+                        <strong>
+                          {vaccination.vaccine || "—"}
+                        </strong>
+                      </td>
+                      <td style={tdStyle}>
+                        {formatDate(vaccination.dateGiven)}
+                      </td>
+                      <td style={tdStyle}>
+                        {formatDate(vaccination.nextDueDate)}
+                      </td>
+                      <td style={tdStyle}>
+                        <StatusBadge status={vaccination.status} />
+                      </td>
+                      <td style={tdStyle}>
+                        {vaccination.notes || "—"}
+                      </td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>
           ) : (
             <div style={emptyStyle}>
-              No vaccination records
-              available.
+              No vaccination records available.
             </div>
           )}
         </div>
 
-        {/* =====================================================
-            MEDICATIONS
-        ===================================================== */}
+        {/* MEDICATIONS */}
 
         <div style={cardStyle}>
           <h2 style={sectionTitleStyle}>
-            <FaPills
-              style={{
-                color: "#319c97",
-              }}
-            />
-
+            <FaPills style={{ color: "#319c97" }} />
             Medications
           </h2>
 
-          {records.medications.length >
-          0 ? (
+          {medications.length > 0 ? (
             <div style={tableWrapperStyle}>
               <table style={tableStyle}>
                 <thead>
                   <tr>
-                    <th style={thStyle}>
-                      Medication
-                    </th>
-
-                    <th style={thStyle}>
-                      Dosage
-                    </th>
-
-                    <th style={thStyle}>
-                      Frequency
-                    </th>
-
-                    <th style={thStyle}>
-                      Route
-                    </th>
-
-                    <th style={thStyle}>
-                      Start
-                    </th>
-
-                    <th style={thStyle}>
-                      End
-                    </th>
-
-                    <th style={thStyle}>
-                      Status
-                    </th>
+                    {[
+                      "Medication",
+                      "Dosage",
+                      "Frequency",
+                      "Route",
+                      "Start",
+                      "End",
+                      "Status",
+                    ].map((heading) => (
+                      <th key={heading} style={thStyle}>
+                        {heading}
+                      </th>
+                    ))}
                   </tr>
                 </thead>
 
                 <tbody>
-                  {records.medications.map(
-                    (medication) => (
-                      <tr
-                        key={medication.id}
-                      >
-                        <td style={tdStyle}>
-                          <strong>
-                            {medication.name ||
-                              "—"}
-                          </strong>
-                        </td>
-
-                        <td style={tdStyle}>
-                          {medication.dosage ||
-                            "—"}
-                        </td>
-
-                        <td style={tdStyle}>
-                          {medication.frequency ||
-                            "—"}
-                        </td>
-
-                        <td style={tdStyle}>
-                          {medication.route ||
-                            "—"}
-                        </td>
-
-                        <td style={tdStyle}>
-                          {formatDate(
-                            medication.startDate
-                          )}
-                        </td>
-
-                        <td style={tdStyle}>
-                          {formatDate(
-                            medication.endDate
-                          )}
-                        </td>
-
-                        <td style={tdStyle}>
-                          <StatusBadge
-                            status={
-                              medication.status
-                            }
-                          />
-                        </td>
-                      </tr>
-                    )
-                  )}
+                  {medications.map((medication) => (
+                    <tr key={medication.id}>
+                      <td style={tdStyle}>
+                        <strong>
+                          {medication.name || "—"}
+                        </strong>
+                      </td>
+                      <td style={tdStyle}>
+                        {medication.dosage || "—"}
+                      </td>
+                      <td style={tdStyle}>
+                        {medication.frequency || "—"}
+                      </td>
+                      <td style={tdStyle}>
+                        {medication.route || "—"}
+                      </td>
+                      <td style={tdStyle}>
+                        {formatDate(medication.startDate)}
+                      </td>
+                      <td style={tdStyle}>
+                        {formatDate(medication.endDate)}
+                      </td>
+                      <td style={tdStyle}>
+                        <StatusBadge status={medication.status} />
+                      </td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>
@@ -1540,146 +1047,101 @@ function PetProfile() {
           )}
         </div>
 
-        {/* =====================================================
-            PRESCRIPTIONS
-        ===================================================== */}
+        {/* PRESCRIPTIONS */}
 
         <div style={cardStyle}>
           <h2 style={sectionTitleStyle}>
             <FaPrescriptionBottleAlt
-              style={{
-                color: "#319c97",
-              }}
+              style={{ color: "#319c97" }}
             />
-
             Prescriptions
           </h2>
 
-          {records.prescriptions.length >
-          0 ? (
-            <div
-              style={{
-                display: "grid",
-                gap: "12px",
-              }}
-            >
-              {records.prescriptions.map(
-                (prescription) => (
+          {prescriptions.length > 0 ? (
+            <div style={{ display: "grid", gap: "12px" }}>
+              {prescriptions.map((prescription) => (
+                <div
+                  key={prescription.id}
+                  style={{
+                    border: "1px solid #e1eceb",
+                    background: "#f9fcfc",
+                    borderRadius: "9px",
+                    padding: "16px",
+                  }}
+                >
                   <div
-                    key={prescription.id}
                     style={{
-                      border:
-                        "1px solid #e1eceb",
-                      background: "#f9fcfc",
-                      borderRadius: "9px",
-                      padding: "16px",
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "flex-start",
+                      gap: "15px",
+                      flexWrap: "wrap",
                     }}
                   >
-                    <div
-                      style={{
-                        display: "flex",
-                        justifyContent:
-                          "space-between",
-                        alignItems:
-                          "flex-start",
-                        gap: "15px",
-                        flexWrap: "wrap",
-                      }}
-                    >
-                      <div>
-                        <h3
-                          style={{
-                            margin:
-                              "0 0 6px",
-                            color: "#333333",
-                            fontSize:
-                              "16px",
-                          }}
-                        >
-                          {prescription.medication ||
-                            "Prescription"}
-                        </h3>
+                    <div>
+                      <h3
+                        style={{
+                          margin: "0 0 6px",
+                          color: "#333333",
+                          fontSize: "16px",
+                        }}
+                      >
+                        {prescription.medication ||
+                          "Prescription"}
+                      </h3>
 
-                        <div
-                          style={{
-                            color:
-                              "#718181",
-                            fontSize:
-                              "13px",
-                          }}
-                        >
-                          {prescription.veterinarian ||
-                            "—"}
-                        </div>
-                      </div>
-
-                      <span
+                      <div
                         style={{
                           color: "#718181",
                           fontSize: "13px",
                         }}
                       >
-                        {formatDate(
-                          prescription.date
-                        )}
-                      </span>
+                        {prescription.veterinarian || "—"}
+                      </div>
                     </div>
 
-                    <div
+                    <span
                       style={{
-                        marginTop: "14px",
-                        paddingTop: "14px",
-                        borderTop:
-                          "1px solid #e4eeee",
-                        display: "grid",
-                        gridTemplateColumns:
-                          "repeat(auto-fit, minmax(220px, 1fr))",
-                        gap: "15px",
+                        color: "#718181",
+                        fontSize: "13px",
                       }}
                     >
-                      <div>
-                        <div
-                          style={{
-                            color:
-                              "#718181",
-                            fontSize:
-                              "12px",
-                            marginBottom:
-                              "4px",
-                          }}
-                        >
-                          Dosage
-                        </div>
-
-                        <strong>
-                          {prescription.dosage ||
-                            "—"}
-                        </strong>
-                      </div>
-
-                      <div>
-                        <div
-                          style={{
-                            color:
-                              "#718181",
-                            fontSize:
-                              "12px",
-                            marginBottom:
-                              "4px",
-                          }}
-                        >
-                          Instructions
-                        </div>
-
-                        <strong>
-                          {prescription.instructions ||
-                            "—"}
-                        </strong>
-                      </div>
-                    </div>
+                      {formatDate(prescription.date)}
+                    </span>
                   </div>
-                )
-              )}
+
+                  <div
+                    style={{
+                      marginTop: "14px",
+                      paddingTop: "14px",
+                      borderTop: "1px solid #e4eeee",
+                      display: "grid",
+                      gridTemplateColumns:
+                        "repeat(auto-fit, minmax(220px, 1fr))",
+                      gap: "15px",
+                    }}
+                  >
+                    {[
+                      ["Dosage", prescription.dosage],
+                      ["Instructions", prescription.instructions],
+                    ].map(([label, value]) => (
+                      <div key={label}>
+                        <div
+                          style={{
+                            color: "#718181",
+                            fontSize: "12px",
+                            marginBottom: "4px",
+                          }}
+                        >
+                          {label}
+                        </div>
+
+                        <strong>{value || "—"}</strong>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
             </div>
           ) : (
             <div style={emptyStyle}>
@@ -1688,110 +1150,80 @@ function PetProfile() {
           )}
         </div>
 
-        {/* =====================================================
-            REMINDERS
-        ===================================================== */}
+        {/* REMINDERS */}
 
         <div style={cardStyle}>
           <h2 style={sectionTitleStyle}>
-            <FaBell
-              style={{
-                color: "#319c97",
-              }}
-            />
-
+            <FaBell style={{ color: "#319c97" }} />
             Reminders
           </h2>
 
-          {records.reminders.length > 0 ? (
-            <div
-              style={{
-                display: "grid",
-                gap: "12px",
-              }}
-            >
-              {records.reminders.map(
-                (reminder) => (
+          {reminders.length > 0 ? (
+            <div style={{ display: "grid", gap: "12px" }}>
+              {reminders.map((reminder) => (
+                <div
+                  key={reminder.id}
+                  style={{
+                    border: "1px solid #e1eceb",
+                    background: "#f9fcfc",
+                    borderRadius: "9px",
+                    padding: "15px 16px",
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    gap: "15px",
+                    flexWrap: "wrap",
+                  }}
+                >
                   <div
-                    key={reminder.id}
                     style={{
-                      border:
-                        "1px solid #e1eceb",
-                      background: "#f9fcfc",
-                      borderRadius: "9px",
-                      padding: "15px 16px",
                       display: "flex",
-                      justifyContent:
-                        "space-between",
                       alignItems: "center",
-                      gap: "15px",
-                      flexWrap: "wrap",
+                      gap: "12px",
                     }}
                   >
                     <div
                       style={{
+                        width: "38px",
+                        height: "38px",
+                        borderRadius: "50%",
+                        background: "#e1f5f3",
+                        color: "#319c97",
                         display: "flex",
-                        alignItems:
-                          "center",
-                        gap: "12px",
+                        alignItems: "center",
+                        justifyContent: "center",
                       }}
                     >
-                      <div
-                        style={{
-                          width: "38px",
-                          height: "38px",
-                          borderRadius:
-                            "50%",
-                          background:
-                            "#e1f5f3",
-                          color: "#319c97",
-                          display: "flex",
-                          alignItems:
-                            "center",
-                          justifyContent:
-                            "center",
-                        }}
-                      >
-                        <FaBell />
-                      </div>
-
-                      <div>
-                        <strong
-                          style={{
-                            display:
-                              "block",
-                            color:
-                              "#333333",
-                            marginBottom:
-                              "4px",
-                          }}
-                        >
-                          {reminder.title ||
-                            reminder.type ||
-                            "Reminder"}
-                        </strong>
-
-                        <span
-                          style={{
-                            color:
-                              "#718181",
-                            fontSize:
-                              "13px",
-                          }}
-                        >
-                          {formatDate(
-                            reminder.date
-                          )}
-                        </span>
-                      </div>
+                      <FaBell />
                     </div>
 
-                    <StatusBadge
-                      status={reminder.status}
-                    />
+                    <div>
+                      <strong
+                        style={{
+                          display: "block",
+                          color: "#333333",
+                          marginBottom: "4px",
+                        }}
+                      >
+                        {reminder.title ||
+                          reminder.type ||
+                          "Reminder"}
+                      </strong>
+
+                      <span
+                        style={{
+                          color: "#718181",
+                          fontSize: "13px",
+                        }}
+                      >
+                        {formatDate(reminder.date)}
+                      </span>
+                    </div>
                   </div>
-                )
-              )}
+
+                  <StatusBadge status={reminder.status} />
+                </div>
+              ))}
             </div>
           ) : (
             <div style={emptyStyle}>
@@ -1800,355 +1232,181 @@ function PetProfile() {
           )}
         </div>
 
-        {/* =====================================================
-            BILLING
-        ===================================================== */}
+        {/* BILLING & INVOICES */}
 
         <div style={cardStyle}>
           <h2 style={sectionTitleStyle}>
             <FaFileInvoiceDollar
-              style={{
-                color: "#319c97",
-              }}
+              style={{ color: "#319c97" }}
             />
-
             Billing & Invoices
           </h2>
 
-          {records.billing.length > 0 ? (
-            <div
-              style={{
-                display: "grid",
-                gap: "16px",
-              }}
-            >
-              {records.billing.map(
-                (invoice) => (
+          {billing.length > 0 ? (
+            <div style={{ display: "grid", gap: "16px" }}>
+              {billing.map((invoice) => (
+                <div
+                  key={invoice.id}
+                  style={{
+                    border: "1px solid #dcebea",
+                    borderRadius: "9px",
+                    overflow: "hidden",
+                  }}
+                >
                   <div
-                    key={invoice.id}
                     style={{
-                      border:
-                        "1px solid #dcebea",
-                      borderRadius: "9px",
-                      overflow: "hidden",
+                      background: "#f3f9f8",
+                      padding: "14px 16px",
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      gap: "15px",
+                      flexWrap: "wrap",
+                      borderBottom: "1px solid #dcebea",
                     }}
                   >
-                    {/* INVOICE HEADER */}
-
-                    <div
-                      style={{
-                        background: "#f3f9f8",
-                        padding:
-                          "14px 16px",
-                        display: "flex",
-                        justifyContent:
-                          "space-between",
-                        alignItems:
-                          "center",
-                        gap: "15px",
-                        flexWrap: "wrap",
-                        borderBottom:
-                          "1px solid #dcebea",
-                      }}
-                    >
-                      <div>
-                        <strong
-                          style={{
-                            display:
-                              "block",
-                            color:
-                              "#333333",
-                            marginBottom:
-                              "4px",
-                          }}
-                        >
-                          {invoice.invoiceNumber ||
-                            `Invoice #${invoice.id}`}
-                        </strong>
-
-                        <span
-                          style={{
-                            color:
-                              "#718181",
-                            fontSize:
-                              "13px",
-                          }}
-                        >
-                          {formatDate(
-                            invoice.date
-                          )}
-                        </span>
-                      </div>
-
-                      <StatusBadge
-                        status={invoice.status}
-                      />
-                    </div>
-
-                    {/* INVOICE ITEMS */}
-
-                    {invoice.items?.length >
-                      0 && (
-                      <div
-                        style={
-                          tableWrapperStyle
-                        }
-                      >
-                        <table
-                          style={{
-                            ...tableStyle,
-                            minWidth:
-                              "600px",
-                          }}
-                        >
-                          <thead>
-                            <tr>
-                              <th
-                                style={
-                                  thStyle
-                                }
-                              >
-                                Type
-                              </th>
-
-                              <th
-                                style={
-                                  thStyle
-                                }
-                              >
-                                Description
-                              </th>
-
-                              <th
-                                style={
-                                  thStyle
-                                }
-                              >
-                                Qty
-                              </th>
-
-                              <th
-                                style={
-                                  thStyle
-                                }
-                              >
-                                Unit Price
-                              </th>
-
-                              <th
-                                style={
-                                  thStyle
-                                }
-                              >
-                                Total
-                              </th>
-                            </tr>
-                          </thead>
-
-                          <tbody>
-                            {invoice.items.map(
-                              (
-                                item,
-                                index
-                              ) => (
-                                <tr
-                                  key={
-                                    index
-                                  }
-                                >
-                                  <td
-                                    style={
-                                      tdStyle
-                                    }
-                                  >
-                                    {item.type ||
-                                      "—"}
-                                  </td>
-
-                                  <td
-                                    style={
-                                      tdStyle
-                                    }
-                                  >
-                                    {item.description ||
-                                      "—"}
-                                  </td>
-
-                                  <td
-                                    style={
-                                      tdStyle
-                                    }
-                                  >
-                                    {item.quantity ||
-                                      1}
-                                  </td>
-
-                                  <td
-                                    style={
-                                      tdStyle
-                                    }
-                                  >
-                                    {formatMoney(
-                                      item.unitPrice
-                                    )}
-                                  </td>
-
-                                  <td
-                                    style={
-                                      tdStyle
-                                    }
-                                  >
-                                    {formatMoney(
-                                      Number(
-                                        item.quantity ||
-                                          1
-                                      ) *
-                                        Number(
-                                          item.unitPrice ||
-                                            0
-                                        )
-                                    )}
-                                  </td>
-                                </tr>
-                              )
-                            )}
-                          </tbody>
-                        </table>
-                      </div>
-                    )}
-
-                    {/* TOTALS */}
-
-                    <div
-                      style={{
-                        padding:
-                          "16px",
-                        display: "flex",
-                        justifyContent:
-                          "flex-end",
-                      }}
-                    >
-                      <div
+                    <div>
+                      <strong
                         style={{
-                          width: "100%",
-                          maxWidth:
-                            "330px",
+                          display: "block",
+                          color: "#333333",
+                          marginBottom: "4px",
                         }}
                       >
+                        {invoice.invoiceNumber ||
+                          `Invoice #${invoice.id}`}
+                      </strong>
+
+                      <span
+                        style={{
+                          color: "#718181",
+                          fontSize: "13px",
+                        }}
+                      >
+                        {formatDate(invoice.date)}
+                      </span>
+                    </div>
+
+                    <StatusBadge status={invoice.status} />
+                  </div>
+
+                  {invoice.items?.length > 0 && (
+                    <div style={tableWrapperStyle}>
+                      <table
+                        style={{
+                          ...tableStyle,
+                          minWidth: "600px",
+                        }}
+                      >
+                        <thead>
+                          <tr>
+                            {[
+                              "Type",
+                              "Description",
+                              "Qty",
+                              "Unit Price",
+                              "Total",
+                            ].map((heading) => (
+                              <th
+                                key={heading}
+                                style={thStyle}
+                              >
+                                {heading}
+                              </th>
+                            ))}
+                          </tr>
+                        </thead>
+
+                        <tbody>
+                          {invoice.items.map((item, index) => (
+                            <tr key={index}>
+                              <td style={tdStyle}>
+                                {item.type || "—"}
+                              </td>
+                              <td style={tdStyle}>
+                                {item.description || "—"}
+                              </td>
+                              <td style={tdStyle}>
+                                {item.quantity || 1}
+                              </td>
+                              <td style={tdStyle}>
+                                {formatMoney(item.unitPrice)}
+                              </td>
+                              <td style={tdStyle}>
+                                {formatMoney(
+                                  Number(item.quantity || 1) *
+                                    Number(item.unitPrice || 0)
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+
+                  <div
+                    style={{
+                      padding: "16px",
+                      display: "flex",
+                      justifyContent: "flex-end",
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: "100%",
+                        maxWidth: "330px",
+                      }}
+                    >
+                      {[
+                        ["Total", invoice.total, "#333333"],
+                        ["Paid", invoice.paid, "#27845f"],
+                        [
+                          "Balance",
+                          invoice.balance,
+                          Number(invoice.balance || 0) > 0
+                            ? "#b47a18"
+                            : "#27845f",
+                        ],
+                      ].map(([label, value, color], index) => (
                         <div
+                          key={label}
                           style={{
                             ...infoRowStyle,
-                            minHeight:
-                              "42px",
-                            padding:
-                              "7px 0",
-                          }}
-                        >
-                          <span
-                            style={
-                              labelStyle
-                            }
-                          >
-                            Total
-                          </span>
-
-                          <strong>
-                            {formatMoney(
-                              invoice.total
-                            )}
-                          </strong>
-                        </div>
-
-                        <div
-                          style={{
-                            ...infoRowStyle,
-                            minHeight:
-                              "42px",
-                            padding:
-                              "7px 0",
-                          }}
-                        >
-                          <span
-                            style={
-                              labelStyle
-                            }
-                          >
-                            Paid
-                          </span>
-
-                          <strong
-                            style={{
-                              color:
-                                "#27845f",
-                            }}
-                          >
-                            {formatMoney(
-                              invoice.paid
-                            )}
-                          </strong>
-                        </div>
-
-                        <div
-                          style={{
-                            ...infoRowStyle,
-                            minHeight:
-                              "42px",
-                            padding:
-                              "7px 0",
+                            minHeight: "42px",
+                            padding: "7px 0",
                             borderBottom:
-                              "none",
+                              index === 2
+                                ? "none"
+                                : "1px solid #e4eeee",
                           }}
                         >
-                          <span
-                            style={
-                              labelStyle
-                            }
-                          >
-                            Balance
+                          <span style={labelStyle}>
+                            {label}
                           </span>
 
-                          <strong
-                            style={{
-                              color:
-                                Number(
-                                  invoice.balance ||
-                                    0
-                                ) > 0
-                                  ? "#b47a18"
-                                  : "#27845f",
-                            }}
-                          >
-                            {formatMoney(
-                              invoice.balance
-                            )}
+                          <strong style={{ color }}>
+                            {formatMoney(value)}
                           </strong>
                         </div>
-                      </div>
+                      ))}
                     </div>
                   </div>
-                )
-              )}
+                </div>
+              ))}
             </div>
           ) : (
             <div style={emptyStyle}>
-              No invoices available for{" "}
-              {pet.name}.
+              No invoices available for {pet.name}.
             </div>
           )}
         </div>
 
-        {/* =====================================================
-            NOTES
-        ===================================================== */}
+        {/* NOTES */}
 
         <div style={cardStyle}>
           <h2 style={sectionTitleStyle}>
-            <FaStickyNote
-              style={{
-                color: "#319c97",
-              }}
-            />
-
+            <FaStickyNote style={{ color: "#319c97" }} />
             Notes
           </h2>
 
@@ -2159,27 +1417,21 @@ function PetProfile() {
               borderRadius: "8px",
               padding: "15px",
               color: "#52605f",
-              lineHeight: "1.6",
+              lineHeight: 1.6,
               minHeight: "55px",
             }}
           >
-            {pet.notes ||
-              "No notes added for this pet."}
+            {pet.notes || "No notes added for this pet."}
           </div>
         </div>
 
-        {/* =====================================================
-            COMPLETE TIMELINE
-        ===================================================== */}
+        {/* COMPLETE PET TIMELINE */}
 
         <div style={cardStyle}>
           <h2 style={sectionTitleStyle}>
             <FaCalendarCheck
-              style={{
-                color: "#319c97",
-              }}
+              style={{ color: "#319c97" }}
             />
-
             Complete Pet Timeline
           </h2>
 
@@ -2190,10 +1442,8 @@ function PetProfile() {
               fontSize: "14px",
             }}
           >
-            Appointments, medical records,
-            vaccinations, medications,
-            prescriptions, reminders and
-            billing.
+            Appointments, medical records, vaccinations,
+            medications, prescriptions, reminders and billing.
           </p>
 
           {timeline.length > 0 ? (
@@ -2203,182 +1453,124 @@ function PetProfile() {
                 paddingLeft: "18px",
               }}
             >
-              {timeline.map(
-                (item, index) => (
+              {timeline.map((item, index) => (
+                <div
+                  key={`${item.timelineType}-${item.id}-${index}`}
+                  style={{
+                    display: "flex",
+                    gap: "16px",
+                    position: "relative",
+                    paddingBottom:
+                      index === timeline.length - 1
+                        ? 0
+                        : "22px",
+                  }}
+                >
+                  {index !== timeline.length - 1 && (
+                    <div
+                      style={{
+                        position: "absolute",
+                        left: "19px",
+                        top: "38px",
+                        bottom: 0,
+                        width: "2px",
+                        background: "#d9e9e7",
+                      }}
+                    />
+                  )}
+
                   <div
-                    key={`${item.timelineType}-${item.id}-${index}`}
                     style={{
+                      width: "40px",
+                      height: "40px",
+                      minWidth: "40px",
+                      borderRadius: "50%",
+                      background: "#e1f5f3",
+                      color: "#319c97",
                       display: "flex",
-                      gap: "16px",
-                      position:
-                        "relative",
-                      paddingBottom:
-                        index ===
-                        timeline.length -
-                          1
-                          ? "0"
-                          : "22px",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      zIndex: 1,
+                      fontSize: "15px",
                     }}
                   >
-                    {/* LINE */}
+                    {getTimelineIcon(item.timelineType)}
+                  </div>
 
-                    {index !==
-                      timeline.length -
-                        1 && (
-                      <div
-                        style={{
-                          position:
-                            "absolute",
-                          left: "19px",
-                          top: "38px",
-                          bottom: "0",
-                          width: "2px",
-                          background:
-                            "#d9e9e7",
-                        }}
-                      />
-                    )}
-
-                    {/* ICON */}
-
+                  <div
+                    style={{
+                      flex: 1,
+                      background: "#f9fcfc",
+                      border: "1px solid #e1eceb",
+                      borderRadius: "9px",
+                      padding: "14px 16px",
+                    }}
+                  >
                     <div
                       style={{
-                        width: "40px",
-                        height: "40px",
-                        minWidth:
-                          "40px",
-                        borderRadius:
-                          "50%",
-                        background:
-                          "#e1f5f3",
-                        color:
-                          "#319c97",
                         display: "flex",
-                        alignItems:
-                          "center",
-                        justifyContent:
-                          "center",
-                        zIndex: 1,
-                        fontSize:
-                          "15px",
+                        justifyContent: "space-between",
+                        alignItems: "flex-start",
+                        gap: "15px",
+                        flexWrap: "wrap",
+                        marginBottom: "5px",
                       }}
                     >
-                      {getTimelineIcon(
-                        item.timelineType
-                      )}
-                    </div>
-
-                    {/* CONTENT */}
-
-                    <div
-                      style={{
-                        flex: 1,
-                        background:
-                          "#f9fcfc",
-                        border:
-                          "1px solid #e1eceb",
-                        borderRadius:
-                          "9px",
-                        padding:
-                          "14px 16px",
-                      }}
-                    >
-                      <div
-                        style={{
-                          display:
-                            "flex",
-                          justifyContent:
-                            "space-between",
-                          alignItems:
-                            "flex-start",
-                          gap: "15px",
-                          flexWrap:
-                            "wrap",
-                          marginBottom:
-                            "5px",
-                        }}
-                      >
-                        <div>
-                          <span
-                            style={{
-                              display:
-                                "inline-block",
-                              fontSize:
-                                "11px",
-                              fontWeight:
-                                "700",
-                              color:
-                                "#319c97",
-                              background:
-                                "#e1f5f3",
-                              borderRadius:
-                                "15px",
-                              padding:
-                                "4px 9px",
-                              marginBottom:
-                                "7px",
-                            }}
-                          >
-                            {getTimelineLabel(
-                              item.timelineType
-                            )}
-                          </span>
-
-                          <h3
-                            style={{
-                              margin: 0,
-                              color:
-                                "#333333",
-                              fontSize:
-                                "15px",
-                            }}
-                          >
-                            {item.timelineTitle ||
-                              "Activity"}
-                          </h3>
-                        </div>
-
+                      <div>
                         <span
                           style={{
-                            color:
-                              "#718181",
-                            fontSize:
-                              "13px",
-                            whiteSpace:
-                              "nowrap",
+                            display: "inline-block",
+                            fontSize: "11px",
+                            fontWeight: 700,
+                            color: "#319c97",
+                            background: "#e1f5f3",
+                            borderRadius: "15px",
+                            padding: "4px 9px",
+                            marginBottom: "7px",
                           }}
                         >
-                          {formatDate(
-                            item.timelineDate
-                          )}
+                          {getTimelineLabel(item.timelineType)}
                         </span>
+
+                        <h3
+                          style={{
+                            margin: 0,
+                            color: "#333333",
+                            fontSize: "15px",
+                          }}
+                        >
+                          {item.timelineTitle || "Activity"}
+                        </h3>
                       </div>
 
-                      <p
+                      <span
                         style={{
-                          margin:
-                            "6px 0 0",
-                          color:
-                            "#52605f",
-                          fontSize:
-                            "14px",
-                          lineHeight:
-                            "1.5",
+                          color: "#718181",
+                          fontSize: "13px",
+                          whiteSpace: "nowrap",
                         }}
                       >
-                        {getTimelineDescription(
-                          item
-                        )}
-                      </p>
+                        {formatDate(item.timelineDate)}
+                      </span>
                     </div>
+
+                    <p
+                      style={{
+                        margin: "6px 0 0",
+                        color: "#52605f",
+                        fontSize: "14px",
+                        lineHeight: 1.5,
+                      }}
+                    >
+                      {getTimelineDescription(item)}
+                    </p>
                   </div>
-                )
-              )}
+                </div>
+              ))}
             </div>
           ) : (
             <div style={emptyStyle}>
-              No timeline activity
-              available for this pet.
+              No timeline activity available for this pet.
             </div>
           )}
         </div>
@@ -2388,3 +1580,4 @@ function PetProfile() {
 }
 
 export default PetProfile;
+

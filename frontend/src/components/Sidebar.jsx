@@ -1,14 +1,6 @@
-import {
-  NavLink,
-  useNavigate,
-  useLocation,
-} from "react-router-dom";
 
-import {
-  useEffect,
-  useRef,
-  useState,
-} from "react";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
+import { useEffect, useRef, useState } from "react";
 
 import {
   FaChartLine,
@@ -43,79 +35,788 @@ import {
   FaArrowTrendDown,
 } from "react-icons/fa6";
 
+const SCROLL_KEY = "vetClinicSidebarScroll";
+const COLLAPSE_KEY = "vetClinicSidebarCollapsed";
 
-function Sidebar() {
+const navigationLinks = [
+  { path: "/dashboard", label: "Dashboard", icon: FaHouse },
+  { path: "/owners", label: "Owners", icon: FaUsers },
+  { path: "/pets", label: "Pets", icon: FaPaw },
+  {
+    path: "/appointments",
+    label: "Appointments",
+    icon: FaCalendarDays,
+  },
+  {
+    path: "/medical-records",
+    label: "Medical Records",
+    icon: FaNotesMedical,
+  },
+  {
+    path: "/vaccinations",
+    label: "Vaccinations",
+    icon: FaSyringe,
+  },
+  { path: "/reminders", label: "Reminders", icon: FaBell },
+  { path: "/medications", label: "Medications", icon: FaPills },
+  {
+    path: "/prescriptions",
+    label: "Prescriptions",
+    icon: FaPrescriptionBottleMedical,
+  },
+];
+
+const salesLinks = [
+  { path: "/pos", label: "POS", icon: FaCashRegister },
+  {
+    path: "/admin/orders",
+    label: "Orders",
+    icon: FaClipboardList,
+  },
+  { path: "/admin/sales", label: "Sales", icon: FaChartLine },
+  {
+    path: "/billing",
+    label: "Billing",
+    icon: FaFileInvoiceDollar,
+  },
+];
+
+const otherLinks = [
+  { path: "/reports", label: "Reports", icon: FaChartColumn },
+  { path: "/users", label: "Users", icon: FaUserCog },
+  { path: "/audit-log", label: "Audit Log", icon: FaClipboard },
+  { path: "/settings", label: "Settings", icon: FaGear },
+];
+
+const sidebarStyles = `
+  :root {
+    --vet-sidebar-open-width: 260px;
+    --vet-sidebar-closed-width: 72px;
+  }
+
+  /* =========================================
+     DASHBOARD LAYOUT
+     Sidebar and page share available width.
+     POS is excluded from aggressive overrides.
+  ========================================= */
+
+  @media (min-width: 769px) {
+    .dashboard-layout {
+      display: flex !important;
+      flex-direction: row !important;
+      align-items: stretch !important;
+      width: 100% !important;
+      max-width: none !important;
+      min-width: 0 !important;
+      box-sizing: border-box !important;
+    }
+
+    .dashboard-layout > .sidebar {
+      position: relative !important;
+      flex: 0 0 var(--vet-sidebar-open-width) !important;
+      width: var(--vet-sidebar-open-width) !important;
+      min-width: var(--vet-sidebar-open-width) !important;
+      max-width: var(--vet-sidebar-open-width) !important;
+    }
+
+    .dashboard-layout > .sidebar.sidebar-pos-collapsed {
+      flex: 0 0 var(--vet-sidebar-closed-width) !important;
+      width: var(--vet-sidebar-closed-width) !important;
+      min-width: var(--vet-sidebar-closed-width) !important;
+      max-width: var(--vet-sidebar-closed-width) !important;
+    }
+
+    /* Normal pages: expand when sidebar collapses */
+    .dashboard-layout:not(:has(> .sidebar-pos-page))
+      > :is(
+        .dashboard-main,
+        main,
+        .main-content,
+        .settings-page,
+        .settings-main
+      ) {
+      flex: 1 1 0% !important;
+      width: auto !important;
+      min-width: 0 !important;
+      max-width: none !important;
+      margin-left: 0 !important;
+      margin-right: 0 !important;
+      left: auto !important;
+      right: auto !important;
+      box-sizing: border-box !important;
+    }
+
+    /*
+      POS: preserve its own content positioning.
+      Do not reset its transforms, grid, or columns.
+    */
+    .dashboard-layout:has(> .sidebar-pos-page)
+      > :not(.sidebar) {
+      flex: 1 1 0%;
+      min-width: 0;
+      max-width: none;
+      box-sizing: border-box;
+    }
+  }
+
+  @media (max-width: 768px) {
+    .dashboard-layout {
+      width: 100% !important;
+      min-width: 0 !important;
+      display: block !important;
+      box-sizing: border-box !important;
+    }
+
+    .dashboard-layout
+      > :is(
+        .dashboard-main,
+        main,
+        .main-content,
+        .settings-page,
+        .settings-main
+      ) {
+      width: 100% !important;
+      min-width: 0 !important;
+      max-width: none !important;
+      margin-left: 0 !important;
+      box-sizing: border-box !important;
+    }
+  }
+
+  /* =========================================
+     SIDEBAR BASE
+  ========================================= */
+
+  .sidebar {
+    --sidebar-bg: #49aaa6;
+    --sidebar-hover: #348b87;
+    --sidebar-active: #246d69;
+
+    width: 260px;
+    min-width: 260px;
+    height: 100vh;
+    height: 100dvh;
+    padding: 14px 12px;
+    box-sizing: border-box;
+
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+
+    background: var(--sidebar-bg);
+    color: #ffffff !important;
+
+    overflow-x: hidden;
+    overflow-y: auto;
+
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255,255,255,.4) transparent;
+
+    transition:
+      width .25s ease,
+      min-width .25s ease,
+      flex-basis .25s ease;
+  }
+
+  .sidebar * {
+    box-sizing: border-box;
+  }
+
+  .sidebar::-webkit-scrollbar {
+    width: 5px;
+  }
+
+  .sidebar::-webkit-scrollbar-thumb {
+    background: rgba(255,255,255,.4);
+    border-radius: 20px;
+  }
+
+  .sidebar-content {
+    width: 100%;
+    flex-shrink: 0;
+  }
+
+  /* =========================================
+     LOGO
+  ========================================= */
+
+  .sidebar .sidebar-logo {
+    width: 100%;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 12px 0 18px;
+    margin-bottom: 20px;
+    border-bottom: 1px solid rgba(255,255,255,.22);
+  }
+
+  .sidebar .sidebar-brand {
+    width: 100%;
+    min-width: 0;
+    padding: 8px;
+
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+
+    border: 0 !important;
+    border-radius: 12px;
+    background: transparent;
+    color: #ffffff !important;
+    cursor: pointer;
+    text-align: center;
+
+    transition: background-color .2s ease;
+  }
+
+  .sidebar .sidebar-brand:hover {
+    background: rgba(255,255,255,.12);
+  }
+
+  .sidebar .sidebar-logo-icon {
+    font-size: 34px;
+    color: #ffffff !important;
+  }
+
+  .sidebar .sidebar-logo-image {
+    width: 62px;
+    height: 62px;
+    object-fit: contain;
+    border-radius: 12px;
+  }
+
+  .sidebar .sidebar-logo-text {
+    max-width: 100%;
+    color: #ffffff !important;
+    font-size: 17px;
+    font-weight: 700;
+    line-height: 1.4;
+    text-align: center;
+    overflow-wrap: anywhere;
+  }
+
+  /* =========================================
+     NAVIGATION
+  ========================================= */
+
+  .sidebar .sidebar-nav {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 5px;
+    width: 100%;
+  }
+
+  .sidebar .sidebar-nav a,
+  .sidebar .sidebar-nav .inventory-parent-button,
+  .sidebar .sidebar-nav .financial-parent-button {
+    width: 100% !important;
+    min-height: 46px !important;
+    height: 46px !important;
+    margin: 0 !important;
+    padding: 0 15px !important;
+
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    gap: 18px !important;
+
+    border: 0 !important;
+    border-radius: 10px !important;
+    background: transparent;
+    color: #ffffff !important;
+    text-decoration: none !important;
+
+    font-size: 14px !important;
+    font-weight: 500 !important;
+    font-family: inherit !important;
+    line-height: 20px !important;
+    text-align: left !important;
+
+    box-shadow: none !important;
+    transform: none !important;
+    translate: none !important;
+    cursor: pointer;
+
+    transition: background-color .2s ease !important;
+  }
+
+  /* =========================================
+     ICONS
+  ========================================= */
+
+  .sidebar .sidebar-nav .sidebar-icon,
+  .sidebar .sidebar-logout .sidebar-icon {
+    display: block !important;
+    width: 19px !important;
+    min-width: 19px !important;
+    max-width: 19px !important;
+    height: 19px !important;
+    min-height: 19px !important;
+    max-height: 19px !important;
+    flex: 0 0 19px !important;
+
+    margin: 0 !important;
+    padding: 0 !important;
+    color: #ffffff !important;
+
+    position: static !important;
+    transform: none !important;
+    translate: none !important;
+    transition: none !important;
+  }
+
+  /* =========================================
+     TEXT
+  ========================================= */
+
+  .sidebar .sidebar-nav .sidebar-text,
+  .sidebar .sidebar-logout .sidebar-text {
+    display: block;
+    margin: 0 !important;
+    padding: 0 !important;
+    color: #ffffff !important;
+
+    font-size: 14px !important;
+    font-weight: 500 !important;
+    line-height: 20px !important;
+    white-space: nowrap;
+
+    position: static !important;
+    transform: none !important;
+    translate: none !important;
+    transition: none !important;
+  }
+
+  /* =========================================
+     HOVER
+  ========================================= */
+
+  .sidebar .sidebar-nav a:hover,
+  .sidebar .sidebar-nav .inventory-parent-button:hover,
+  .sidebar .sidebar-nav .financial-parent-button:hover,
+  .sidebar .sidebar-logout:hover {
+    background: var(--sidebar-hover) !important;
+    color: #ffffff !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    transform: none !important;
+  }
+
+  /* =========================================
+     ACTIVE
+  ========================================= */
+
+  .sidebar .sidebar-nav a.active,
+  .sidebar .sidebar-nav .inventory-parent-button.active,
+  .sidebar .sidebar-nav .financial-parent-button.active {
+    background: var(--sidebar-active) !important;
+    color: #ffffff !important;
+    border: 0 !important;
+    border-left: 0 !important;
+    box-shadow: none !important;
+    font-weight: 500 !important;
+    transform: none !important;
+    translate: none !important;
+  }
+
+  .sidebar .sidebar-nav a.active:hover,
+  .sidebar .sidebar-nav .inventory-parent-button.active:hover,
+  .sidebar .sidebar-nav .financial-parent-button.active:hover {
+    background: var(--sidebar-active) !important;
+  }
+
+  /* =========================================
+     FOCUS
+  ========================================= */
+
+  .sidebar .sidebar-nav a:active,
+  .sidebar .sidebar-nav button:active,
+  .sidebar .sidebar-nav a:focus,
+  .sidebar .sidebar-nav button:focus {
+    border: 0 !important;
+    box-shadow: none !important;
+    transform: none !important;
+    translate: none !important;
+  }
+
+  .sidebar .sidebar-nav a:focus:not(:focus-visible),
+  .sidebar .sidebar-nav button:focus:not(:focus-visible) {
+    outline: none !important;
+  }
+
+  .sidebar .sidebar-nav a:focus-visible,
+  .sidebar .sidebar-nav button:focus-visible {
+    outline: 2px solid #174e4b;
+    outline-offset: 2px;
+  }
+
+  /* =========================================
+     DROPDOWNS
+  ========================================= */
+
+  .sidebar .inventory-sidebar-group,
+  .sidebar .financial-sidebar-group {
+    width: 100%;
+  }
+
+  .sidebar .inventory-parent-arrow,
+  .sidebar .financial-parent-arrow {
+    margin-left: auto !important;
+    min-width: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #ffffff !important;
+    font-size: 12px;
+    transform: none !important;
+  }
+
+  .sidebar .inventory-submenu,
+  .sidebar .financial-submenu {
+    width: 100%;
+    padding: 5px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .sidebar .inventory-submenu-button,
+  .sidebar .financial-submenu-button {
+    width: calc(100% - 12px) !important;
+    min-height: 40px !important;
+    height: 40px !important;
+    margin: 0 0 0 12px !important;
+    padding: 0 12px 0 30px !important;
+
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    gap: 13px !important;
+
+    background: transparent;
+    border: 0 !important;
+    border-radius: 9px !important;
+    color: #ffffff !important;
+
+    font-family: inherit !important;
+    font-size: 13px !important;
+    font-weight: 500 !important;
+    line-height: 20px !important;
+    text-align: left !important;
+
+    box-shadow: none !important;
+    transform: none !important;
+    translate: none !important;
+    cursor: pointer;
+
+    transition: background-color .2s ease !important;
+  }
+
+  .sidebar .inventory-submenu-button svg,
+  .sidebar .financial-submenu-button svg {
+    display: block !important;
+    width: 15px !important;
+    min-width: 15px !important;
+    max-width: 15px !important;
+    height: 15px !important;
+    min-height: 15px !important;
+    max-height: 15px !important;
+    flex: 0 0 15px !important;
+
+    margin: 0 !important;
+    padding: 0 !important;
+    color: #ffffff !important;
+    transform: none !important;
+    transition: none !important;
+  }
+
+  .sidebar .inventory-submenu-button span,
+  .sidebar .financial-submenu-button span {
+    font-weight: 500 !important;
+    line-height: 20px !important;
+    transform: none !important;
+    transition: none !important;
+  }
+
+  .sidebar .inventory-submenu-button:hover,
+  .sidebar .financial-submenu-button:hover {
+    background: var(--sidebar-hover) !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    transform: none !important;
+  }
+
+  .sidebar .inventory-submenu-button.active,
+  .sidebar .financial-submenu-button.active {
+    background: var(--sidebar-active) !important;
+    color: #ffffff !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    font-weight: 500 !important;
+    transform: none !important;
+    translate: none !important;
+  }
+
+  .sidebar .inventory-submenu-button.active:hover,
+  .sidebar .financial-submenu-button.active:hover {
+    background: var(--sidebar-active) !important;
+  }
+
+  /* =========================================
+     LOGOUT
+  ========================================= */
+
+  .sidebar .sidebar-logout {
+    width: 100% !important;
+    min-height: 46px !important;
+    height: 46px !important;
+    margin: 24px 0 0 !important;
+    padding: 0 15px !important;
+    flex-shrink: 0;
+
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    gap: 18px !important;
+
+    border: 0 !important;
+    border-radius: 10px !important;
+    background: transparent;
+    color: #ffffff !important;
+
+    font-family: inherit !important;
+    font-size: 14px !important;
+    font-weight: 500 !important;
+
+    box-shadow: none !important;
+    transform: none !important;
+    translate: none !important;
+    cursor: pointer;
+
+    transition: background-color .2s ease !important;
+  }
+
+  /* =========================================
+     COLLAPSED SIDEBAR - DESKTOP
+  ========================================= */
+
+  @media (min-width: 769px) {
+    .sidebar.sidebar-pos-collapsed {
+      width: 72px !important;
+      min-width: 72px !important;
+      max-width: 72px !important;
+      padding: 14px 8px !important;
+    }
+
+    .sidebar.sidebar-pos-collapsed .sidebar-logo {
+      padding: 8px 0 15px;
+      margin-bottom: 15px;
+    }
+
+    .sidebar.sidebar-pos-collapsed .sidebar-brand {
+      padding: 8px 0;
+      gap: 0;
+    }
+
+    .sidebar.sidebar-pos-collapsed .sidebar-logo-icon {
+      font-size: 26px;
+    }
+
+    .sidebar.sidebar-pos-collapsed .sidebar-logo-image {
+      width: 40px;
+      height: 40px;
+    }
+
+    .sidebar.sidebar-pos-collapsed .sidebar-logo-text,
+    .sidebar.sidebar-pos-collapsed .sidebar-text,
+    .sidebar.sidebar-pos-collapsed .inventory-parent-arrow,
+    .sidebar.sidebar-pos-collapsed .financial-parent-arrow {
+      display: none !important;
+    }
+
+    .sidebar.sidebar-pos-collapsed .sidebar-nav a,
+    .sidebar.sidebar-pos-collapsed .inventory-parent-button,
+    .sidebar.sidebar-pos-collapsed .financial-parent-button,
+    .sidebar.sidebar-pos-collapsed .sidebar-logout {
+      width: 100% !important;
+      min-width: 0 !important;
+      min-height: 46px !important;
+      height: 46px !important;
+      margin: 0 !important;
+      padding: 0 !important;
+
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      gap: 0 !important;
+    }
+
+    .sidebar.sidebar-pos-collapsed .sidebar-logout {
+      margin-top: 24px !important;
+    }
+
+    .sidebar.sidebar-pos-collapsed .sidebar-icon {
+      width: 19px !important;
+      min-width: 19px !important;
+      height: 19px !important;
+      margin: 0 !important;
+    }
+
+    .sidebar.sidebar-pos-collapsed .inventory-submenu,
+    .sidebar.sidebar-pos-collapsed .financial-submenu {
+      display: none !important;
+    }
+  }
+
+  /* =========================================
+     MOBILE
+  ========================================= */
+
+  .mobile-menu-button {
+    display: none;
+    position: fixed;
+    top: 16px;
+    left: 16px;
+    z-index: 1001;
+
+    width: 42px;
+    height: 42px;
+    align-items: center;
+    justify-content: center;
+
+    border: none;
+    border-radius: 10px;
+    background: #348b87;
+    color: #ffffff;
+    cursor: pointer;
+  }
+
+  .mobile-close-button {
+    display: none;
+  }
+
+  .sidebar-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1099;
+    background: rgba(0,0,0,.45);
+  }
+
+  @media (max-width: 768px) {
+    .mobile-menu-button {
+      display: flex;
+    }
+
+    .sidebar,
+    .sidebar.sidebar-pos-collapsed {
+      position: fixed;
+      top: 0;
+      left: 0;
+      z-index: 1100;
+
+      width: min(280px, 85vw) !important;
+      min-width: 0 !important;
+      max-width: 85vw !important;
+      height: 100dvh;
+      padding: 14px 12px !important;
+
+      transform: translateX(-105%);
+      transition: transform .25s ease;
+    }
+
+    .sidebar.sidebar-open,
+    .sidebar.sidebar-pos-collapsed.sidebar-open {
+      transform: translateX(0);
+    }
+
+    .sidebar .sidebar-logo {
+      padding-right: 25px;
+    }
+
+    .sidebar .mobile-close-button {
+      display: flex;
+      position: absolute;
+      top: 8px;
+      right: 0;
+
+      width: 28px;
+      height: 28px;
+      align-items: center;
+      justify-content: center;
+
+      border: none;
+      background: transparent;
+      color: #ffffff;
+      cursor: pointer;
+    }
+
+    .sidebar.sidebar-pos-collapsed .sidebar-logo-text,
+    .sidebar.sidebar-pos-collapsed .sidebar-text,
+    .sidebar.sidebar-pos-collapsed .inventory-parent-arrow,
+    .sidebar.sidebar-pos-collapsed .financial-parent-arrow {
+      display: inline-flex !important;
+    }
+
+    .sidebar.sidebar-pos-collapsed .sidebar-nav a,
+    .sidebar.sidebar-pos-collapsed .inventory-parent-button,
+    .sidebar.sidebar-pos-collapsed .financial-parent-button,
+    .sidebar.sidebar-pos-collapsed .sidebar-logout {
+      min-height: 46px !important;
+      height: 46px !important;
+      padding: 0 15px !important;
+      justify-content: flex-start !important;
+      gap: 18px !important;
+    }
+
+    .sidebar.sidebar-pos-collapsed .inventory-submenu,
+    .sidebar.sidebar-pos-collapsed .financial-submenu {
+      display: flex !important;
+    }
+  }
+`;
+
+export default function Sidebar({ clinicName, clinicLogo }) {
   const navigate = useNavigate();
   const location = useLocation();
-
-  const [menuOpen, setMenuOpen] =
-    useState(false);
-
   const sidebarRef = useRef(null);
 
-  const SIDEBAR_SCROLL_KEY =
-    "vetClinicSidebarScroll";
+  const [mobileOpen, setMobileOpen] = useState(false);
 
-  const isPOSPage =
-    location.pathname === "/pos";
+  const [collapsed, setCollapsed] = useState(
+    () => localStorage.getItem(COLLAPSE_KEY) === "true"
+  );
 
+  const [branding, setBranding] = useState(() => ({
+    name: localStorage.getItem("clinicName") || "My Clinic",
+    logo: localStorage.getItem("clinicLogo") || "",
+  }));
 
-  // =========================================================
-  // FINANCIAL
-  // =========================================================
+  // POS must always display the collapsed sidebar.
+  const isPOSPage = location.pathname === "/pos";
+  const isCollapsed = collapsed || isPOSPage;
+
+  const isInventoryPage =
+    location.pathname.startsWith("/inventory");
 
   const isFinancialPage =
     location.pathname === "/financial";
 
-  const financialTab =
-    new URLSearchParams(
-      location.search
-    ).get("tab");
+  const financialTab = new URLSearchParams(
+    location.search
+  ).get("tab");
 
-  const isFinancialOverview =
-    isFinancialPage && !financialTab;
+  const [inventoryOpen, setInventoryOpen] =
+    useState(isInventoryPage);
 
-  const isRevenuePage =
-    isFinancialPage &&
-    financialTab === "revenue";
+  const [financialOpen, setFinancialOpen] =
+    useState(isFinancialPage);
 
-  const isExpensesPage =
-    isFinancialPage &&
-    financialTab === "expenses";
-
-  const [
-    financialOpen,
-    setFinancialOpen,
-  ] = useState(isFinancialPage);
-
-  useEffect(() => {
-    if (isFinancialPage) {
-      setFinancialOpen(true);
-    }
-  }, [isFinancialPage]);
-
-
-  // =========================================================
-  // INVENTORY
-  // =========================================================
-
-  const isInventoryPage =
-    location.pathname.startsWith(
-      "/inventory"
-    );
-
-  const isProductsPage =
-    location.pathname ===
-    "/inventory/products";
-
-  const isCategoriesPage =
-    location.pathname ===
-    "/inventory/categories";
-
-  const [
-    inventoryOpen,
-    setInventoryOpen,
-  ] = useState(isInventoryPage);
+  const displayName = clinicName ?? branding.name;
+  const displayLogo = clinicLogo ?? branding.logo;
 
   useEffect(() => {
     if (isInventoryPage) {
@@ -123,980 +824,271 @@ function Sidebar() {
     }
   }, [isInventoryPage]);
 
-
-  // =========================================================
-  // RESTORE SIDEBAR SCROLL
-  // =========================================================
+  useEffect(() => {
+    if (isFinancialPage) {
+      setFinancialOpen(true);
+    }
+  }, [isFinancialPage]);
 
   useEffect(() => {
-    const sidebar =
-      sidebarRef.current;
-
-    if (!sidebar) return;
-
-    const savedScrollPosition =
-      Number(
-        sessionStorage.getItem(
-          SIDEBAR_SCROLL_KEY
-        ) || 0
-      );
-
-    const frame =
-      requestAnimationFrame(() => {
-        sidebar.scrollTop =
-          savedScrollPosition;
+    const updateBranding = () => {
+      setBranding({
+        name: localStorage.getItem("clinicName") || "My Clinic",
+        logo: localStorage.getItem("clinicLogo") || "",
       });
+    };
+
+    window.addEventListener("storage", updateBranding);
+    window.addEventListener(
+      "clinic-branding-updated",
+      updateBranding
+    );
 
     return () => {
-      cancelAnimationFrame(frame);
+      window.removeEventListener("storage", updateBranding);
+      window.removeEventListener(
+        "clinic-branding-updated",
+        updateBranding
+      );
     };
-  }, [
-    location.pathname,
-    location.search,
-  ]);
+  }, []);
 
-
-  // =========================================================
-  // SAVE SIDEBAR SCROLL
-  // =========================================================
-
-  const saveSidebarScroll = () => {
-    const sidebar =
-      sidebarRef.current;
-
+  useEffect(() => {
+    const sidebar = sidebarRef.current;
     if (!sidebar) return;
 
-    sessionStorage.setItem(
-      SIDEBAR_SCROLL_KEY,
-      String(sidebar.scrollTop)
+    const savedScroll = Number(
+      sessionStorage.getItem(SCROLL_KEY) || 0
+    );
+
+    const frame = requestAnimationFrame(() => {
+      sidebar.scrollTop = savedScroll;
+    });
+
+    return () => cancelAnimationFrame(frame);
+  }, [location.pathname, location.search]);
+
+  const saveScroll = () => {
+    if (sidebarRef.current) {
+      sessionStorage.setItem(
+        SCROLL_KEY,
+        String(sidebarRef.current.scrollTop)
+      );
+    }
+  };
+
+  const changeCollapse = (value) => {
+    setCollapsed(value);
+    localStorage.setItem(
+      COLLAPSE_KEY,
+      String(value)
     );
   };
 
-
-  const handleSidebarScroll = () => {
-    saveSidebarScroll();
+  const toggleSidebar = () => {
+    if (isPOSPage) return;
+    changeCollapse(!collapsed);
   };
 
+  const handleLogoWheel = (event) => {
+    if (isPOSPage || window.innerWidth <= 768) {
+      return;
+    }
 
-  // =========================================================
-  // NORMAL NAVIGATION
-  // =========================================================
-
-  const handleNavigation = () => {
-    saveSidebarScroll();
-
-    setMenuOpen(false);
+    if (event.deltaY > 0 && !collapsed) {
+      changeCollapse(true);
+    } else if (event.deltaY < 0 && collapsed) {
+      changeCollapse(false);
+    }
   };
 
+  const closeMobile = () => {
+    saveScroll();
+    setMobileOpen(false);
+  };
 
-  // =========================================================
-  // FINANCIAL PARENT
-  // =========================================================
+  const handleLogout = () => {
+    sessionStorage.removeItem(SCROLL_KEY);
+    setMobileOpen(false);
+    navigate("/");
+  };
 
-  const handleFinancialParent = () => {
-    saveSidebarScroll();
+  const handleInventoryClick = () => {
+    saveScroll();
 
-    if (!isFinancialOverview) {
-      navigate("/financial");
+    if (
+      isCollapsed &&
+      !isPOSPage &&
+      window.innerWidth > 768
+    ) {
+      changeCollapse(false);
+      setInventoryOpen(true);
+      return;
+    }
 
+    setInventoryOpen((previous) => !previous);
+  };
+
+  const handleFinancialClick = () => {
+    saveScroll();
+
+    if (
+      isCollapsed &&
+      !isPOSPage &&
+      window.innerWidth > 768
+    ) {
+      changeCollapse(false);
       setFinancialOpen(true);
 
-      setMenuOpen(false);
+      if (!isFinancialPage) {
+        navigate("/financial");
+      }
 
       return;
     }
 
-    setFinancialOpen(
-      (previous) => !previous
-    );
+    if (!isFinancialPage || financialTab) {
+      navigate("/financial");
+      setFinancialOpen(true);
+      setMobileOpen(false);
+      return;
+    }
+
+    setFinancialOpen((previous) => !previous);
   };
 
-
-  // =========================================================
-  // FINANCIAL CHILD
-  // =========================================================
-
-  const handleFinancialNavigation = (
-    tab
-  ) => {
-    saveSidebarScroll();
-
-    navigate(
-      `/financial?tab=${tab}`
-    );
-
-    setFinancialOpen(true);
-
-    setMenuOpen(false);
-  };
-
-
-  // =========================================================
-  // INVENTORY PARENT
-  // =========================================================
-
-  const handleInventoryParent = () => {
-    saveSidebarScroll();
-
-    setInventoryOpen(
-      (previous) => !previous
-    );
-  };
-
-
-  // =========================================================
-  // INVENTORY CHILD
-  // =========================================================
-
-  const handleInventoryNavigation = (
-    page
-  ) => {
-    saveSidebarScroll();
-
-    navigate(
-      `/inventory/${page}`
-    );
-
+  const goToInventory = (path) => {
+    saveScroll();
+    navigate(path);
     setInventoryOpen(true);
-
-    setMenuOpen(false);
+    setMobileOpen(false);
   };
 
+  const goToFinancial = (tab) => {
+    saveScroll();
+    navigate(`/financial?tab=${tab}`);
+    setFinancialOpen(true);
+    setMobileOpen(false);
+  };
 
-  // =========================================================
-  // LOGOUT
-  // =========================================================
+  const renderLink = ({ path, label, icon: Icon }) => {
+    const profileActive =
+      (path === "/owners" &&
+        location.pathname.startsWith("/owners/")) ||
+      (path === "/pets" &&
+        location.pathname.startsWith("/pets/"));
 
-  const handleLogout = () => {
-    sessionStorage.removeItem(
-      SIDEBAR_SCROLL_KEY
+    return (
+      <NavLink
+        key={path}
+        to={path}
+        end
+        onClick={closeMobile}
+        title={isCollapsed ? label : undefined}
+        className={({ isActive }) =>
+          `sidebar-link ${
+            isActive || profileActive ? "active" : ""
+          }`
+        }
+      >
+        <Icon className="sidebar-icon" />
+        <span className="sidebar-text">
+          {label}
+        </span>
+      </NavLink>
     );
-
-    setMenuOpen(false);
-
-    navigate("/");
   };
-
-
-  // =========================================================
-  // MOBILE CLOSE
-  // =========================================================
-
-  const closeMenu = () => {
-    saveSidebarScroll();
-
-    setMenuOpen(false);
-  };
-
 
   return (
     <>
-      <style>{`
+      <style>{sidebarStyles}</style>
 
-        /* =====================================================
-           POS COLLAPSED SIDEBAR
-        ===================================================== */
-
-        .sidebar.sidebar-pos-collapsed {
-          width: 72px !important;
-          min-width: 72px !important;
-          max-width: 72px !important;
-
-          padding-left: 8px !important;
-          padding-right: 8px !important;
-
-          overflow-x: hidden;
-        }
-
-
-        .sidebar.sidebar-pos-collapsed
-        .sidebar-logo {
-          justify-content:
-            center !important;
-
-          padding-left: 0 !important;
-          padding-right: 0 !important;
-        }
-
-
-        .sidebar.sidebar-pos-collapsed
-        .sidebar-brand {
-          width: 100%;
-
-          display: flex;
-
-          align-items: center;
-
-          justify-content: center;
-        }
-
-
-        .sidebar.sidebar-pos-collapsed
-        .sidebar-logo-icon {
-          margin: 0 !important;
-
-          font-size: 25px;
-        }
-
-
-        .sidebar.sidebar-pos-collapsed
-        .sidebar-logo-text {
-          display: none !important;
-        }
-
-
-        .sidebar.sidebar-pos-collapsed
-        .sidebar-nav {
-          width: 100%;
-        }
-
-
-        .sidebar.sidebar-pos-collapsed
-        .sidebar-nav a,
-
-        .sidebar.sidebar-pos-collapsed
-        .financial-parent-button,
-
-        .sidebar.sidebar-pos-collapsed
-        .inventory-parent-button {
-          width: 100% !important;
-
-          min-width: 0 !important;
-
-          height: 46px;
-
-          margin: 4px 0 !important;
-
-          padding: 0 !important;
-
-          display: flex !important;
-
-          align-items:
-            center !important;
-
-          justify-content:
-            center !important;
-
-          gap: 0 !important;
-
-          border-radius: 9px;
-        }
-
-
-        .sidebar.sidebar-pos-collapsed
-        .sidebar-nav
-        a
-        .sidebar-icon,
-
-        .sidebar.sidebar-pos-collapsed
-        .financial-parent-button
-        .sidebar-icon,
-
-        .sidebar.sidebar-pos-collapsed
-        .inventory-parent-button
-        .sidebar-icon {
-          width: 18px !important;
-
-          min-width: 18px !important;
-
-          margin: 0 !important;
-
-          font-size: 18px;
-        }
-
-
-        .sidebar.sidebar-pos-collapsed
-        .sidebar-text,
-
-        .sidebar.sidebar-pos-collapsed
-        .financial-parent-arrow,
-
-        .sidebar.sidebar-pos-collapsed
-        .inventory-parent-arrow {
-          display: none !important;
-        }
-
-
-        .sidebar.sidebar-pos-collapsed
-        .sidebar-nav
-        a.active {
-          background: #2f7f7b;
-
-          color: #ffffff;
-        }
-
-
-        .sidebar.sidebar-pos-collapsed
-        .financial-parent-button.active,
-
-        .sidebar.sidebar-pos-collapsed
-        .inventory-parent-button.active {
-          background: #2f7f7b;
-
-          color: #ffffff;
-        }
-
-
-        .sidebar.sidebar-pos-collapsed
-        .financial-submenu,
-
-        .sidebar.sidebar-pos-collapsed
-        .inventory-submenu {
-          display: none !important;
-        }
-
-
-        .sidebar.sidebar-pos-collapsed
-        .sidebar-logout {
-          width: 100% !important;
-
-          min-width: 0 !important;
-
-          height: 46px;
-
-          padding: 0 !important;
-
-          margin: 0 !important;
-
-          display: flex !important;
-
-          align-items:
-            center !important;
-
-          justify-content:
-            center !important;
-
-          gap: 0 !important;
-
-          border-radius: 9px;
-        }
-
-
-        .sidebar.sidebar-pos-collapsed
-        .sidebar-logout
-        .sidebar-icon {
-          width: 18px !important;
-
-          min-width: 18px !important;
-
-          margin: 0 !important;
-
-          font-size: 18px;
-        }
-
-
-        /* =====================================================
-           FINANCIAL + INVENTORY PARENTS
-        ===================================================== */
-
-        .financial-sidebar-group,
-        .inventory-sidebar-group {
-          width: 100%;
-        }
-
-
-        .financial-parent-button,
-        .inventory-parent-button {
-          width: 100%;
-
-          border: none;
-
-          outline: none;
-
-          background: transparent;
-
-          color: inherit;
-
-          font-family: inherit;
-
-          cursor: pointer;
-
-          display: flex;
-
-          align-items: center;
-
-          box-sizing: border-box;
-
-          text-align: left;
-
-          transition:
-            background 0.18s ease,
-            color 0.18s ease;
-        }
-
-
-        .financial-parent-button:hover,
-        .inventory-parent-button:hover {
-          background:
-            rgba(
-              255,
-              255,
-              255,
-              0.12
-            );
-        }
-
-
-        .financial-parent-button.active,
-        .inventory-parent-button.active {
-          background: #2f7f7b;
-
-          color: #ffffff;
-        }
-
-
-        .financial-parent-arrow,
-        .inventory-parent-arrow {
-          margin-left: auto;
-
-          width: 14px;
-
-          min-width: 14px;
-
-          font-size: 11px;
-
-          display: flex;
-
-          align-items: center;
-
-          justify-content: center;
-        }
-
-
-        /* =====================================================
-           FINANCIAL + INVENTORY SUBMENUS
-        ===================================================== */
-
-        .financial-submenu,
-        .inventory-submenu {
-          width: 100%;
-
-          padding:
-            4px 0 5px 0;
-
-          display: flex;
-
-          flex-direction: column;
-
-          gap: 3px;
-
-          box-sizing: border-box;
-        }
-
-
-        .financial-submenu-button,
-        .inventory-submenu-button {
-          width:
-            calc(
-              100% - 16px
-            );
-
-          min-height: 39px;
-
-          margin-left: 16px;
-
-          padding:
-            8px 14px
-            8px 44px;
-
-          border: none;
-
-          outline: none;
-
-          border-radius: 8px;
-
-          background: transparent;
-
-          color: inherit;
-
-          font-family: inherit;
-
-          font-size: 13px;
-
-          font-weight: 500;
-
-          cursor: pointer;
-
-          display: flex;
-
-          align-items: center;
-
-          gap: 9px;
-
-          box-sizing: border-box;
-
-          text-align: left;
-
-          transition:
-            background 0.18s ease,
-            color 0.18s ease;
-        }
-
-
-        .financial-submenu-button svg,
-        .inventory-submenu-button svg {
-          width: 13px;
-
-          min-width: 13px;
-
-          font-size: 13px;
-        }
-
-
-        .financial-submenu-button:hover,
-        .inventory-submenu-button:hover {
-          background:
-            rgba(
-              255,
-              255,
-              255,
-              0.12
-            );
-        }
-
-
-        .financial-submenu-button.active,
-        .inventory-submenu-button.active {
-          background:
-            rgba(
-              47,
-              127,
-              123,
-              0.75
-            );
-
-          color: #ffffff;
-
-          font-weight: 700;
-        }
-
-
-        /* =====================================================
-           MOBILE
-        ===================================================== */
-
-        @media (max-width: 768px) {
-
-          .sidebar.sidebar-pos-collapsed {
-            width:
-              260px !important;
-
-            min-width:
-              260px !important;
-
-            max-width:
-              260px !important;
-
-            padding-left:
-              initial !important;
-
-            padding-right:
-              initial !important;
-          }
-
-
-          .sidebar.sidebar-pos-collapsed
-          .sidebar-logo {
-            justify-content:
-              space-between !important;
-          }
-
-
-          .sidebar.sidebar-pos-collapsed
-          .sidebar-brand {
-            width: auto;
-
-            justify-content:
-              flex-start;
-          }
-
-
-          .sidebar.sidebar-pos-collapsed
-          .sidebar-logo-text {
-            display:
-              block !important;
-          }
-
-
-          .sidebar.sidebar-pos-collapsed
-          .sidebar-text,
-
-          .sidebar.sidebar-pos-collapsed
-          .financial-parent-arrow,
-
-          .sidebar.sidebar-pos-collapsed
-          .inventory-parent-arrow {
-            display:
-              flex !important;
-          }
-
-
-          .sidebar.sidebar-pos-collapsed
-          .sidebar-nav a,
-
-          .sidebar.sidebar-pos-collapsed
-          .financial-parent-button,
-
-          .sidebar.sidebar-pos-collapsed
-          .inventory-parent-button {
-            height: auto;
-
-            padding:
-              12px 16px !important;
-
-            justify-content:
-              flex-start !important;
-
-            gap: 12px !important;
-          }
-
-
-          .sidebar.sidebar-pos-collapsed
-          .financial-submenu,
-
-          .sidebar.sidebar-pos-collapsed
-          .inventory-submenu {
-            display:
-              flex !important;
-          }
-
-
-          .sidebar.sidebar-pos-collapsed
-          .sidebar-logout {
-            height: auto;
-
-            padding:
-              12px 16px !important;
-
-            justify-content:
-              flex-start !important;
-
-            gap: 12px !important;
-          }
-
-        }
-
-      `}</style>
-
-
-      {/* MOBILE BUTTON */}
-
+      {/* MOBILE OPEN BUTTON */}
       <button
+        type="button"
         className="mobile-menu-button"
-        onClick={() =>
-          setMenuOpen(true)
-        }
-        aria-label="Open menu"
+        onClick={() => setMobileOpen(true)}
+        aria-label="Open sidebar"
       >
         <FaBars />
       </button>
 
-
       {/* MOBILE OVERLAY */}
-
-      {menuOpen && (
+      {mobileOpen && (
         <div
           className="sidebar-overlay"
-          onClick={closeMenu}
+          onClick={closeMobile}
         />
       )}
 
-
       {/* SIDEBAR */}
-
       <aside
         ref={sidebarRef}
-        onScroll={
-          handleSidebarScroll
-        }
-        className={`sidebar ${
-          menuOpen
-            ? "sidebar-open"
-            : ""
-        } ${
-          isPOSPage
-            ? "sidebar-pos-collapsed"
-            : ""
-        }`}
+        onScroll={saveScroll}
+        className={[
+          "sidebar",
+          mobileOpen ? "sidebar-open" : "",
+          isCollapsed ? "sidebar-pos-collapsed" : "",
+          isPOSPage ? "sidebar-pos-page" : "",
+        ].join(" ")}
       >
-
-        <div>
-
-
-          {/* LOGO */}
-
+        <div className="sidebar-content">
+          {/* CLINIC LOGO */}
           <div className="sidebar-logo">
+            <button
+              type="button"
+              className="sidebar-brand"
+              onClick={toggleSidebar}
+              onWheel={handleLogoWheel}
+              title={
+                isPOSPage
+                  ? "Sidebar collapsed on POS"
+                  : "Collapse / expand sidebar"
+              }
+              aria-label="Collapse or expand sidebar"
+            >
+              {displayLogo ? (
+                <img
+                  src={displayLogo}
+                  alt={`${displayName} logo`}
+                  className="sidebar-logo-image"
+                />
+              ) : (
+                <FaPaw className="sidebar-logo-icon" />
+              )}
 
-            <div className="sidebar-brand">
-
-              <FaPaw
-                className="sidebar-logo-icon"
-              />
-
-              <h2 className="sidebar-logo-text">
-                Vet Clinic
-              </h2>
-
-            </div>
-
+              <span className="sidebar-logo-text">
+                {displayName}
+              </span>
+            </button>
 
             <button
+              type="button"
               className="mobile-close-button"
-              onClick={closeMenu}
-              aria-label="Close menu"
+              onClick={closeMobile}
+              aria-label="Close sidebar"
             >
               <FaXmark />
             </button>
-
           </div>
 
-
-          {/* NAVIGATION */}
-
+          {/* MAIN NAVIGATION */}
           <nav className="sidebar-nav">
+            {navigationLinks.map(renderLink)}
 
-
-            {/* DASHBOARD */}
-
-            <NavLink
-              to="/dashboard"
-              onClick={
-                handleNavigation
-              }
-              data-label="Dashboard"
-              title={
-                isPOSPage
-                  ? "Dashboard"
-                  : ""
-              }
-            >
-
-              <FaHouse className="sidebar-icon" />
-
-              <span className="sidebar-text">
-                Dashboard
-              </span>
-
-            </NavLink>
-
-
-            {/* OWNERS */}
-
-            <NavLink
-              to="/owners"
-              onClick={
-                handleNavigation
-              }
-              data-label="Owners"
-              title={
-                isPOSPage
-                  ? "Owners"
-                  : ""
-              }
-            >
-
-              <FaUsers className="sidebar-icon" />
-
-              <span className="sidebar-text">
-                Owners
-              </span>
-
-            </NavLink>
-
-
-            {/* PETS */}
-
-            <NavLink
-              to="/pets"
-              onClick={
-                handleNavigation
-              }
-              data-label="Pets"
-              title={
-                isPOSPage
-                  ? "Pets"
-                  : ""
-              }
-            >
-
-              <FaPaw className="sidebar-icon" />
-
-              <span className="sidebar-text">
-                Pets
-              </span>
-
-            </NavLink>
-
-
-            {/* APPOINTMENTS */}
-
-            <NavLink
-              to="/appointments"
-              onClick={
-                handleNavigation
-              }
-              data-label="Appointments"
-              title={
-                isPOSPage
-                  ? "Appointments"
-                  : ""
-              }
-            >
-
-              <FaCalendarDays className="sidebar-icon" />
-
-              <span className="sidebar-text">
-                Appointments
-              </span>
-
-            </NavLink>
-
-
-            {/* MEDICAL RECORDS */}
-
-            <NavLink
-              to="/medical-records"
-              onClick={
-                handleNavigation
-              }
-              data-label="Medical Records"
-              title={
-                isPOSPage
-                  ? "Medical Records"
-                  : ""
-              }
-            >
-
-              <FaNotesMedical className="sidebar-icon" />
-
-              <span className="sidebar-text">
-                Medical Records
-              </span>
-
-            </NavLink>
-
-
-            {/* VACCINATIONS */}
-
-            <NavLink
-              to="/vaccinations"
-              onClick={
-                handleNavigation
-              }
-              data-label="Vaccinations"
-              title={
-                isPOSPage
-                  ? "Vaccinations"
-                  : ""
-              }
-            >
-
-              <FaSyringe className="sidebar-icon" />
-
-              <span className="sidebar-text">
-                Vaccinations
-              </span>
-
-            </NavLink>
-
-
-            {/* REMINDERS */}
-
-            <NavLink
-              to="/reminders"
-              onClick={
-                handleNavigation
-              }
-              data-label="Reminders"
-              title={
-                isPOSPage
-                  ? "Reminders"
-                  : ""
-              }
-            >
-
-              <FaBell className="sidebar-icon" />
-
-              <span className="sidebar-text">
-                Reminders
-              </span>
-
-            </NavLink>
-
-
-            {/* MEDICATIONS */}
-
-            <NavLink
-              to="/medications"
-              onClick={
-                handleNavigation
-              }
-              data-label="Medications"
-              title={
-                isPOSPage
-                  ? "Medications"
-                  : ""
-              }
-            >
-
-              <FaPills className="sidebar-icon" />
-
-              <span className="sidebar-text">
-                Medications
-              </span>
-
-            </NavLink>
-
-
-            {/* PRESCRIPTIONS */}
-
-            <NavLink
-              to="/prescriptions"
-              onClick={
-                handleNavigation
-              }
-              data-label="Prescriptions"
-              title={
-                isPOSPage
-                  ? "Prescriptions"
-                  : ""
-              }
-            >
-
-              <FaPrescriptionBottleMedical
-                className="sidebar-icon"
-              />
-
-              <span className="sidebar-text">
-                Prescriptions
-              </span>
-
-            </NavLink>
-
-
-            {/* ===============================================
-                INVENTORY + SUBMENU
-            =============================================== */}
-
+            {/* INVENTORY DROPDOWN */}
             <div className="inventory-sidebar-group">
-
               <button
                 type="button"
                 className={`inventory-parent-button ${
-                  isInventoryPage
-                    ? "active"
-                    : ""
+                  isInventoryPage ? "active" : ""
                 }`}
-                onClick={
-                  handleInventoryParent
-                }
+                onClick={handleInventoryClick}
+                aria-expanded={inventoryOpen}
                 title={
-                  isPOSPage
-                    ? "Inventory"
-                    : ""
+                  isCollapsed ? "Inventory" : undefined
                 }
               >
-
                 <FaBoxesStacked className="sidebar-icon" />
 
                 <span className="sidebar-text">
@@ -1104,217 +1096,69 @@ function Sidebar() {
                 </span>
 
                 <span className="inventory-parent-arrow">
-
                   {inventoryOpen ? (
                     <FaChevronDown />
                   ) : (
                     <FaChevronRight />
                   )}
-
                 </span>
-
               </button>
 
-
               {inventoryOpen && (
-
                 <div className="inventory-submenu">
-
-
-                  {/* PRODUCTS */}
+                  <button
+                    type="button"
+                    className={`inventory-submenu-button ${
+                      location.pathname === "/inventory" ||
+                      location.pathname === "/inventory/products"
+                        ? "active"
+                        : ""
+                    }`}
+                    onClick={() =>
+                      goToInventory("/inventory")
+                    }
+                  >
+                    <FaBoxOpen />
+                    <span>Products</span>
+                  </button>
 
                   <button
                     type="button"
                     className={`inventory-submenu-button ${
                       location.pathname ===
-                      "/inventory"
-                        ? "active"
-                        : ""
-                    }`}
-                    onClick={() => {
-                      saveSidebarScroll();
-
-                      navigate(
-                        "/inventory"
-                      );
-
-                      setInventoryOpen(
-                        true
-                      );
-
-                      setMenuOpen(
-                        false
-                      );
-                    }}
-                  >
-
-                    <FaBoxOpen />
-
-                    <span>
-                      Products
-                    </span>
-
-                  </button>
-
-
-                  {/* CATEGORIES */}
-
-                  <button
-                    type="button"
-                    className={`inventory-submenu-button ${
-                      isCategoriesPage
+                      "/inventory/categories"
                         ? "active"
                         : ""
                     }`}
                     onClick={() =>
-                      handleInventoryNavigation(
-                        "categories"
+                      goToInventory(
+                        "/inventory/categories"
                       )
                     }
                   >
-
                     <FaTags />
-
-                    <span>
-                      Categories
-                    </span>
-
+                    <span>Categories</span>
                   </button>
-
                 </div>
-
               )}
-
             </div>
-                        {/* ===============================================
-                POS
-            =============================================== */}
 
-<NavLink
-              to="/pos"
-              onClick={
-                handleNavigation
-              }
-              data-label="POS"
-              title={
-                isPOSPage
-                  ? "POS"
-                  : ""
-              }
-            >
+            {/* SALES LINKS */}
+            {salesLinks.map(renderLink)}
 
-              <FaCashRegister className="sidebar-icon" />
-
-              <span className="sidebar-text">
-                POS
-              </span>
-
-            </NavLink>
-
-
-            {/* ===============================================
-                ORDERS
-            =============================================== */}
-
-            <NavLink
-              to="/admin/orders"
-              onClick={
-                handleNavigation
-              }
-              data-label="Orders"
-              title={
-                isPOSPage
-                  ? "Orders"
-                  : ""
-              }
-            >
-
-              <FaClipboardList className="sidebar-icon" />
-
-              <span className="sidebar-text">
-                Orders
-              </span>
-
-            </NavLink>
-
-
-            {/* ===============================================
-                SALES
-            =============================================== */}
-
-            <NavLink
-              to="/admin/sales"
-              onClick={
-                handleNavigation
-              }
-              data-label="Sales"
-              title={
-                isPOSPage
-                  ? "Sales"
-                  : ""
-              }
-            >
-
-              <FaChartLine className="sidebar-icon" />
-
-              <span className="sidebar-text">
-                Sales
-              </span>
-
-            </NavLink>
-
-
-            {/* ===============================================
-                BILLING
-            =============================================== */}
-
-            <NavLink
-              to="/billing"
-              onClick={
-                handleNavigation
-              }
-              data-label="Billing"
-              title={
-                isPOSPage
-                  ? "Billing"
-                  : ""
-              }
-            >
-
-              <FaFileInvoiceDollar
-                className="sidebar-icon"
-              />
-
-              <span className="sidebar-text">
-                Billing
-              </span>
-
-            </NavLink>
-
-
-            {/* ===============================================
-                FINANCIAL + SUBMENU
-            =============================================== */}
-
+            {/* FINANCIAL DROPDOWN */}
             <div className="financial-sidebar-group">
-
               <button
                 type="button"
                 className={`financial-parent-button ${
-                  isFinancialPage
-                    ? "active"
-                    : ""
+                  isFinancialPage ? "active" : ""
                 }`}
-                onClick={
-                  handleFinancialParent
-                }
+                onClick={handleFinancialClick}
+                aria-expanded={financialOpen}
                 title={
-                  isPOSPage
-                    ? "Financial"
-                    : ""
+                  isCollapsed ? "Financial" : undefined
                 }
               >
-
                 <FaChartLine className="sidebar-icon" />
 
                 <span className="sidebar-text">
@@ -1322,216 +1166,69 @@ function Sidebar() {
                 </span>
 
                 <span className="financial-parent-arrow">
-
                   {financialOpen ? (
                     <FaChevronDown />
                   ) : (
                     <FaChevronRight />
                   )}
-
                 </span>
-
               </button>
 
-
               {financialOpen && (
-
                 <div className="financial-submenu">
-
-
-                  {/* REVENUE */}
-
                   <button
                     type="button"
                     className={`financial-submenu-button ${
-                      isRevenuePage
+                      isFinancialPage &&
+                      financialTab === "revenue"
                         ? "active"
                         : ""
                     }`}
                     onClick={() =>
-                      handleFinancialNavigation(
-                        "revenue"
-                      )
+                      goToFinancial("revenue")
                     }
                   >
-
                     <FaArrowTrendUp />
-
-                    <span>
-                      Revenue
-                    </span>
-
+                    <span>Revenue</span>
                   </button>
-
-
-                  {/* EXPENSES */}
 
                   <button
                     type="button"
                     className={`financial-submenu-button ${
-                      isExpensesPage
+                      isFinancialPage &&
+                      financialTab === "expenses"
                         ? "active"
                         : ""
                     }`}
                     onClick={() =>
-                      handleFinancialNavigation(
-                        "expenses"
-                      )
+                      goToFinancial("expenses")
                     }
                   >
-
                     <FaArrowTrendDown />
-
-                    <span>
-                      Expenses
-                    </span>
-
+                    <span>Expenses</span>
                   </button>
-
                 </div>
-
               )}
-
             </div>
 
-
-            {/* ===============================================
-                REPORTS
-            =============================================== */}
-
-            <NavLink
-              to="/reports"
-              onClick={
-                handleNavigation
-              }
-              data-label="Reports"
-              title={
-                isPOSPage
-                  ? "Reports"
-                  : ""
-              }
-            >
-
-              <FaChartColumn className="sidebar-icon" />
-
-              <span className="sidebar-text">
-                Reports
-              </span>
-
-            </NavLink>
-
-
-            {/* ===============================================
-                USERS
-            =============================================== */}
-
-            <NavLink
-              to="/users"
-              onClick={
-                handleNavigation
-              }
-              data-label="Users"
-              title={
-                isPOSPage
-                  ? "Users"
-                  : ""
-              }
-            >
-
-              <FaUserCog className="sidebar-icon" />
-
-              <span className="sidebar-text">
-                Users
-              </span>
-
-            </NavLink>
-
-
-            {/* ===============================================
-                AUDIT LOG
-            =============================================== */}
-
-            <NavLink
-              to="/audit-log"
-              onClick={
-                handleNavigation
-              }
-              data-label="Audit Log"
-              title={
-                isPOSPage
-                  ? "Audit Log"
-                  : ""
-              }
-            >
-
-              <FaClipboard className="sidebar-icon" />
-
-              <span className="sidebar-text">
-                Audit Log
-              </span>
-
-            </NavLink>
-
-
-            {/* ===============================================
-                SETTINGS
-            =============================================== */}
-
-            <NavLink
-              to="/settings"
-              onClick={
-                handleNavigation
-              }
-              data-label="Settings"
-              title={
-                isPOSPage
-                  ? "Settings"
-                  : ""
-              }
-            >
-
-              <FaGear className="sidebar-icon" />
-
-              <span className="sidebar-text">
-                Settings
-              </span>
-
-            </NavLink>
-
+            {/* OTHER LINKS */}
+            {otherLinks.map(renderLink)}
           </nav>
-
         </div>
 
-
-        {/* ===============================================
-            LOGOUT
-        =============================================== */}
-
+        {/* LOGOUT */}
         <button
+          type="button"
           className="sidebar-logout"
-          onClick={
-            handleLogout
-          }
-          title={
-            isPOSPage
-              ? "Logout"
-              : ""
-          }
+          onClick={handleLogout}
+          title={isCollapsed ? "Logout" : undefined}
         >
-
           <FaRightFromBracket className="sidebar-icon" />
-
           <span className="sidebar-text">
             Logout
           </span>
-
         </button>
-
       </aside>
-
     </>
   );
 }
-
-
-export default Sidebar;

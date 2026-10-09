@@ -620,16 +620,16 @@ function Financial() {
             </p>
           </div>
 
-          {isOverview && (
+          {/* {isOverview && (
             <button
               type="button"
               className="financial-export-button"
               onClick={handleExport}
             >
               <FaFileExcel />
-              Export
+              
             </button>
-          )}
+          )} */}
         </div>
 
         {/* =====================================================

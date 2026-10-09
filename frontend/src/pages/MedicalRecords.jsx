@@ -1486,13 +1486,13 @@ function MedicalRecords() {
                     Save & Add Vaccination
                   </button>
 
-                  <button
+                  {/* <button
                     type="button"
                     className="medical-workflow-button medical-workflow-primary"
                     onClick={handleCompleteVisit}
                   >
                     Complete Visit
-                  </button>
+                  </button> */}
 
                   <button
                     type="button"

@@ -568,11 +568,11 @@ function AuditLog() {
             </p>
           </div>
 
-          <div className="audit-view-only">
+          {/* <div className="audit-view-only">
             <FaClipboardList />
 
             <span>View Only</span>
-          </div>
+          </div> */}
         </div>
 
         {/* ===============================================

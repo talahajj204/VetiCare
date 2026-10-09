@@ -1472,14 +1472,13 @@ function Reports() {
                         <td>
 
                           <button
-                            type="button"
-                            onClick={() =>
-                              handlePrintReport(
-                                report
-                              )
-                            }
+                           type="button"
+                           className="reports-print-icon-button"
+                           onClick={() => handlePrintReport(report)}
+                           title="Print Report"
+                           aria-label={`Print ${report.category} report`}
                           >
-                            <FaPrint /> Print
+                            <FaPrint /> 
                           </button>
 
                         </td>
