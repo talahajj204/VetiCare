@@ -1,5 +1,6 @@
 
 import { useEffect, useState } from "react";
+
 import StoreHeader from "./StoreHeader";
 
 import {
@@ -38,6 +39,7 @@ const isWebLink = (value) =>
 
 const socialUrl = (value, platform) => {
   const input = String(value || "").trim();
+
   if (!input) return "";
 
   if (isWebLink(input)) return input;
@@ -61,16 +63,19 @@ const socialUrl = (value, platform) => {
 
 const whatsappUrl = (value) => {
   const input = String(value || "").trim();
+
   if (!input) return "";
 
   if (isWebLink(input)) return input;
 
   const digits = input.replace(/\D/g, "");
+
   return digits ? `https://wa.me/${digits}` : "";
 };
 
 const mapsUrl = (address) => {
   const input = String(address || "").trim();
+
   if (!input) return "";
 
   if (isWebLink(input)) return input;
@@ -127,6 +132,7 @@ function Contact() {
   }, []);
 
   // SAME KEYS USED BY ADMIN SETTINGS
+
   const contactTitle = firstFilled(
     settings.contactTitle,
     "Contact Us"
@@ -207,6 +213,7 @@ function Contact() {
 
     // The existing form is frontend-only.
     // A backend/API is needed to actually deliver messages.
+
     setMessageSent(true);
 
     setFormData({
@@ -219,8 +226,27 @@ function Contact() {
     });
   };
 
+  // DYNAMIC COLORS FROM ADMIN SETTINGS
+  // Only colors are changed; layout and functionality stay the same.
+
+  const storeColors = settings.storeColors || {};
+
+  const contactColors = {
+    "--contact-primary":
+      storeColors.primaryColor || "#199a96",
+
+    "--contact-secondary":
+      storeColors.secondaryColor || "#117b78",
+
+    "--contact-light":
+      storeColors.lightColor || "#eaf8f7",
+
+    "--contact-border":
+      storeColors.borderColor || "#dcebea",
+  };
+
   return (
-    <div className="contact-page">
+    <div className="contact-page" style={contactColors}>
       <style>{`
         * {
           box-sizing: border-box;
@@ -238,12 +264,12 @@ function Contact() {
           padding: 32px 24px 28px;
           background: linear-gradient(
             135deg,
-            #f0faf9 0%,
+            var(--contact-light) 0%,
             #ffffff 52%,
-            #edf9f8 100%
+            var(--contact-light) 100%
           );
           text-align: center;
-          border-bottom: 1px solid #edf4f3;
+          border-bottom: 1px solid var(--contact-border);
         }
 
         .contact-top-badge {
@@ -252,7 +278,7 @@ function Contact() {
           justify-content: center;
           gap: 6px;
           margin-bottom: 8px;
-          color: #199a96;
+          color: var(--contact-primary);
           font-size: 10px;
           font-weight: 800;
           letter-spacing: 1.2px;
@@ -290,7 +316,7 @@ function Contact() {
         .contact-info-box {
           display: grid;
           grid-template-columns: repeat(4, minmax(0, 1fr));
-          border: 1px solid #dcebea;
+          border: 1px solid var(--contact-border);
           border-radius: 16px;
           background: #ffffff;
           overflow: hidden;
@@ -303,7 +329,7 @@ function Contact() {
           display: flex;
           align-items: flex-start;
           gap: 13px;
-          border-right: 1px solid #e4efee;
+          border-right: 1px solid var(--contact-border);
         }
 
         .contact-info-item:last-child {
@@ -315,8 +341,8 @@ function Contact() {
           height: 40px;
           flex-shrink: 0;
           border-radius: 11px;
-          background: #eaf8f7;
-          color: #199a96;
+          background: var(--contact-light);
+          color: var(--contact-primary);
           display: flex;
           align-items: center;
           justify-content: center;
@@ -354,7 +380,7 @@ function Contact() {
           align-items: center;
           gap: 5px;
           margin-top: 8px;
-          color: #199a96;
+          color: var(--contact-primary);
           font-size: 10px;
           font-weight: 800;
           text-decoration: none;
@@ -362,7 +388,7 @@ function Contact() {
         }
 
         .contact-info-link:hover {
-          color: #117b78;
+          color: var(--contact-secondary);
         }
 
         .contact-info-link svg {
@@ -387,10 +413,10 @@ function Contact() {
         .contact-social-icon {
           width: 31px;
           height: 31px;
-          border: 1px solid #d6e8e6;
+          border: 1px solid var(--contact-border);
           border-radius: 50%;
-          background: #f5fbfa;
-          color: #199a96;
+          background: var(--contact-light);
+          color: var(--contact-primary);
           display: flex;
           align-items: center;
           justify-content: center;
@@ -400,13 +426,14 @@ function Contact() {
         }
 
         .contact-social-icon:hover {
-          background: #199a96;
-          border-color: #199a96;
+          background: var(--contact-primary);
+          border-color: var(--contact-primary);
           color: #ffffff;
           transform: translateY(-2px);
         }
 
         /* PART 2 CONTINUES HERE */
+
 
         /* CONTACT FORM SECTION */
 
@@ -418,11 +445,11 @@ function Contact() {
             minmax(0, 1.3fr);
           gap: 42px;
           padding: 34px;
-          border: 1px solid #e0eceb;
+          border: 1px solid var(--contact-border);
           border-radius: 17px;
           background: linear-gradient(
             135deg,
-            #f8fcfc,
+            var(--contact-light),
             #ffffff
           );
           box-shadow: 0 10px 30px rgba(32, 76, 73, 0.04);
@@ -437,7 +464,7 @@ function Contact() {
           align-items: center;
           gap: 7px;
           margin-bottom: 11px;
-          color: #199a96;
+          color: var(--contact-primary);
           font-size: 10px;
           font-weight: 800;
           letter-spacing: 1px;
@@ -463,7 +490,7 @@ function Contact() {
           margin-top: 19px;
           padding: 13px;
           border-radius: 11px;
-          background: #eaf8f7;
+          background: var(--contact-light);
           display: flex;
           align-items: flex-start;
           gap: 9px;
@@ -472,7 +499,7 @@ function Contact() {
         .contact-form-pet-note svg {
           flex-shrink: 0;
           margin-top: 2px;
-          color: #199a96;
+          color: var(--contact-primary);
           font-size: 14px;
         }
 
@@ -516,7 +543,7 @@ function Contact() {
         .contact-form-field select,
         .contact-form-field textarea {
           width: 100%;
-          border: 1px solid #d8e6e4;
+          border: 1px solid var(--contact-border);
           border-radius: 8px;
           outline: none;
           background: #ffffff;
@@ -544,8 +571,13 @@ function Contact() {
         .contact-form-field input:focus,
         .contact-form-field select:focus,
         .contact-form-field textarea:focus {
-          border-color: #199a96;
-          box-shadow: 0 0 0 3px rgba(25, 154, 150, 0.07);
+          border-color: var(--contact-primary);
+          box-shadow: 0 0 0 3px
+            color-mix(
+              in srgb,
+              var(--contact-primary) 7%,
+              transparent
+            );
         }
 
         .contact-form-field input::placeholder,
@@ -560,7 +592,7 @@ function Contact() {
           padding: 0 19px;
           border: none;
           border-radius: 8px;
-          background: #199a96;
+          background: var(--contact-primary);
           color: #ffffff;
           display: inline-flex;
           align-items: center;
@@ -575,17 +607,17 @@ function Contact() {
         }
 
         .contact-send-button:hover {
-          background: #147f7c;
+          background: var(--contact-secondary);
           transform: translateY(-1px);
         }
 
         .contact-success-message {
           margin-bottom: 13px;
           padding: 11px 13px;
-          border: 1px solid #bce1de;
+          border: 1px solid var(--contact-border);
           border-radius: 8px;
-          background: #ecf9f7;
-          color: #187d78;
+          background: var(--contact-light);
+          color: var(--contact-secondary);
           font-size: 11px;
           font-weight: 650;
         }
@@ -603,7 +635,7 @@ function Contact() {
 
           .contact-info-item:nth-child(1),
           .contact-info-item:nth-child(2) {
-            border-bottom: 1px solid #e4efee;
+            border-bottom: 1px solid var(--contact-border);
           }
 
           .contact-form-section {
@@ -636,7 +668,7 @@ function Contact() {
           .contact-info-item {
             min-height: auto;
             border-right: none;
-            border-bottom: 1px solid #e4efee;
+            border-bottom: 1px solid var(--contact-border);
           }
 
           .contact-info-item:last-child {

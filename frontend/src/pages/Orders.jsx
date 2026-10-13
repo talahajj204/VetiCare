@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import {
@@ -18,8 +19,49 @@ import {
   FaMapMarkerAlt,
 } from "react-icons/fa";
 
+const STORE_SETTINGS_KEY = "storeSettings";
+
+const loadOrdersTheme = () => {
+  try {
+    const settings = JSON.parse(
+      localStorage.getItem(STORE_SETTINGS_KEY) || "{}"
+    );
+    const colors = settings.storeColors || {};
+
+    return {
+      "--orders-primary": colors.primaryColor || "#159f9f",
+      "--orders-secondary": colors.secondaryColor || "#118887",
+      "--orders-light": colors.lightColor || "#eaf8f7",
+      "--orders-border": colors.borderColor || "#dfe8e7",
+    };
+  } catch {
+    return {
+      "--orders-primary": "#159f9f",
+      "--orders-secondary": "#118887",
+      "--orders-light": "#eaf8f7",
+      "--orders-border": "#dfe8e7",
+    };
+  }
+};
+
 function Orders() {
   const navigate = useNavigate();
+
+  const [ordersTheme, setOrdersTheme] = useState(loadOrdersTheme);
+
+  useEffect(() => {
+    const refreshTheme = () => setOrdersTheme(loadOrdersTheme());
+
+    window.addEventListener("storeSettingsUpdated", refreshTheme);
+    window.addEventListener("storage", refreshTheme);
+    window.addEventListener("focus", refreshTheme);
+
+    return () => {
+      window.removeEventListener("storeSettingsUpdated", refreshTheme);
+      window.removeEventListener("storage", refreshTheme);
+      window.removeEventListener("focus", refreshTheme);
+    };
+  }, []);
 
   // =========================================
   // LOAD ORDERS
@@ -143,7 +185,7 @@ function Orders() {
 
   if (orders.length === 0) {
     return (
-      <div className="orders-page">
+      <div className="orders-page" style={ordersTheme}>
         <style>{styles}</style>
 
         {/* HEADER */}
@@ -166,7 +208,6 @@ function Orders() {
             onClick={() => navigate("/store")}
           >
             <FaShoppingBag />
-
             Store
           </button>
         </header>
@@ -193,7 +234,6 @@ function Orders() {
               onClick={() => navigate("/store")}
             >
               <FaShoppingBag />
-
               Start Shopping
             </button>
           </div>
@@ -207,7 +247,7 @@ function Orders() {
   // =========================================
 
   return (
-    <div className="orders-page">
+    <div className="orders-page" style={ordersTheme}>
       <style>{styles}</style>
 
       {/* =====================================
@@ -232,7 +272,6 @@ function Orders() {
           onClick={() => navigate("/store")}
         >
           <FaShoppingBag />
-
           Store
         </button>
       </header>
@@ -248,7 +287,6 @@ function Orders() {
           onClick={() => navigate("/store")}
         >
           <FaArrowLeft />
-
           Back to Store
         </button>
 
@@ -777,9 +815,7 @@ function Orders() {
                             $
                             {Number(
                               order.total || 0
-                            ).toFixed(
-                              2
-                            )}
+                            ).toFixed(2)}
                           </strong>
                         </div>
                       </div>
@@ -795,9 +831,6 @@ function Orders() {
   );
 }
 
-// =========================================
-// CSS
-// =========================================
 
 const styles = `
   * {
@@ -810,10 +843,8 @@ const styles = `
 
   .orders-page {
     min-height: 100vh;
-
     background: #f7faf9;
     color: #344054;
-
     font-family: Arial, Helvetica, sans-serif;
   }
 
@@ -823,77 +854,64 @@ const styles = `
 
   .orders-header {
     height: 70px;
-
     padding: 0 5%;
-
     background: #ffffff;
-
     border-bottom: 1px solid #e5eceb;
-
     display: flex;
     align-items: center;
     justify-content: space-between;
-
     position: sticky;
-
     top: 0;
-
     z-index: 100;
   }
 
   .orders-logo {
     display: flex;
     align-items: center;
-
     gap: 9px;
-
-    color: #176d6a;
-
+    color: var(--orders-primary);
     font-size: 19px;
     font-weight: 800;
-
     cursor: pointer;
   }
 
   .orders-logo svg {
-    color: #159f9f;
-
+    color: var(--orders-primary);
     font-size: 25px;
   }
 
   .orders-logo b {
-    color: #159f9f;
+    color: var(--orders-primary);
   }
 
   .orders-store-button {
+    width: fit-content !important;
+    min-width: 0 !important;
+    max-width: max-content;
+    flex: 0 0 auto !important;
+    align-self: center;
+    justify-content: center;
+    white-space: nowrap;
     height: 38px;
-
     padding: 0 14px;
-
-    border: 1px solid #dfe8e7;
-
+    border: 1px solid var(--orders-border);
     border-radius: 7px;
-
     background: #ffffff;
-
     color: #475467;
-
     display: flex;
     align-items: center;
-
     gap: 7px;
-
     font-size: 10px;
-
     font-weight: 700;
-
     cursor: pointer;
   }
 
   .orders-store-button:hover {
-    color: #159f9f;
-
-    border-color: #159f9f;
+    width: fit-content !important;
+    background: var(--orders-light);
+    transform: none;
+    color: var(--orders-primary);
+    border-color: var(--orders-primary);
   }
 
   /* ========================================
@@ -902,37 +920,26 @@ const styles = `
 
   .orders-container {
     width: min(1100px, 92%);
-
     margin: auto;
-
     padding: 28px 0 60px;
   }
 
   .orders-back {
     padding: 0;
-
     margin-bottom: 25px;
-
     border: 0;
-
     background: transparent;
-
     color: #667085;
-
     display: flex;
     align-items: center;
-
     gap: 8px;
-
     font-size: 10px;
-
     font-weight: 600;
-
     cursor: pointer;
   }
 
   .orders-back:hover {
-    color: #159f9f;
+    color: var(--orders-primary);
   }
 
   /* ========================================
@@ -941,7 +948,6 @@ const styles = `
 
   .orders-title {
     margin-bottom: 22px;
-
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -949,58 +955,42 @@ const styles = `
 
   .orders-title h1 {
     margin: 0;
-
     color: #27364a;
-
     font-size: 28px;
   }
 
   .orders-title p {
     margin: 6px 0 0;
-
     color: #98a2b3;
-
     font-size: 10px;
   }
 
   .orders-count {
     min-width: 110px;
-
     padding: 11px 14px;
-
-    border: 1px solid #dfe8e7;
-
+    border: 1px solid var(--orders-border);
     border-radius: 9px;
-
     background: #ffffff;
-
     display: flex;
     align-items: center;
-
     gap: 10px;
   }
 
   .orders-count > svg {
-    color: #159f9f;
-
+    color: var(--orders-primary);
     font-size: 18px;
   }
 
   .orders-count strong {
     display: block;
-
     color: #344054;
-
     font-size: 13px;
   }
 
   .orders-count span {
     display: block;
-
     margin-top: 2px;
-
     color: #98a2b3;
-
     font-size: 8px;
   }
 
@@ -1010,51 +1000,34 @@ const styles = `
 
   .orders-filters {
     margin-bottom: 20px;
-
     padding: 5px;
-
     border: 1px solid #e2e9e8;
-
     border-radius: 9px;
-
     background: #ffffff;
-
     display: flex;
-
     gap: 4px;
-
     overflow-x: auto;
   }
 
   .orders-filters button {
     min-width: 80px;
-
     padding: 9px 13px;
-
     border: 0;
-
     border-radius: 6px;
-
     background: transparent;
-
     color: #667085;
-
     font-size: 9px;
-
     font-weight: 600;
-
     cursor: pointer;
-
     white-space: nowrap;
   }
 
   .orders-filters button:hover {
-    background: #f2f8f7;
+    background: var(--orders-light);
   }
 
   .orders-filters button.active {
-    background: #159f9f;
-
+    background: var(--orders-primary);
     color: #ffffff;
   }
 
@@ -1064,27 +1037,20 @@ const styles = `
 
   .orders-list {
     display: flex;
-
     flex-direction: column;
-
     gap: 15px;
   }
 
   .order-card {
     border: 1px solid #e0e8e7;
-
     border-radius: 12px;
-
     background: #ffffff;
-
     overflow: hidden;
   }
 
   .order-top {
     padding: 17px 20px;
-
     border-bottom: 1px solid #edf1f1;
-
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -1093,40 +1059,30 @@ const styles = `
   .order-number {
     display: flex;
     align-items: center;
-
     gap: 10px;
   }
 
   .order-number-icon {
     width: 35px;
     height: 35px;
-
     border-radius: 8px;
-
-    background: #e9f8f6;
-
-    color: #159f9f;
-
+    background: var(--orders-light);
+    color: var(--orders-primary);
     display: flex;
     align-items: center;
     justify-content: center;
-
     font-size: 12px;
   }
 
   .order-number span {
     display: block;
-
     color: #98a2b3;
-
     font-size: 8px;
   }
 
   .order-number h2 {
     margin: 3px 0 0;
-
     color: #344054;
-
     font-size: 12px;
   }
 
@@ -1136,46 +1092,36 @@ const styles = `
 
   .order-status {
     padding: 6px 10px;
-
     border-radius: 20px;
-
     display: flex;
     align-items: center;
-
     gap: 5px;
-
     font-size: 8px;
-
     font-weight: 700;
   }
 
   .status-pending {
     background: #fff7e8;
-
     color: #b26a00;
   }
 
   .status-confirmed {
     background: #eaf8f7;
-
     color: #168d88;
   }
 
   .status-preparing {
     background: #eef4ff;
-
     color: #4169a8;
   }
 
   .status-completed {
     background: #eaf8ee;
-
     color: #2e8b57;
   }
 
   .status-cancelled {
     background: #fff0ef;
-
     color: #d92d20;
   }
 
@@ -1185,81 +1131,58 @@ const styles = `
 
   .order-summary-grid {
     padding: 16px 20px;
-
     display: grid;
-
     grid-template-columns:
       repeat(3, 1fr) 140px;
-
     gap: 10px;
   }
 
   .order-summary-box {
     min-height: 62px;
-
     padding: 10px 12px;
-
     border: 1px solid #edf1f1;
-
     border-radius: 8px;
-
     display: flex;
     align-items: center;
-
     gap: 9px;
   }
 
   .order-summary-box > svg {
-    color: #159f9f;
-
+    color: var(--orders-primary);
     font-size: 13px;
   }
 
   .order-summary-box span {
     display: block;
-
     color: #98a2b3;
-
     font-size: 7px;
   }
 
   .order-summary-box strong {
     display: block;
-
     margin-top: 3px;
-
     color: #344054;
-
     font-size: 9px;
   }
 
   .order-summary-box small {
     display: block;
-
     margin-top: 2px;
-
     color: #98a2b3;
-
     font-size: 7px;
   }
 
   .order-summary-box.total {
-    background: #f3fbfa;
-
-    border-color: #d4eeeb;
-
+    background: var(--orders-light);
+    border-color: var(--orders-border);
     display: flex;
-
     flex-direction: column;
-
     align-items: flex-end;
-
     justify-content: center;
   }
 
   .order-summary-box.total strong {
-    color: #159f9f;
-
+    color: var(--orders-primary);
     font-size: 17px;
   }
 
@@ -1269,109 +1192,76 @@ const styles = `
 
   .order-products-preview {
     padding: 0 20px 16px;
-
     display: flex;
     align-items: center;
-
     gap: 12px;
-
     flex-wrap: wrap;
   }
 
   .order-preview-product {
     display: flex;
     align-items: center;
-
     gap: 7px;
   }
 
   .order-preview-image {
     width: 38px;
     height: 38px;
-
     border-radius: 7px;
-
     background: #f3f7f6;
-
     color: #9fb7b4;
-
     display: flex;
     align-items: center;
     justify-content: center;
-
     position: relative;
-
     overflow: visible;
   }
 
   .order-preview-image img {
     width: 100%;
     height: 100%;
-
     border-radius: 7px;
-
     object-fit: cover;
   }
 
   .order-preview-image span {
     width: 15px;
     height: 15px;
-
     position: absolute;
-
     top: -5px;
     right: -5px;
-
     border-radius: 50%;
-
-    background: #159f9f;
-
+    background: var(--orders-primary);
     color: #ffffff;
-
     display: flex;
     align-items: center;
     justify-content: center;
-
     font-size: 6px;
-
     font-weight: 700;
   }
 
   .order-preview-product strong {
     display: block;
-
     max-width: 100px;
-
     color: #344054;
-
     font-size: 8px;
-
     overflow: hidden;
-
     text-overflow: ellipsis;
-
     white-space: nowrap;
   }
 
   .order-preview-product > div:last-child span {
     display: block;
-
     margin-top: 3px;
-
     color: #98a2b3;
-
     font-size: 7px;
   }
 
   .order-more-products {
     padding: 7px 9px;
-
     border-radius: 6px;
-
     background: #f4f7f7;
-
     color: #667085;
-
     font-size: 8px;
   }
 
@@ -1381,32 +1271,22 @@ const styles = `
 
   .order-details-button {
     width: 100%;
-
     padding: 12px 20px;
-
     border: 0;
-
     border-top: 1px solid #edf1f1;
-
     background: #fbfcfc;
-
     color: #667085;
-
     display: flex;
     align-items: center;
     justify-content: space-between;
-
     font-size: 9px;
-
     font-weight: 700;
-
     cursor: pointer;
   }
 
   .order-details-button:hover {
-    background: #f2f9f8;
-
-    color: #159f9f;
+    background: var(--orders-light);
+    color: var(--orders-primary);
   }
 
   /* ========================================
@@ -1415,49 +1295,35 @@ const styles = `
 
   .order-expanded {
     padding: 20px;
-
     border-top: 1px solid #edf1f1;
-
     background: #fcfdfd;
   }
 
   .order-detail-section {
     margin-bottom: 18px;
-
     padding: 15px;
-
     border: 1px solid #e5eceb;
-
     border-radius: 9px;
-
     background: #ffffff;
   }
 
   .order-detail-section h3 {
     margin: 0 0 13px;
-
     color: #344054;
-
     font-size: 11px;
   }
 
   .order-items {
     display: flex;
-
     flex-direction: column;
   }
 
   .order-item-row {
     padding: 10px 0;
-
     border-bottom: 1px solid #edf1f1;
-
     display: grid;
-
     grid-template-columns: 48px 1fr auto;
-
     gap: 10px;
-
     align-items: center;
   }
 
@@ -1468,58 +1334,43 @@ const styles = `
   .order-item-image {
     width: 48px;
     height: 48px;
-
     border-radius: 7px;
-
     background: #f3f7f6;
-
     color: #9fb7b4;
-
     display: flex;
     align-items: center;
     justify-content: center;
-
     overflow: hidden;
   }
 
   .order-item-image img {
     width: 100%;
     height: 100%;
-
     object-fit: cover;
   }
 
   .order-item-info strong {
     display: block;
-
     color: #344054;
-
     font-size: 9px;
   }
 
   .order-item-info span {
     display: block;
-
     margin-top: 3px;
-
     color: #98a2b3;
-
     font-size: 7px;
   }
 
   .order-item-info small {
     display: block;
-
     margin-top: 5px;
-
     color: #667085;
-
     font-size: 8px;
   }
 
   .order-item-row > b {
     color: #344054;
-
     font-size: 10px;
   }
 
@@ -1529,23 +1380,17 @@ const styles = `
 
   .order-details-columns {
     display: grid;
-
     grid-template-columns: 1fr 1fr;
-
     gap: 12px;
   }
 
   .order-info-line {
     padding: 8px 0;
-
     border-bottom: 1px solid #edf1f1;
-
     display: flex;
     align-items: flex-start;
     justify-content: space-between;
-
     gap: 15px;
-
     font-size: 8px;
   }
 
@@ -1555,34 +1400,26 @@ const styles = `
 
   .order-info-line strong {
     color: #667085;
-
     display: flex;
     align-items: center;
-
     gap: 5px;
   }
 
   .order-info-line strong svg {
-    color: #159f9f;
+    color: var(--orders-primary);
   }
 
   .order-info-line span {
     color: #344054;
-
     text-align: right;
   }
 
   .order-notes {
     padding: 11px;
-
     border-radius: 6px;
-
     background: #f7faf9;
-
     color: #667085;
-
     font-size: 8px;
-
     line-height: 1.6;
   }
 
@@ -1592,27 +1429,19 @@ const styles = `
 
   .order-total-section {
     width: min(330px, 100%);
-
     margin-left: auto;
-
     padding: 15px;
-
-    border: 1px solid #dfe8e7;
-
+    border: 1px solid var(--orders-border);
     border-radius: 9px;
-
     background: #ffffff;
   }
 
   .order-total-section > div {
     padding: 7px 0;
-
     display: flex;
     align-items: center;
     justify-content: space-between;
-
     color: #667085;
-
     font-size: 9px;
   }
 
@@ -1622,19 +1451,14 @@ const styles = `
 
   .order-total-section .order-final-total {
     margin-top: 5px;
-
     padding-top: 12px;
-
     border-top: 1px solid #e5eceb;
-
     color: #344054;
-
     font-weight: 700;
   }
 
   .order-final-total strong {
-    color: #159f9f;
-
+    color: var(--orders-primary);
     font-size: 16px;
   }
 
@@ -1644,9 +1468,7 @@ const styles = `
 
   .orders-empty-wrapper {
     min-height: calc(100vh - 70px);
-
     padding: 30px;
-
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1655,100 +1477,70 @@ const styles = `
   .orders-empty-card,
   .orders-no-results {
     width: min(440px, 100%);
-
     padding: 40px;
-
     border: 1px solid #e0e8e7;
-
     border-radius: 13px;
-
     background: #ffffff;
-
     text-align: center;
   }
 
   .orders-empty-icon {
     width: 70px;
     height: 70px;
-
     margin: auto auto 18px;
-
     border-radius: 50%;
-
-    background: #eaf8f7;
-
-    color: #159f9f;
-
+    background: var(--orders-light);
+    color: var(--orders-primary);
     display: flex;
     align-items: center;
     justify-content: center;
-
     font-size: 26px;
   }
 
   .orders-empty-card h1,
   .orders-no-results h2 {
     margin: 0;
-
     color: #344054;
-
     font-size: 20px;
   }
 
   .orders-empty-card p,
   .orders-no-results p {
     margin: 8px 0 20px;
-
     color: #98a2b3;
-
     font-size: 9px;
-
     line-height: 1.6;
   }
 
   .orders-primary-button {
     min-width: 150px;
-
     min-height: 41px;
-
     padding: 0 15px;
-
     border: 0;
-
     border-radius: 7px;
-
-    background: #159f9f;
-
+    background: var(--orders-primary);
     color: #ffffff;
-
     display: inline-flex;
     align-items: center;
     justify-content: center;
-
     gap: 7px;
-
     font-size: 9px;
-
     font-weight: 700;
-
     cursor: pointer;
   }
 
   .orders-primary-button:hover {
-    background: #118887;
+    background: var(--orders-secondary);
   }
 
   .orders-no-results {
     width: 100%;
-
     margin-top: 10px;
   }
 
   .orders-no-results > svg {
     margin-bottom: 12px;
-
     color: #b5c7c5;
-
     font-size: 35px;
   }
 
@@ -1769,7 +1561,6 @@ const styles = `
   @media (max-width: 550px) {
     .orders-title {
       align-items: flex-start;
-
       gap: 15px;
     }
 
@@ -1783,7 +1574,6 @@ const styles = `
 
     .order-top {
       align-items: flex-start;
-
       gap: 10px;
     }
 

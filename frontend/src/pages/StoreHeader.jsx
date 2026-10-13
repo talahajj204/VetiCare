@@ -2,19 +2,9 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  FaShoppingCart,
-  FaUser,
-  FaBoxOpen,
-  FaChevronDown,
-  FaPaw,
-  FaClipboardList,
-  FaSignOutAlt,
-  FaCog,
-  FaHome,
-  FaInfoCircle,
-  FaEnvelope,
-  FaBars,
-  FaTimes,
+  FaShoppingCart, FaUser, FaBoxOpen, FaChevronDown,
+  FaPaw, FaClipboardList, FaSignOutAlt, FaCog,
+  FaHome, FaInfoCircle, FaEnvelope, FaBars, FaTimes,
 } from "react-icons/fa";
 
 import { storeTranslations } from "../translations/storeTranslations";
@@ -24,18 +14,9 @@ import {
 } from "../translations/storeLanguage";
 
 const DEFAULT_CATEGORIES = [
-  "Food",
-  "Care",
-  "Hygiene",
-  "Accessories",
-  "Supplements",
-  "Grooming",
-  "Toys",
-  "Treats",
-  "Beds",
-  "Bowls",
-  "Dental Care",
-  "Pet Essentials",
+  "Food", "Care", "Hygiene", "Accessories",
+  "Supplements", "Grooming", "Toys", "Treats",
+  "Beds", "Bowls", "Dental Care", "Pet Essentials",
 ].map((title, index) => ({
   id: index + 1,
   title,
@@ -44,7 +25,14 @@ const DEFAULT_CATEGORIES = [
   sortOrder: index + 1,
 }));
 
-const readCategories = () => {
+const DEFAULT_STORE_COLORS = {
+  primaryColor: "#1aa6a6",
+  secondaryColor: "#11797b",
+  lightColor: "#e8f7f7",
+  borderColor: "#dcebea",
+};
+
+function readCategories() {
   try {
     const saved = localStorage.getItem("vetClinicCategories");
 
@@ -68,9 +56,9 @@ const readCategories = () => {
     console.error("Categories error:", error);
     return DEFAULT_CATEGORIES;
   }
-};
+}
 
-const readSettings = () => {
+function readSettings() {
   try {
     const saved = JSON.parse(
       localStorage.getItem("storeSettings") || "{}"
@@ -79,14 +67,22 @@ const readSettings = () => {
     return {
       storeName: saved.storeName || "",
       storeBanner: saved.storeBanner || null,
+      storeColors: {
+        ...DEFAULT_STORE_COLORS,
+        ...(saved.storeColors || {}),
+      },
     };
   } catch (error) {
     console.error("Settings error:", error);
-    return { storeName: "", storeBanner: null };
+    return {
+      storeName: "",
+      storeBanner: null,
+      storeColors: { ...DEFAULT_STORE_COLORS },
+    };
   }
-};
+}
 
-const readCartCount = () => {
+function readCartCount() {
   try {
     const cart = JSON.parse(
       localStorage.getItem("vetClinicStoreCart") || "[]"
@@ -101,7 +97,7 @@ const readCartCount = () => {
   } catch {
     return 0;
   }
-};
+}
 
 function StoreHeader() {
   const navigate = useNavigate();
@@ -159,17 +155,22 @@ function StoreHeader() {
       setLanguageState(event.detail || getStoreLanguage());
     };
 
-    window.addEventListener(
-      "storeLanguageChanged",
-      syncLanguage
-    );
-
+    window.addEventListener("storeLanguageChanged", syncLanguage);
     return () =>
       window.removeEventListener(
         "storeLanguageChanged",
         syncLanguage
       );
   }, [language]);
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth > 700) setMobileOpen(false);
+    };
+
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   const closeMenus = () => {
     setCategoriesOpen(false);
@@ -194,217 +195,217 @@ function StoreHeader() {
       goTo("/products");
       return;
     }
-
-    goTo(
-      `/products?category=${encodeURIComponent(category)}`
-    );
+    goTo(`/products?category=${encodeURIComponent(category)}`);
   };
 
   const brandName =
     storeSettings.storeName?.trim() || "Pet Store";
 
+  const colors =
+    storeSettings.storeColors || DEFAULT_STORE_COLORS;
+
+  const headerColors = {
+    "--shx-primary": colors.primaryColor || "#1aa6a6",
+    "--shx-secondary": colors.secondaryColor || "#11797b",
+    "--shx-light": colors.lightColor || "#e8f7f7",
+    "--shx-border": colors.borderColor || "#dcebea",
+  };
+
   return (
     <>
       <style>{`
-        .store-header {
-          --sh-teal: #1aa6a6;
-          --sh-dark: #11797b;
-          --sh-light: #e8f7f7;
-          --sh-border: #dcebea;
+        .shx-header,
+        .shx-header *,
+        .shx-header *::before,
+        .shx-header *::after {
+          box-sizing: border-box;
+        }
 
+        .shx-header {
           position: sticky;
           top: 0;
           z-index: 1000;
+          display: flex;
+          flex-direction: row;
+          align-items: center;
+          justify-content: space-between;
           width: 100%;
-          min-height: 84px;
-          padding: 0 4%;
-          display: grid;
-          grid-template-columns:
-            minmax(190px, 1fr)
-            auto
-            minmax(260px, 1fr);
-          align-items: center;
-          gap: 24px;
-          background: var(--sh-teal);
-          box-shadow: 0 7px 25px rgba(17,121,123,.14);
-          box-sizing: border-box;
-        }
-
-        .store-header *,
-        .store-header *::before,
-        .store-header *::after {
-          box-sizing: border-box;
-        }
-
-        .store-logo {
-          display: inline-flex;
-          align-items: center;
-          gap: 12px;
-          width: fit-content;
           max-width: 100%;
           min-width: 0;
+          min-height: 84px;
+          padding: 0 24px;
+          gap: 16px;
+          background: var(--shx-primary);
+          color: #fff;
+          box-shadow: 0 7px 25px rgba(0,0,0,.09);
+          font-family: inherit;
+          direction: ltr;
+        }
+
+        .shx-header button {
+          font-family: inherit;
+          letter-spacing: normal;
+          line-height: normal;
+        }
+
+        /* LOGO */
+        .shx-logo {
+          display: flex;
+          align-items: center;
+          flex: 0 1 185px;
+          min-width: 105px;
+          max-width: 185px;
+          gap: 10px;
           padding: 0;
+          margin: 0;
           border: 0;
           background: transparent;
-          color: white;
+          color: #fff;
+          text-align: left;
           cursor: pointer;
-          text-align: start;
         }
 
-        .store-header .store-header-logo-image {
-          display: block;
-          width: 60px !important;
-          height: 60px !important;
-          min-width: 60px;
-          min-height: 60px;
-          max-width: 60px;
-          max-height: 60px;
+        .shx-logo-icon {
           flex-shrink: 0;
-          object-fit: cover;
-          object-position: center;
-          border-radius: 12px !important;
-          overflow: hidden;
-        }
-
-        .store-logo-icon {
           font-size: 29px;
-          flex-shrink: 0;
         }
 
-        .store-logo-text {
-          color: white;
-          font-size: 19px;
+        .shx-logo-image {
+          display: block;
+          flex-shrink: 0;
+          width: 48px;
+          height: 48px;
+          max-width: 48px;
+          max-height: 48px;
+          object-fit: cover;
+          border-radius: 10px;
+        }
+
+        .shx-logo-text {
+          min-width: 0;
+          color: #fff;
+          font-size: 18px;
           font-weight: 800;
-          letter-spacing: -.4px;
           line-height: 1.2;
           overflow-wrap: anywhere;
         }
 
-        .store-nav {
+        /* CENTER NAVIGATION */
+        .shx-nav {
+          position: static;
           display: flex;
+          flex-direction: row;
+          flex-wrap: nowrap;
           align-items: center;
           justify-content: center;
-          gap: 27px;
-          height: 84px;
+          flex: 0 1 auto;
+          width: auto;
+          min-width: 0;
+          height: auto;
+          padding: 0;
+          margin: 0;
+          gap: 18px;
+          background: transparent;
+          box-shadow: none;
         }
 
-        .store-nav-link {
+        .shx-nav-link {
           position: relative;
           display: inline-flex;
+          flex-direction: row;
           align-items: center;
           justify-content: center;
-          gap: 7px;
-          height: 48px;
+          flex-shrink: 0;
+          width: auto;
+          min-width: 0;
+          height: 42px;
+          gap: 6px;
           padding: 0;
+          margin: 0;
           border: 0;
-          background: transparent !important;
-          color: rgba(255,255,255,.91);
-          font-size: 13px;
+          border-radius: 0;
+          background: transparent;
+          color: #fff;
+          font-size: 12px;
           font-weight: 700;
           white-space: nowrap;
           cursor: pointer;
-          transition: color .2s;
         }
 
-        .store-nav-link:hover {
-          color: white;
-        }
-
-        .store-nav-link svg {
+        .shx-nav-link svg {
+          flex-shrink: 0;
           font-size: 12px;
         }
 
-        .store-nav-link::after {
-          content: "";
-          position: absolute;
-          bottom: 5px;
-          left: 50%;
-          width: 0;
-          height: 2px;
-          border-radius: 4px;
-          background: white;
-          transform: translateX(-50%);
-          transition: width .2s;
-        }
-
-        .store-nav-link:hover::after {
-          width: 100%;
-        }
-
-        .store-category-dropdown,
-        .store-account-wrapper {
-          position: relative;
-        }
-
-        .store-nav-chevron {
+        .shx-chevron {
           font-size: 9px !important;
           transition: transform .2s;
         }
 
-        .store-nav-chevron.open,
-        .store-account-chevron.open {
+        .shx-chevron.open {
           transform: rotate(180deg);
         }
 
-        .store-category-menu,
-        .store-account-menu {
+        /* DROPDOWNS */
+        .shx-category-wrapper,
+        .shx-account-wrapper {
+          position: relative;
+          flex-shrink: 0;
+        }
+
+        .shx-category-menu,
+        .shx-account-menu {
           position: absolute;
           z-index: 1300;
+          display: flex;
+          flex-direction: column;
           padding: 8px;
-          background: white;
-          border: 1px solid var(--sh-border);
-          border-radius: 14px;
-          box-shadow: 0 18px 45px rgba(13,102,104,.17);
+          background: #fff;
           color: #344054;
+          border: 1px solid var(--shx-border);
+          border-radius: 14px;
+          box-shadow: 0 18px 45px rgba(0,0,0,.15);
         }
 
-        .store-category-menu {
-          top: calc(100% + 14px);
+        .shx-category-menu {
+          top: calc(100% + 12px);
           left: 50%;
           width: 240px;
-          max-height: min(65vh, 480px);
+          max-height: min(65vh,480px);
           overflow-y: auto;
           transform: translateX(-50%);
-          scrollbar-width: thin;
         }
 
-        .store-category-menu-title {
-          position: sticky;
-          top: -8px;
-          z-index: 1;
+        .shx-menu-title {
           padding: 10px;
-          background: white;
           color: #98a2b3;
           font-size: 10px;
           font-weight: 800;
           text-transform: uppercase;
         }
 
-        .store-category-menu button,
-        .store-account-menu button {
+        .shx-category-menu button,
+        .shx-account-menu button {
           display: flex;
+          flex-direction: row;
           align-items: center;
-          gap: 10px;
+          justify-content: flex-start;
           width: 100%;
           min-height: 39px;
+          gap: 10px;
           padding: 7px 9px;
           border: 0;
           border-radius: 9px;
           background: transparent;
           color: #475467;
-          text-align: start;
           font-size: 12px;
           font-weight: 650;
+          text-align: left;
           cursor: pointer;
+          transition: background .2s ease, color .2s ease;
         }
 
-        .store-category-menu button:hover,
-        .store-account-menu button:hover {
-          background: var(--sh-light);
-          color: var(--sh-dark);
-        }
-
-        .store-dropdown-icon {
+        .shx-dropdown-icon {
           display: flex;
           align-items: center;
           justify-content: center;
@@ -413,35 +414,48 @@ function StoreHeader() {
           height: 30px;
           overflow: hidden;
           border-radius: 8px;
-          background: var(--sh-light);
-          color: var(--sh-teal);
+          background: var(--shx-light);
+          color: var(--shx-primary);
         }
 
-        .store-dropdown-category-image {
+        .shx-category-image {
           width: 100%;
           height: 100%;
           object-fit: cover;
         }
 
-        .store-header-actions {
+        /* RIGHT ACTIONS */
+        .shx-actions {
           display: flex;
+          flex-direction: row;
           align-items: center;
           justify-content: flex-end;
-          gap: 10px;
+          flex: 0 1 310px;
+          min-width: 0;
+          gap: 8px;
         }
 
-        .store-language-switcher {
+        .shx-language {
           display: flex;
           align-items: center;
-          gap: 5px;
+          justify-content: center;
+          flex-shrink: 0;
           height: 36px;
+          gap: 5px;
           padding: 0 10px;
           border: 1px solid rgba(255,255,255,.35);
           border-radius: 20px;
           background: rgba(255,255,255,.1);
+          white-space: nowrap;
+          transition: background .2s ease, border-color .2s ease;
         }
 
-        .store-language-switcher button {
+        .shx-language:hover {
+          background: var(--shx-secondary);
+          border-color: var(--shx-light);
+        }
+
+        .shx-language button {
           padding: 0;
           border: 0;
           background: transparent;
@@ -449,18 +463,23 @@ function StoreHeader() {
           font-size: 10px;
           font-weight: 800;
           cursor: pointer;
+          transition: color .2s ease;
         }
 
-        .store-language-switcher button.active {
-          color: white;
+        .shx-language button:hover {
+          color: var(--shx-light);
         }
 
-        .store-language-switcher span {
+        .shx-language button.active {
+          color: #fff;
+        }
+
+        .shx-language span {
           color: rgba(255,255,255,.4);
         }
 
-        .store-icon-button,
-        .store-mobile-toggle {
+        .shx-icon-button,
+        .shx-mobile-toggle {
           position: relative;
           display: flex;
           align-items: center;
@@ -472,16 +491,12 @@ function StoreHeader() {
           border: 1px solid rgba(255,255,255,.32);
           border-radius: 50%;
           background: rgba(255,255,255,.12);
-          color: white;
+          color: #fff;
           cursor: pointer;
+          transition: background .2s ease, border-color .2s ease;
         }
 
-        .store-icon-button:hover,
-        .store-mobile-toggle:hover {
-          background: rgba(255,255,255,.23);
-        }
-
-        .store-cart-count {
+        .shx-cart-count {
           position: absolute;
           top: -5px;
           right: -4px;
@@ -491,96 +506,140 @@ function StoreHeader() {
           min-width: 19px;
           height: 19px;
           padding: 0 4px;
-          border: 2px solid var(--sh-teal);
+          border: 2px solid var(--shx-primary);
           border-radius: 20px;
-          background: white;
-          color: var(--sh-dark);
+          background: #fff;
+          color: var(--shx-secondary);
           font-size: 10px;
           font-weight: 800;
         }
 
-        .store-account-button {
+        .shx-account-button {
           display: flex;
+          flex-direction: row;
           align-items: center;
-          gap: 9px;
+          justify-content: center;
+          flex-shrink: 0;
           min-height: 42px;
+          gap: 9px;
           padding: 5px 12px;
           border: 1px solid rgba(255,255,255,.32);
           border-radius: 24px;
           background: rgba(255,255,255,.12);
-          color: white;
+          color: #fff;
+          white-space: nowrap;
           cursor: pointer;
+          transition: background .2s ease, border-color .2s ease;
         }
 
-        .store-account-avatar {
+        .shx-account-avatar {
           display: flex;
           align-items: center;
           justify-content: center;
+          flex-shrink: 0;
           width: 29px;
           height: 29px;
           border-radius: 50%;
-          background: white;
-          color: var(--sh-teal);
+          background: #fff;
+          color: var(--shx-primary);
         }
 
-        .store-account-text {
+        .shx-account-text {
           font-size: 11px;
           font-weight: 750;
-          white-space: nowrap;
         }
 
-        .store-account-chevron {
-          font-size: 9px;
-          transition: transform .2s;
-        }
-
-        .store-account-menu {
+        .shx-account-menu {
           top: calc(100% + 9px);
           right: 0;
           width: 195px;
         }
 
-        .store-account-menu button svg {
-          color: var(--sh-teal);
+        .shx-account-menu button svg {
+          color: var(--shx-primary);
         }
 
-        .store-account-menu button.logout,
-        .store-account-menu button.logout svg {
+        .shx-account-menu button.logout,
+        .shx-account-menu button.logout svg {
           color: #d92d20;
         }
 
-        .store-mobile-toggle {
+        .shx-mobile-toggle {
           display: none;
         }
 
-        @media (max-width: 1200px) {
-          .store-header {
-            padding: 0 2.5%;
-            gap: 15px;
-            grid-template-columns:
-              minmax(155px, 1fr)
-              auto
-              minmax(215px, 1fr);
+        /* SMALLER DESKTOP */
+        @media (max-width: 1250px) and (min-width: 701px) {
+          .shx-header {
+            padding: 0 14px;
+            gap: 9px;
           }
 
-          .store-nav {
-            gap: 16px;
+          .shx-logo {
+            flex: 0 1 145px;
+            min-width: 95px;
+            gap: 7px;
           }
 
-          .store-logo-text {
-            font-size: 16px;
-          }
+          .shx-logo-text { font-size: 15px; }
+          .shx-logo-icon { font-size: 25px; }
+          .shx-logo-image { width: 40px; height: 40px; }
+          .shx-nav { gap: 10px; }
+          .shx-nav-link { gap: 4px; font-size: 11px; }
+          .shx-actions { flex: 0 1 275px; gap: 5px; }
+          .shx-icon-button { width: 36px; height: 36px; }
+          .shx-account-button { gap: 6px; padding: 4px 8px; }
         }
 
-        @media (max-width: 1000px) {
-          .store-header {
-            min-height: 70px;
-            padding: 10px 20px;
-            grid-template-columns: minmax(0,1fr) auto;
-            gap: 12px;
+        @media (max-width: 1000px) and (min-width: 701px) {
+          .shx-header { padding: 0 10px; gap: 6px; }
+          .shx-logo {
+            flex: 0 1 112px;
+            min-width: 75px;
+            gap: 5px;
           }
 
-          .store-nav {
+          .shx-logo-text { font-size: 12px; }
+          .shx-logo-icon { font-size: 21px; }
+          .shx-logo-image { width: 32px; height: 32px; }
+          .shx-nav { gap: 6px; }
+          .shx-nav-link { gap: 3px; font-size: 10px; }
+          .shx-nav-link svg { font-size: 10px; }
+          .shx-actions { flex: 0 1 220px; gap: 4px; }
+          .shx-language { height: 30px; gap: 3px; padding: 0 5px; }
+          .shx-language button { font-size: 9px; }
+          .shx-icon-button { width: 31px; height: 31px; }
+          .shx-account-button {
+            min-height: 32px;
+            gap: 4px;
+            padding: 3px 5px;
+          }
+          .shx-account-avatar { width: 23px; height: 23px; }
+          .shx-account-text { font-size: 9px; }
+        }
+
+        /* MOBILE */
+        @media (max-width: 700px) {
+          .shx-header {
+            min-height: 70px;
+            padding: 10px 12px;
+            gap: 8px;
+          }
+
+          .shx-logo {
+            flex: 1 1 auto;
+            min-width: 0;
+          }
+
+          .shx-logo-text { font-size: 13px; }
+          .shx-logo-image { width: 36px; height: 36px; }
+
+          .shx-actions {
+            flex: 0 0 auto;
+            gap: 5px;
+          }
+
+          .shx-nav {
             position: absolute;
             top: 100%;
             left: 0;
@@ -588,29 +647,26 @@ function StoreHeader() {
             display: none;
             flex-direction: column;
             align-items: stretch;
-            gap: 2px;
-            height: auto;
+            width: 100%;
+            max-height: calc(100vh - 70px);
+            overflow-y: auto;
             padding: 12px 20px 18px;
-            background: var(--sh-teal);
+            gap: 2px;
+            background: var(--shx-primary);
             box-shadow: 0 16px 25px rgba(0,0,0,.12);
           }
 
-          .store-nav.mobile-open {
-            display: flex;
-          }
+          .shx-nav.mobile-open { display: flex; }
 
-          .store-nav-link {
+          .shx-nav-link {
             justify-content: flex-start;
             width: 100%;
             height: 42px;
             padding: 0 12px;
+            font-size: 12px;
           }
 
-          .store-nav-link::after {
-            display: none;
-          }
-
-          .store-category-menu {
+          .shx-category-menu {
             position: static;
             width: 100%;
             max-height: 250px;
@@ -618,91 +674,117 @@ function StoreHeader() {
             transform: none;
           }
 
-          .store-mobile-toggle {
-            display: flex;
-          }
-        }
+          .shx-mobile-toggle { display: flex; }
+          .shx-language { height: 32px; padding: 0 6px; }
 
-        @media (max-width: 560px) {
-          .store-header {
-            padding: 10px 12px;
-            gap: 8px;
-          }
-
-          .store-header .store-header-logo-image {
-            width: 38px !important;
-            height: 38px !important;
-            min-width: 38px;
-            min-height: 38px;
-            max-width: 38px;
-            max-height: 38px;
-            border-radius: 10px !important;
-          }
-
-          .store-logo {
-            gap: 7px;
-          }
-
-          .store-logo-text {
-            font-size: 13px;
-          }
-
-          .store-header-actions {
-            gap: 5px;
-          }
-
-          .store-language-switcher {
-            height: 32px;
-            padding: 0 6px;
-          }
-
-          .store-icon-button,
-          .store-mobile-toggle {
+          .shx-icon-button,
+          .shx-mobile-toggle {
             width: 34px;
             height: 34px;
           }
 
-          .store-account-button {
+          .shx-account-button {
             width: 34px;
             height: 34px;
             min-height: 34px;
             padding: 0;
-            justify-content: center;
           }
 
-          .store-account-avatar {
+          .shx-account-avatar {
             width: 22px;
             height: 22px;
           }
 
-          .store-account-text,
-          .store-account-chevron {
+          .shx-account-text,
+          .shx-account-chevron {
             display: none;
           }
 
-          .store-account-menu {
-            right: 0;
-            width: 185px;
+          .shx-account-menu { width: 185px; }
+        }
+
+        @media (max-width: 390px) {
+          .shx-logo-text {
+            max-width: 70px;
+            font-size: 11px;
+          }
+
+          .shx-language { padding: 0 4px; gap: 3px; }
+          .shx-actions { gap: 4px; }
+
+          .shx-icon-button,
+          .shx-mobile-toggle,
+          .shx-account-button {
+            width: 30px;
+            height: 30px;
           }
         }
 
-        html[dir="rtl"] .store-account-menu {
-          right: auto;
-          left: 0;
+        /* REMOVE NAVBAR HOVER COMPLETELY */
+        .shx-header .shx-nav-link,
+        .shx-header .shx-nav-link:hover,
+        .shx-header .shx-nav-link:focus,
+        .shx-header .shx-nav-link:active {
+          background: transparent !important;
+          background-color: transparent !important;
+          color: #fff !important;
+          opacity: 1 !important;
+          box-shadow: none !important;
+          border: 0 !important;
+          transform: none !important;
+          filter: none !important;
+          text-decoration: none !important;
         }
 
-        html[dir="rtl"] .store-nav-link {
-          text-align: right;
+        .shx-header .shx-nav-link svg,
+        .shx-header .shx-nav-link span,
+        .shx-header .shx-nav-link:hover svg,
+        .shx-header .shx-nav-link:hover span {
+          color: inherit !important;
+          background: transparent !important;
+          opacity: 1 !important;
         }
+
+        /* KEEP HOVER ON ACTION BUTTONS */
+        .shx-header .shx-icon-button:hover,
+        .shx-header .shx-mobile-toggle:hover,
+        .shx-header .shx-account-button:hover {
+          background: var(--shx-secondary) !important;
+          border-color: var(--shx-light) !important;
+          color: #fff !important;
+        }
+
+        /* KEEP DROPDOWN HOVER */
+        .shx-header .shx-category-menu button:hover,
+        .shx-header .shx-account-menu button:hover {
+          background: var(--shx-light) !important;
+          color: var(--shx-secondary) !important;
+        }
+        /* DISABLE LOGO HOVER ONLY */
+
+.shx-header .shx-logo:hover {
+  background: transparent !important;
+  color: #fff !important;
+  box-shadow: none !important;
+  transform: none !important;
+  filter: none !important;
+  opacity: 1 !important;
+}
+
+.shx-header .shx-logo:hover .shx-logo-text,
+.shx-header .shx-logo:hover .shx-logo-icon,
+.shx-header .shx-logo:hover .shx-logo-image {
+  transform: none !important;
+  filter: none !important;
+  opacity: 1 !important;
+}
       `}</style>
 
-      {/* PART 2 CONTINUES HERE */}
-
-      <header className="store-header">
-        {/* LOGO + STORE NAME */}
+      <header className="shx-header" style={headerColors}>
+        {/* LOGO */}
         <button
           type="button"
-          className="store-logo"
+          className="shx-logo"
           onClick={() => goTo("/store")}
           aria-label={`${brandName} home`}
         >
@@ -710,57 +792,52 @@ function StoreHeader() {
             <img
               src={storeSettings.storeBanner}
               alt={`${brandName} logo`}
-              className="store-header-logo-image"
+              className="shx-logo-image"
             />
           ) : (
-            <FaPaw className="store-logo-icon" />
+            <FaPaw className="shx-logo-icon" />
           )}
 
-          <span className="store-logo-text">
-            {brandName}
-          </span>
+          <span className="shx-logo-text">{brandName}</span>
         </button>
 
-        {/* NAVIGATION */}
+        {/* CENTER NAVIGATION */}
         <nav
-          className={`store-nav ${
-            mobileOpen ? "mobile-open" : ""
-          }`}
+          className={`shx-nav ${mobileOpen ? "mobile-open" : ""}`}
           aria-label="Store navigation"
         >
-          {/* 1. HOME */}
           <button
             type="button"
-            className="store-nav-link home"
+            className="shx-nav-link"
             onClick={() => goTo("/store")}
           >
             <FaHome />
             <span>{t.home || "Home"}</span>
           </button>
 
-          {/* 2. CATEGORIES */}
-          <div className="store-category-dropdown">
+          {/* CATEGORIES */}
+          <div className="shx-category-wrapper">
             <button
               type="button"
-              className="store-nav-link"
+              className="shx-nav-link"
               aria-expanded={categoriesOpen}
               onClick={() => {
-                setCategoriesOpen(!categoriesOpen);
+                setCategoriesOpen((previous) => !previous);
                 setAccountOpen(false);
               }}
             >
               <FaBoxOpen />
               <span>{t.categories || "Categories"}</span>
               <FaChevronDown
-                className={`store-nav-chevron ${
+                className={`shx-chevron ${
                   categoriesOpen ? "open" : ""
                 }`}
               />
             </button>
 
             {categoriesOpen && (
-              <div className="store-category-menu">
-                <div className="store-category-menu-title">
+              <div className="shx-category-menu">
+                <div className="shx-menu-title">
                   {language === "ar"
                     ? "تسوق حسب الفئة"
                     : "Shop by Category"}
@@ -770,7 +847,7 @@ function StoreHeader() {
                   type="button"
                   onClick={() => chooseCategory(null)}
                 >
-                  <span className="store-dropdown-icon">
+                  <span className="shx-dropdown-icon">
                     <FaBoxOpen />
                   </span>
                   <span>
@@ -784,22 +861,19 @@ function StoreHeader() {
                   <button
                     type="button"
                     key={category.id}
-                    onClick={() =>
-                      chooseCategory(category.title)
-                    }
+                    onClick={() => chooseCategory(category.title)}
                   >
-                    <span className="store-dropdown-icon">
+                    <span className="shx-dropdown-icon">
                       {category.image ? (
                         <img
                           src={category.image}
                           alt={category.title}
-                          className="store-dropdown-category-image"
+                          className="shx-category-image"
                         />
                       ) : (
                         <FaPaw />
                       )}
                     </span>
-
                     <span>{category.title}</span>
                   </button>
                 ))}
@@ -807,20 +881,20 @@ function StoreHeader() {
             )}
           </div>
 
-          {/* 3. ABOUT US */}
+          {/* ABOUT */}
           <button
             type="button"
-            className="store-nav-link"
+            className="shx-nav-link"
             onClick={() => goTo("/about")}
           >
             <FaInfoCircle />
             <span>{t.aboutUs || "About Us"}</span>
           </button>
 
-          {/* 4. CONTACT US */}
+          {/* CONTACT */}
           <button
             type="button"
-            className="store-nav-link"
+            className="shx-nav-link"
             onClick={() => goTo("/contact")}
           >
             <FaEnvelope />
@@ -829,9 +903,9 @@ function StoreHeader() {
         </nav>
 
         {/* RIGHT ACTIONS */}
-        <div className="store-header-actions">
+        <div className="shx-actions">
           {/* LANGUAGE */}
-          <div className="store-language-switcher">
+          <div className="shx-language">
             <button
               type="button"
               className={language === "en" ? "active" : ""}
@@ -854,7 +928,7 @@ function StoreHeader() {
           {/* ORDERS */}
           <button
             type="button"
-            className="store-icon-button"
+            className="shx-icon-button"
             title="My Orders"
             aria-label="My Orders"
             onClick={() => goTo("/orders")}
@@ -865,7 +939,7 @@ function StoreHeader() {
           {/* CART */}
           <button
             type="button"
-            className="store-icon-button"
+            className="shx-icon-button"
             title="Shopping Cart"
             aria-label="Shopping Cart"
             onClick={() => goTo("/cart")}
@@ -873,51 +947,47 @@ function StoreHeader() {
             <FaShoppingCart />
 
             {cartCount > 0 && (
-              <span className="store-cart-count">
+              <span className="shx-cart-count">
                 {cartCount > 99 ? "99+" : cartCount}
               </span>
             )}
           </button>
 
           {/* ACCOUNT */}
-          <div className="store-account-wrapper">
+          <div className="shx-account-wrapper">
             <button
               type="button"
-              className="store-account-button"
+              className="shx-account-button"
               aria-expanded={accountOpen}
               onClick={() => {
-                setAccountOpen(!accountOpen);
+                setAccountOpen((previous) => !previous);
                 setCategoriesOpen(false);
               }}
             >
-              <span className="store-account-avatar">
+              <span className="shx-account-avatar">
                 <FaUser />
               </span>
 
-              <span className="store-account-text">
-                {language === "ar"
-                  ? "حسابي"
-                  : "My Account"}
+              <span className="shx-account-text">
+                {language === "ar" ? "حسابي" : "My Account"}
               </span>
 
               <FaChevronDown
-                className={`store-account-chevron ${
+                className={`shx-chevron shx-account-chevron ${
                   accountOpen ? "open" : ""
                 }`}
               />
             </button>
 
             {accountOpen && (
-              <div className="store-account-menu">
+              <div className="shx-account-menu">
                 <button
                   type="button"
                   onClick={() => goTo("/orders")}
                 >
                   <FaClipboardList />
                   <span>
-                    {language === "ar"
-                      ? "طلباتي"
-                      : "My Orders"}
+                    {language === "ar" ? "طلباتي" : "My Orders"}
                   </span>
                 </button>
 
@@ -927,9 +997,7 @@ function StoreHeader() {
                 >
                   <FaShoppingCart />
                   <span>
-                    {language === "ar"
-                      ? "سلة التسوق"
-                      : "My Cart"}
+                    {language === "ar" ? "سلة التسوق" : "My Cart"}
                   </span>
                 </button>
 
@@ -939,9 +1007,7 @@ function StoreHeader() {
                 >
                   <FaCog />
                   <span>
-                    {language === "ar"
-                      ? "الإعدادات"
-                      : "Settings"}
+                    {language === "ar" ? "الإعدادات" : "Settings"}
                   </span>
                 </button>
 
@@ -961,16 +1027,14 @@ function StoreHeader() {
             )}
           </div>
 
-          {/* MOBILE HAMBURGER */}
+          {/* MOBILE TOGGLE */}
           <button
             type="button"
-            className="store-mobile-toggle"
-            aria-label={
-              mobileOpen ? "Close menu" : "Open menu"
-            }
+            className="shx-mobile-toggle"
+            aria-label={mobileOpen ? "Close menu" : "Open menu"}
             aria-expanded={mobileOpen}
             onClick={() => {
-              setMobileOpen(!mobileOpen);
+              setMobileOpen((previous) => !previous);
               setCategoriesOpen(false);
               setAccountOpen(false);
             }}

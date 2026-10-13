@@ -15,10 +15,7 @@ import {
 function Owners() {
   const navigate = useNavigate();
 
-  // =========================
   // DATA
-  // =========================
-
   const [owners, setOwners] = useState([
     {
       id: 1,
@@ -52,7 +49,6 @@ function Owners() {
         },
       ],
     },
-
     {
       id: 2,
       firstName: "Fatima",
@@ -80,7 +76,6 @@ function Owners() {
         },
       ],
     },
-
     {
       id: 3,
       firstName: "Karen",
@@ -96,40 +91,25 @@ function Owners() {
     },
   ]);
 
-  // =========================
   // SEARCH / FILTER / SORT
-  // =========================
-
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [sortBy, setSortBy] = useState("default");
 
-  // =========================
   // PAGINATION
-  // =========================
-
   const [itemsPerPage, setItemsPerPage] = useState(5);
   const [currentPage, setCurrentPage] = useState(1);
 
-  // =========================
   // MODALS
-  // =========================
-
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedOwner, setSelectedOwner] = useState(null);
 
-  // =========================
   // DELETE
-  // =========================
-
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [ownerToDelete, setOwnerToDelete] = useState(null);
 
-  // =========================
   // NEW OWNER
-  // =========================
-
   const emptyOwner = {
     firstName: "",
     lastName: "",
@@ -143,10 +123,7 @@ function Owners() {
 
   const [newOwner, setNewOwner] = useState(emptyOwner);
 
-  // =========================
   // SEARCH + FILTER
-  // =========================
-
   const filteredOwners = owners.filter((owner) => {
     const searchText = search.trim().toLowerCase();
 
@@ -164,10 +141,7 @@ function Owners() {
     return matchesSearch && matchesStatus;
   });
 
-  // =========================
   // SORT
-  // =========================
-
   const sortedOwners = [...filteredOwners].sort((a, b) => {
     const nameA = `${a.firstName} ${a.lastName}`.toLowerCase();
     const nameB = `${b.firstName} ${b.lastName}`.toLowerCase();
@@ -194,17 +168,13 @@ function Owners() {
     return a.id - b.id;
   });
 
-  // =========================
   // PAGINATION
-  // =========================
-
   const totalPages = Math.max(
     1,
     Math.ceil(sortedOwners.length / itemsPerPage)
   );
 
   const safeCurrentPage = Math.min(currentPage, totalPages);
-
   const indexOfLastOwner = safeCurrentPage * itemsPerPage;
   const indexOfFirstOwner = indexOfLastOwner - itemsPerPage;
 
@@ -213,10 +183,7 @@ function Owners() {
     indexOfLastOwner
   );
 
-  // =========================
   // CLEAR FILTERS
-  // =========================
-
   const handleClearFilters = () => {
     setSearch("");
     setStatusFilter("all");
@@ -224,10 +191,7 @@ function Owners() {
     setCurrentPage(1);
   };
 
-  // =========================
   // EXPORT
-  // =========================
-
   const handleExport = () => {
     const headers = [
       "First Name",
@@ -276,10 +240,7 @@ function Owners() {
     URL.revokeObjectURL(url);
   };
 
-  // =========================
   // ADD OWNER
-  // =========================
-
   const handleNewOwnerChange = (e) => {
     const { name, value } = e.target;
 
@@ -303,7 +264,6 @@ function Owners() {
     };
 
     setOwners((previousOwners) => [...previousOwners, owner]);
-
     setNewOwner(emptyOwner);
     setShowAddModal(false);
 
@@ -318,12 +278,7 @@ function Owners() {
     }
   };
 
-  // =========================
   // VIEW OWNER
-  // IMPORTANT:
-  // OWNER PAGE - NOT MODAL
-  // =========================
-
   const handleViewOwner = (owner) => {
     navigate(`/owners/${owner.id}`, {
       state: {
@@ -332,10 +287,7 @@ function Owners() {
     });
   };
 
-  // =========================
   // EDIT
-  // =========================
-
   const handleOpenEdit = (owner) => {
     setSelectedOwner({ ...owner });
     setShowEditModal(true);
@@ -363,10 +315,7 @@ function Owners() {
     setSelectedOwner(null);
   };
 
-  // =========================
   // STATUS
-  // =========================
-
   const handleToggleStatus = (id) => {
     setOwners(
       owners.map((owner) =>
@@ -381,10 +330,7 @@ function Owners() {
     );
   };
 
-  // =========================
   // DELETE
-  // =========================
-
   const handleDelete = (owner) => {
     if (owner.status === "active") {
       alert("You must set this owner as Inactive before deleting.");
@@ -419,19 +365,224 @@ function Owners() {
     <div className="dashboard-layout">
       <Sidebar />
 
-      <main className="dashboard-main">
-        {/* HEADER */}
+      <main className="dashboard-main owners-spacing-fix">
+        <style>{`
+          html body #root
+          main.dashboard-main.owners-spacing-fix
+          > .page-header.owners-fixed-header {
+            position: relative !important;
 
-        <div className="page-header">
-          <div>
+            display: flex !important;
+            align-items: center !important;
+            justify-content: space-between !important;
+            flex-wrap: wrap !important;
+            gap: 16px !important;
+
+            width: 100% !important;
+            max-width: 100% !important;
+            min-width: 0 !important;
+            min-height: 70px !important;
+
+            margin-left: 0 !important;
+            margin-right: 0 !important;
+            margin-bottom: 22px !important;
+
+            padding: 0 !important;
+            box-sizing: border-box !important;
+          }
+
+          html body #root
+          .owners-spacing-fix
+          .owners-fixed-header > .owners-fixed-title {
+            min-width: 0 !important;
+            flex: 1 1 240px !important;
+          }
+
+          html body #root
+          .owners-spacing-fix
+          .owners-fixed-header > .owners-fixed-actions {
+            position: static !important;
+
+            display: flex !important;
+            align-items: center !important;
+            justify-content: flex-end !important;
+            flex-wrap: wrap !important;
+            gap: 10px !important;
+
+            flex: 0 1 auto !important;
+            width: auto !important;
+            min-width: 0 !important;
+            max-width: 100% !important;
+
+            margin: 0 !important;
+            padding: 0 !important;
+
+            inset: auto !important;
+            transform: none !important;
+            box-sizing: border-box !important;
+          }
+
+          html body #root
+          .owners-spacing-fix
+          .owners-fixed-actions > button {
+            position: static !important;
+            inset: auto !important;
+
+            flex: 0 0 auto !important;
+            width: auto !important;
+            height: 42px !important;
+            min-height: 42px !important;
+            max-height: 42px !important;
+
+            margin: 0 !important;
+            padding: 0 16px !important;
+            box-sizing: border-box !important;
+
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            gap: 7px !important;
+
+            border-radius: 8px !important;
+            font-family: inherit !important;
+            font-size: 14px !important;
+            font-weight: 600 !important;
+            white-space: nowrap !important;
+
+            transform: none !important;
+            cursor: pointer !important;
+          }
+
+          html body #root
+          .owners-spacing-fix
+          .owners-fixed-actions > .owners-fixed-export {
+            min-width: 120px !important;
+            max-width: none !important;
+
+            background: #ffffff !important;
+            color: #319c97 !important;
+            border: 1px solid #55b7b3 !important;
+          }
+
+          html body #root
+          .owners-spacing-fix
+          .owners-fixed-actions > .owners-fixed-export:hover {
+            background: #eef9f8 !important;
+          }
+
+          html body #root
+          .owners-spacing-fix
+          .owners-fixed-actions > .owners-fixed-add {
+            min-width: 135px !important;
+            max-width: none !important;
+
+            background: #55b7b3 !important;
+            color: #ffffff !important;
+            border: 1px solid #55b7b3 !important;
+          }
+
+          html body #root
+          .owners-spacing-fix
+          .owners-fixed-actions > .owners-fixed-add:hover {
+            background: #45aaa6 !important;
+            border-color: #45aaa6 !important;
+          }
+
+          html body #root
+          .owners-spacing-fix > .owners-fixed-toolbar {
+            position: static !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            min-width: 0 !important;
+            box-sizing: border-box !important;
+          }
+
+          @media (max-width: 768px) {
+            html body #root
+            main.dashboard-main.owners-spacing-fix {
+              padding-top: 76px !important;
+            }
+
+            html body #root
+            main.dashboard-main.owners-spacing-fix
+            > .page-header.owners-fixed-header {
+              flex-direction: column !important;
+              flex-wrap: nowrap !important;
+              align-items: flex-start !important;
+              justify-content: flex-start !important;
+
+              height: auto !important;
+              min-height: 0 !important;
+              max-height: none !important;
+
+              padding: 0 !important;
+              margin: 0 0 22px !important;
+              gap: 16px !important;
+            }
+
+            html body #root
+            main.dashboard-main.owners-spacing-fix
+            > .page-header.owners-fixed-header
+            > .owners-fixed-title {
+              flex: 0 0 auto !important;
+              width: 100% !important;
+
+              height: auto !important;
+              min-height: 0 !important;
+              max-height: none !important;
+
+              margin: 0 !important;
+              padding: 0 !important;
+              text-align: left !important;
+            }
+
+            html body #root
+            main.dashboard-main.owners-spacing-fix
+            > .page-header.owners-fixed-header
+            > .owners-fixed-actions {
+              flex: 0 0 auto !important;
+              width: 100% !important;
+
+              height: auto !important;
+              min-height: 0 !important;
+
+              justify-content: flex-start !important;
+              align-items: center !important;
+
+              margin: 0 !important;
+              padding: 0 !important;
+            }
+          }
+        `}</style>
+
+        {/* HEADER */}
+        <div className="page-header owners-fixed-header">
+          <div className="owners-fixed-title">
             <h1>Pet Owners</h1>
             <p>Manage pet owner information</p>
           </div>
-        </div>
 
-        {/* TOOLBAR */}
+          <div className="owners-fixed-actions">
+            <button
+              type="button"
+              className="owners-fixed-export"
+              onClick={handleExport}
+            >
+              <FaFileExport />
+              Export
+            </button>
 
+            <button
+              type="button"
+              className="owners-fixed-add"
+              onClick={() => setShowAddModal(true)}
+            >
+              + Add Owner
+            </button>
+          </div>
+        </div>        {/* TOOLBAR */}
         <div
+          className="owners-fixed-toolbar"
           style={{
             display: "flex",
             alignItems: "center",
@@ -442,7 +593,6 @@ function Owners() {
           }}
         >
           {/* SEARCH */}
-
           <div
             style={{
               position: "relative",
@@ -516,7 +666,6 @@ function Owners() {
           </div>
 
           {/* STATUS */}
-
           <select
             value={statusFilter}
             onChange={(e) => {
@@ -540,7 +689,6 @@ function Owners() {
           </select>
 
           {/* SORT */}
-
           <div
             style={{
               position: "relative",
@@ -584,59 +732,9 @@ function Owners() {
               <option value="inactive">Inactive First</option>
             </select>
           </div>
-
-          {/* EXPORT */}
-
-          <button
-            type="button"
-            onClick={handleExport}
-            style={{
-              width: "auto",
-              minWidth: "110px",
-              height: "44px",
-              padding: "0 16px",
-              border: "none",
-              borderRadius: "8px",
-              background: "#55b7b3",
-              color: "#fff",
-              cursor: "pointer",
-              display: "inline-flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: "7px",
-              fontWeight: "600",
-              whiteSpace: "nowrap",
-            }}
-          >
-            <FaFileExport />
-            Export
-          </button>
-
-          {/* ADD */}
-
-          <button
-            type="button"
-            onClick={() => setShowAddModal(true)}
-            style={{
-              width: "auto",
-              minWidth: "120px",
-              height: "44px",
-              padding: "0 16px",
-              border: "none",
-              borderRadius: "8px",
-              background: "#55b7b3",
-              color: "#fff",
-              cursor: "pointer",
-              fontWeight: "600",
-              whiteSpace: "nowrap",
-            }}
-          >
-            + Add Owner
-          </button>
         </div>
 
         {/* TABLE */}
-
         <div className="owners-table-container">
           <table className="owners-table">
             <thead>
@@ -657,7 +755,6 @@ function Owners() {
                     <td>
                       {owner.firstName} {owner.lastName}
                     </td>
-
                     <td>{owner.email}</td>
                     <td>{owner.phone}</td>
                     <td>{owner.address}</td>
@@ -670,12 +767,9 @@ function Owners() {
                             ? "owner-status-active"
                             : "owner-status-inactive"
                         }`}
-                        onClick={() =>
-                          handleToggleStatus(owner.id)
-                        }
+                        onClick={() => handleToggleStatus(owner.id)}
                       >
                         <span className="status-dot"></span>
-
                         {owner.status === "active"
                           ? "Active"
                           : "Inactive"}
@@ -728,7 +822,6 @@ function Owners() {
         </div>
 
         {/* PAGINATION */}
-
         <div
           style={{
             width: "100%",
@@ -793,9 +886,7 @@ function Owners() {
               type="button"
               disabled={safeCurrentPage === 1}
               onClick={() =>
-                setCurrentPage((page) =>
-                  Math.max(page - 1, 1)
-                )
+                setCurrentPage((page) => Math.max(page - 1, 1))
               }
               style={{
                 width: "34px",
@@ -806,13 +897,9 @@ function Owners() {
                 border: "1px solid #d5e5e3",
                 borderRadius: "7px",
                 background:
-                  safeCurrentPage === 1
-                    ? "#edf3f2"
-                    : "#fff",
+                  safeCurrentPage === 1 ? "#edf3f2" : "#fff",
                 color:
-                  safeCurrentPage === 1
-                    ? "#9aa8a7"
-                    : "#52605f",
+                  safeCurrentPage === 1 ? "#9aa8a7" : "#52605f",
                 cursor:
                   safeCurrentPage === 1
                     ? "not-allowed"
@@ -847,18 +934,10 @@ function Owners() {
                       ? "1px solid #419c99"
                       : "1px solid #d5e5e3",
                   borderRadius: "7px",
-
-                  // KEEP SAME COLORED 1
                   background:
-                    page === safeCurrentPage
-                      ? "#419c99"
-                      : "#fff",
-
+                    page === safeCurrentPage ? "#419c99" : "#fff",
                   color:
-                    page === safeCurrentPage
-                      ? "#fff"
-                      : "#52605f",
-
+                    page === safeCurrentPage ? "#fff" : "#52605f",
                   cursor: "pointer",
                   fontSize: "13px",
                   fontWeight: "600",
@@ -913,10 +992,7 @@ function Owners() {
         </div>
       </main>
 
-      {/* =========================
-          ADD OWNER MODAL
-      ========================= */}
-
+      {/* ADD OWNER MODAL */}
       {showAddModal && (
         <div className="modal-overlay">
           <div className="modal-container">
@@ -1004,8 +1080,6 @@ function Owners() {
                 />
               </div>
 
-              {/* NEW REQUIRED FIELD */}
-
               <div className="form-field">
                 <label>Emergency Contact</label>
 
@@ -1017,8 +1091,6 @@ function Owners() {
                   onChange={handleNewOwnerChange}
                 />
               </div>
-
-              {/* NEW REQUIRED FIELD */}
 
               <div className="form-field">
                 <label>Notes</label>
@@ -1067,10 +1139,7 @@ function Owners() {
         </div>
       )}
 
-      {/* =========================
-          EDIT OWNER MODAL
-      ========================= */}
-
+      {/* EDIT OWNER MODAL */}
       {showEditModal && selectedOwner && (
         <div className="modal-overlay">
           <div className="modal-container">
@@ -1205,10 +1274,7 @@ function Owners() {
                   Cancel
                 </button>
 
-                <button
-                  type="submit"
-                  className="save-button"
-                >
+                <button type="submit" className="save-button">
                   Save Changes
                 </button>
               </div>
@@ -1217,10 +1283,7 @@ function Owners() {
         </div>
       )}
 
-      {/* =========================
-          DELETE POPUP
-      ========================= */}
-
+      {/* DELETE POPUP */}
       {showDeleteModal && ownerToDelete && (
         <div className="modal-overlay">
           <div
@@ -1266,8 +1329,7 @@ function Owners() {
                 }}
               >
                 {ownerToDelete.firstName}{" "}
-                {ownerToDelete.lastName} will be permanently
-                deleted.
+                {ownerToDelete.lastName} will be permanently deleted.
               </p>
             </div>
 

@@ -1,4 +1,3 @@
-
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useEffect, useRef, useState } from "react";
 
@@ -95,9 +94,8 @@ const sidebarStyles = `
   }
 
   /* =========================================
-     DASHBOARD LAYOUT
-     Sidebar and page share available width.
-     POS is excluded from aggressive overrides.
+     DESKTOP LAYOUT
+     Fixed sidebar + independently scrolling page
   ========================================= */
 
   @media (min-width: 769px) {
@@ -108,25 +106,42 @@ const sidebarStyles = `
       width: 100% !important;
       max-width: none !important;
       min-width: 0 !important;
+      min-height: 100vh !important;
       box-sizing: border-box !important;
+
+      padding-left: var(--vet-sidebar-open-width) !important;
+      transition: padding-left .25s ease;
+    }
+
+    .dashboard-layout:has(> .sidebar.sidebar-pos-collapsed) {
+      padding-left: var(--vet-sidebar-closed-width) !important;
     }
 
     .dashboard-layout > .sidebar {
-      position: relative !important;
-      flex: 0 0 var(--vet-sidebar-open-width) !important;
+      position: fixed !important;
+      top: 0 !important;
+      left: 0 !important;
+      bottom: 0 !important;
+      z-index: 1000 !important;
+
+      flex: none !important;
       width: var(--vet-sidebar-open-width) !important;
       min-width: var(--vet-sidebar-open-width) !important;
       max-width: var(--vet-sidebar-open-width) !important;
+
+      height: 100vh !important;
+      height: 100dvh !important;
+      align-self: auto !important;
     }
 
     .dashboard-layout > .sidebar.sidebar-pos-collapsed {
-      flex: 0 0 var(--vet-sidebar-closed-width) !important;
       width: var(--vet-sidebar-closed-width) !important;
       min-width: var(--vet-sidebar-closed-width) !important;
       max-width: var(--vet-sidebar-closed-width) !important;
     }
 
-    /* Normal pages: expand when sidebar collapses */
+    /* Normal pages fill the space beside the sidebar */
+
     .dashboard-layout:not(:has(> .sidebar-pos-page))
       > :is(
         .dashboard-main,
@@ -146,10 +161,8 @@ const sidebarStyles = `
       box-sizing: border-box !important;
     }
 
-    /*
-      POS: preserve its own content positioning.
-      Do not reset its transforms, grid, or columns.
-    */
+    /* POS: preserve its own layout and columns */
+
     .dashboard-layout:has(> .sidebar-pos-page)
       > :not(.sidebar) {
       flex: 1 1 0%;
@@ -159,11 +172,17 @@ const sidebarStyles = `
     }
   }
 
+  /* =========================================
+     MOBILE LAYOUT
+  ========================================= */
+
   @media (max-width: 768px) {
-    .dashboard-layout {
+    .dashboard-layout,
+    .dashboard-layout:has(> .sidebar.sidebar-pos-collapsed) {
+      display: block !important;
       width: 100% !important;
       min-width: 0 !important;
-      display: block !important;
+      padding-left: 0 !important;
       box-sizing: border-box !important;
     }
 
@@ -208,6 +227,7 @@ const sidebarStyles = `
 
     overflow-x: hidden;
     overflow-y: auto;
+    overscroll-behavior-y: contain;
 
     scrollbar-width: thin;
     scrollbar-color: rgba(255,255,255,.4) transparent;
@@ -683,8 +703,8 @@ const sidebarStyles = `
     left: 16px;
     z-index: 1001;
 
-    width: 42px;
-    height: 42px;
+    width: 42px !important;
+    height: 42px !important;
     align-items: center;
     justify-content: center;
 
@@ -713,15 +733,16 @@ const sidebarStyles = `
 
     .sidebar,
     .sidebar.sidebar-pos-collapsed {
-      position: fixed;
-      top: 0;
-      left: 0;
-      z-index: 1100;
+      position: fixed !important;
+      top: 0 !important;
+      left: 0 !important;
+      bottom: 0 !important;
+      z-index: 1100 !important;
 
       width: min(280px, 85vw) !important;
       min-width: 0 !important;
       max-width: 85vw !important;
-      height: 100dvh;
+      height: 100dvh !important;
       padding: 14px 12px !important;
 
       transform: translateX(-105%);
@@ -743,8 +764,8 @@ const sidebarStyles = `
       top: 8px;
       right: 0;
 
-      width: 28px;
-      height: 28px;
+      width: 28px !important;
+      height: 28px !important;
       align-items: center;
       justify-content: center;
 
@@ -778,7 +799,6 @@ const sidebarStyles = `
     }
   }
 `;
-
 export default function Sidebar({ clinicName, clinicLogo }) {
   const navigate = useNavigate();
   const location = useLocation();

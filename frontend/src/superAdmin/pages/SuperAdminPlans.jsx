@@ -1,6 +1,6 @@
-
 import { useEffect, useState } from "react";
 import SuperAdminSidebar from "../components/SuperAdminSidebar";
+
 import {
   FaPlus,
   FaPen,
@@ -143,7 +143,8 @@ const styles = `
   line-height: 1.6;
 }
 
-.sp-page .sp-btn {
+.sp-page .sp-btn,
+.sp-overlay .sp-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -160,16 +161,19 @@ const styles = `
   cursor: pointer;
 }
 
-.sp-page .sp-btn:hover {
+.sp-page .sp-btn:hover,
+.sp-overlay .sp-btn:hover {
   background: #258f8a;
 }
 
-.sp-page .sp-btn.secondary {
+.sp-page .sp-btn.secondary,
+.sp-overlay .sp-btn.secondary {
   background: #edf1f3;
   color: #344e5a;
 }
 
-.sp-page .sp-btn.danger {
+.sp-page .sp-btn.danger,
+.sp-overlay .sp-btn.danger {
   background: #fdeaea;
   color: #bb4d4d;
 }
@@ -414,28 +418,55 @@ const styles = `
   box-shadow: 0 20px 60px #0003;
 }
 
+/* TEAL MODAL HEADER */
+
 .sp-modal-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  flex-direction: row !important;
   gap: 12px;
-  margin-bottom: 24px;
+  margin: -26px -26px 24px;
+  padding: 18px 24px;
+  background: #55b8b5;
+  border-radius: 16px 16px 0 0;
 }
 
 .sp-modal-head h2 {
-  margin: 0;
-  color: #173944;
-  font-size: 22px;
+  margin: 0 !important;
+  color: #ffffff !important;
+  font-size: 21px;
+  font-weight: 700;
 }
 
-.sp-page .sp-close {
-  width: 35px !important;
-  height: 35px;
-  border: 0;
-  border-radius: 8px;
-  background: #edf1f3;
-  color: #344e5a;
+.sp-overlay .sp-modal-head .sp-close {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex: 0 0 30px !important;
+  width: 30px !important;
+  min-width: 30px !important;
+  max-width: 30px !important;
+  height: 30px !important;
+  min-height: 30px !important;
+  max-height: 30px !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  border: 0 !important;
+  border-radius: 50% !important;
+  background: rgba(255,255,255,.16) !important;
+  color: #ffffff !important;
+  font-size: 14px !important;
   cursor: pointer;
+}
+
+.sp-overlay .sp-modal-head .sp-close svg {
+  width: 13px;
+  height: 13px;
+}
+
+.sp-overlay .sp-modal-head .sp-close:hover {
+  background: rgba(255,255,255,.28) !important;
 }
 
 .sp-form-grid {
@@ -550,10 +581,21 @@ const styles = `
   .sp-panel {
     padding: 16px;
   }
-}
-`;
 
-export default function SuperAdminPlans() {
+  .sp-modal {
+    padding: 18px;
+  }
+
+  .sp-modal-head {
+    margin: -18px -18px 20px;
+    padding: 16px 18px;
+  }
+
+  .sp-modal-head h2 {
+    font-size: 18px;
+  }
+}
+`;export default function SuperAdminPlans() {
   const [plans, setPlans] = useState(loadPlans);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
@@ -664,13 +706,18 @@ export default function SuperAdminPlans() {
             <div>
               <p className="sp-eyebrow">PLANS MANAGEMENT</p>
               <h1>Manage Plans</h1>
+
               <p className="sp-subtitle">
                 Create subscription plans, manage pricing,
                 features and permissions.
               </p>
             </div>
 
-            <button className="sp-btn" onClick={openCreate}>
+            <button
+              type="button"
+              className="sp-btn"
+              onClick={openCreate}
+            >
               <FaPlus /> New Plan
             </button>
           </header>
@@ -717,6 +764,7 @@ export default function SuperAdminPlans() {
                     </div>
 
                     <h2>{plan.name}</h2>
+
                     <p className="sp-description">
                       {plan.description}
                     </p>
@@ -757,6 +805,7 @@ export default function SuperAdminPlans() {
 
                     <div className="sp-actions">
                       <button
+                        type="button"
                         className="sp-btn secondary"
                         onClick={() => openEdit(plan)}
                       >
@@ -764,6 +813,7 @@ export default function SuperAdminPlans() {
                       </button>
 
                       <button
+                        type="button"
                         className="sp-btn danger"
                         onClick={() => deletePlan(plan.id)}
                       >
@@ -784,6 +834,7 @@ export default function SuperAdminPlans() {
                 <thead>
                   <tr>
                     <th>Feature / Permission</th>
+
                     {plans.map((plan) => (
                       <th key={plan.id}>{plan.name}</th>
                     ))}
@@ -813,9 +864,20 @@ export default function SuperAdminPlans() {
         </main>
       </div>
 
+      {/* CREATE / EDIT MODAL */}
+
       {modalOpen && (
         <div className="sp-overlay">
-          <div className="sp-modal" role="dialog" aria-modal="true">
+          <div
+            className="sp-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-label={
+              editingId !== null ? "Edit Plan" : "Create New Plan"
+            }
+          >
+            {/* TEAL HEADER WITH SMALL X */}
+
             <div className="sp-modal-head">
               <h2>
                 {editingId !== null
@@ -824,6 +886,7 @@ export default function SuperAdminPlans() {
               </h2>
 
               <button
+                type="button"
                 className="sp-close"
                 onClick={() => setModalOpen(false)}
                 aria-label="Close"
@@ -836,6 +899,7 @@ export default function SuperAdminPlans() {
               <div className="sp-form-grid">
                 <div className="sp-field full">
                   <label>Plan Name</label>
+
                   <input
                     required
                     value={form.name}
@@ -848,6 +912,7 @@ export default function SuperAdminPlans() {
 
                 <div className="sp-field full">
                   <label>Description</label>
+
                   <textarea
                     value={form.description}
                     onChange={(e) =>
@@ -862,6 +927,7 @@ export default function SuperAdminPlans() {
 
                 <div className="sp-field">
                   <label>Monthly Price (USD)</label>
+
                   <input
                     type="number"
                     min="0"
@@ -879,6 +945,7 @@ export default function SuperAdminPlans() {
 
                 <div className="sp-field">
                   <label>Yearly Price (USD)</label>
+
                   <input
                     type="number"
                     min="0"
@@ -896,6 +963,7 @@ export default function SuperAdminPlans() {
 
                 <div className="sp-field full">
                   <label>Plan Status</label>
+
                   <select
                     value={form.status}
                     onChange={(e) =>

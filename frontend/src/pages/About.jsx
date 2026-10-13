@@ -1,6 +1,7 @@
 
 import { useEffect, useState } from "react";
 import StoreHeader from "./StoreHeader";
+
 import {
   FaPaw,
   FaHeart,
@@ -9,6 +10,18 @@ import {
 } from "react-icons/fa";
 
 const STORE_SETTINGS_KEY = "storeSettings";
+
+const DEFAULT_COLORS = {
+  primaryColor: "#1aa6a6",
+  secondaryColor: "#11797b",
+  lightColor: "#e8f7f7",
+  borderColor: "#dcebea",
+  backgroundColor: "#ffffff",
+  textColor: "#344054",
+  buttonColor: "#1aa6a6",
+  buttonTextColor: "#ffffff",
+  footerColor: "#11797b",
+};
 
 const loadStoreSettings = () => {
   try {
@@ -32,6 +45,7 @@ function About() {
       "storeSettingsUpdated",
       refreshSettings
     );
+
     window.addEventListener("storage", refreshSettings);
 
     return () => {
@@ -39,12 +53,31 @@ function About() {
         "storeSettingsUpdated",
         refreshSettings
       );
-      window.removeEventListener(
-        "storage",
-        refreshSettings
-      );
+
+      window.removeEventListener("storage", refreshSettings);
     };
   }, []);
+
+  const colors = {
+    ...DEFAULT_COLORS,
+    ...(settings.storeColors || {}),
+  };
+
+  const aboutColors = {
+    "--about-primary": colors.primaryColor,
+    "--about-secondary": colors.secondaryColor,
+    "--about-light": colors.lightColor,
+    "--about-border": colors.borderColor,
+    "--about-background": colors.backgroundColor,
+    "--about-text": colors.textColor,
+    "--about-button": colors.buttonColor,
+    "--about-button-text": colors.buttonTextColor,
+
+    // Shared footer colors
+    "--footer-color": colors.footerColor,
+    "--footer-light": colors.lightColor,
+    "--footer-border": colors.borderColor,
+  };
 
   const aboutTitle = settings.aboutTitle || "";
   const aboutDescription = settings.aboutDescription || "";
@@ -72,8 +105,12 @@ function About() {
   ];
 
   return (
-    <div className="about-page">
+    <div className="about-page" style={aboutColors}>
       <style>{`
+        /* =====================================
+           ABOUT PAGE
+        ===================================== */
+
         .about-page,
         .about-page * {
           box-sizing: border-box;
@@ -81,402 +118,469 @@ function About() {
 
         .about-page {
           min-height: 100vh;
-          background:
-            radial-gradient(
-              circle at 5% 38%,
-              rgba(26, 163, 159, 0.06),
-              transparent 23%
-            ),
-            radial-gradient(
-              circle at 95% 8%,
-              rgba(26, 163, 159, 0.08),
-              transparent 22%
-            ),
-            #ffffff;
-          color: #263d3d;
+          width: 100%;
+          overflow-x: hidden;
+
+          background: var(--about-background);
+          color: var(--about-text);
         }
 
-        .about-main {
+        .about-page .about-main {
           max-width: 1320px;
           margin: 0 auto;
           padding: 95px 40px 110px;
         }
 
-        .about-layout {
+        .about-page .about-layout {
           display: grid;
+
           grid-template-columns:
             minmax(0, 0.9fr)
             minmax(0, 1.1fr);
+
           gap: 75px;
           align-items: center;
         }
 
-        /* IMAGE */
+        /* =====================================
+           IMAGE
+        ===================================== */
 
-        .about-image-side {
+        .about-page .about-image-side {
           position: relative;
           width: 100%;
           padding: 35px 15px 35px 10px;
         }
 
-        .about-image-bg {
+        .about-page .about-image-bg {
           position: absolute;
           inset: 65px 0 10px 25px;
-          background: #e2f5f3;
+
+          background: var(--about-light);
+
           border-radius: 44% 56% 46% 54%;
           transform: rotate(-8deg);
         }
 
-        .about-image-box {
+        .about-page .about-image-box {
           position: relative;
           z-index: 2;
+
           width: 100%;
           height: 590px;
           overflow: hidden;
+
           border-radius:
             120px 38px 130px 45px;
-          background: #eaf7f6;
+
+          background: var(--about-light);
+
           box-shadow:
-            0 24px 65px rgba(18, 82, 80, 0.12);
+            0 24px 65px rgba(0, 0, 0, 0.12);
         }
 
-        .about-image-box img {
+        .about-page .about-image-box img {
           display: block;
           width: 100%;
           height: 100%;
           object-fit: cover;
         }
 
-        .about-image-placeholder {
+        .about-page .about-image-placeholder {
           width: 100%;
           height: 100%;
+
           display: flex;
           flex-direction: column;
           align-items: center;
           justify-content: center;
+
           gap: 15px;
-          color: #74aaa7;
+          color: var(--about-secondary);
         }
 
-        .about-image-placeholder svg {
+        .about-page .about-image-placeholder svg {
           font-size: 65px;
         }
 
-        .about-image-placeholder span {
+        .about-page .about-image-placeholder span {
           font-size: 15px;
           font-weight: 600;
         }
 
-        .about-floating-card {
+        /* =====================================
+           FLOATING CARD
+        ===================================== */
+
+        .about-page .about-floating-card {
           position: absolute;
           z-index: 3;
+
           left: -12px;
           bottom: 75px;
+
           padding: 20px 23px;
-          background: rgba(255,255,255,0.96);
-          border: 1px solid #e4f2f0;
+
+          background: var(--about-background);
+          border: 1px solid var(--about-border);
           border-radius: 23px;
+
           box-shadow:
-            0 14px 45px rgba(23, 80, 78, 0.12);
+            0 14px 45px rgba(0, 0, 0, 0.12);
         }
 
-        .about-floating-card svg {
-          color: #16a09c;
+        .about-page .about-floating-card svg {
+          color: var(--about-primary);
           font-size: 27px;
           margin-bottom: 9px;
         }
 
-        .about-floating-card p {
+        .about-page .about-floating-card p {
           margin: 0;
-          color: #284340;
+
+          color: var(--about-text);
+
           font-size: 14px;
           font-weight: 800;
           line-height: 1.5;
         }
 
-        .about-paw-one,
-        .about-paw-two {
+        /* =====================================
+           DECORATIVE PAWS
+        ===================================== */
+
+        .about-page .about-paw-one,
+        .about-page .about-paw-two {
           position: absolute;
-          color: rgba(25, 160, 156, 0.18);
+          color: var(--about-primary);
+          opacity: 0.18;
         }
 
-        .about-paw-one {
+        .about-page .about-paw-one {
           top: 0;
           left: 12px;
           font-size: 44px;
           transform: rotate(-18deg);
         }
 
-        .about-paw-two {
+        .about-page .about-paw-two {
           right: -8px;
           bottom: 10px;
           font-size: 48px;
           transform: rotate(22deg);
         }
 
-        /* TEXT */
+        /* =====================================
+           ABOUT TEXT
+        ===================================== */
 
-        .about-text-side {
+        .about-page .about-text-side {
           width: 100%;
           min-width: 0;
         }
 
-        .about-eyebrow {
+        .about-page .about-eyebrow {
           display: inline-flex;
           align-items: center;
+
           gap: 9px;
           margin-bottom: 20px;
           padding: 9px 15px;
-          background: #e7f7f5;
+
+          background: var(--about-light);
           border-radius: 30px;
-          color: #169b97;
+
+          color: var(--about-secondary);
+
           font-size: 12px;
           font-weight: 800;
           letter-spacing: 1px;
         }
 
-        .about-text-side h1 {
+        .about-page .about-text-side h1 {
           margin: 0 0 20px;
-          color: #233b3c;
+
+          color: var(--about-text);
+
           font-size: clamp(38px, 4vw, 57px);
           font-weight: 850;
           line-height: 1.12;
           letter-spacing: -1.5px;
+
           overflow-wrap: anywhere;
         }
 
-        .about-description {
+        .about-page .about-description {
           margin: 0 0 35px;
-          color: #687e80;
+
+          color: var(--about-text);
+          opacity: 0.8;
+
           font-size: 16px;
           line-height: 1.9;
           white-space: pre-line;
         }
 
-        /* TIMELINE */
+        /* =====================================
+           TIMELINE
+        ===================================== */
 
-        .about-timeline {
+        .about-page .about-timeline {
           position: relative;
+
           display: flex;
           flex-direction: column;
+
           gap: 20px;
         }
 
-        .about-timeline::before {
+        .about-page .about-timeline::before {
           content: "";
+
           position: absolute;
+
           top: 38px;
           bottom: 38px;
           left: 23px;
-          border-left: 2px dashed #9fd8d5;
+
+          border-left: 2px dashed var(--about-primary);
+          opacity: 0.5;
         }
 
-        .about-step {
+        .about-page .about-step {
           position: relative;
+
           display: grid;
           grid-template-columns: 48px minmax(0, 1fr);
+
           align-items: center;
           gap: 18px;
         }
 
-        .about-step-number {
+        .about-page .about-step-number {
           position: relative;
           z-index: 2;
+
           display: flex;
           align-items: center;
           justify-content: center;
+
           width: 48px;
           height: 48px;
           border-radius: 50%;
-          background:
-            linear-gradient(135deg, #17a8a4, #0d8987);
-          color: #ffffff;
+
+          background: var(--about-button);
+          color: var(--about-button-text);
+
           font-size: 18px;
           font-weight: 800;
+
           box-shadow:
-            0 5px 15px rgba(22, 160, 156, 0.2);
+            0 5px 15px rgba(0, 0, 0, 0.12);
         }
 
-        .about-step-card {
+        .about-page .about-step-card {
           display: flex;
           align-items: center;
+
           gap: 20px;
           min-height: 130px;
           padding: 23px;
-          background: #f5fbfa;
-          border: 1px solid #edf6f5;
+
+          background: var(--about-light);
+          border: 1px solid var(--about-border);
           border-radius: 23px;
+
           transition:
             transform 0.25s ease,
             box-shadow 0.25s ease,
             background 0.25s ease;
         }
 
-        .about-step-card:hover {
+        .about-page .about-step-card:hover {
           transform: translateY(-4px);
-          background: #effaf8;
+
+          background: var(--about-light);
+
           box-shadow:
-            0 12px 30px rgba(20, 90, 86, 0.08);
+            0 12px 30px rgba(0, 0, 0, 0.1);
         }
 
-        .about-step-icon {
+        .about-page .about-step-icon {
           display: flex;
           flex-shrink: 0;
+
           align-items: center;
           justify-content: center;
+
           width: 60px;
           height: 60px;
           border-radius: 50%;
-          background: #e1f3f1;
-          color: #16a09c;
+
+          background: var(--about-background);
+          color: var(--about-primary);
+
           font-size: 25px;
-          border: 3px solid #ffffff;
+
+          border: 3px solid var(--about-border);
         }
 
-        .about-step-content {
+        .about-page .about-step-content {
           min-width: 0;
         }
 
-        .about-step-content h3 {
+        .about-page .about-step-content h3 {
           margin: 0 0 9px;
-          color: #243e42;
+
+          color: var(--about-text);
+
           font-size: 19px;
           font-weight: 800;
           overflow-wrap: anywhere;
         }
 
-        .about-step-content p {
+        .about-page .about-step-content p {
           margin: 0;
-          color: #718589;
+
+          color: var(--about-text);
+          opacity: 0.8;
+
           font-size: 14px;
           line-height: 1.7;
           white-space: pre-line;
         }
 
-        /* RESPONSIVE */
+        /* =====================================
+           RESPONSIVE
+        ===================================== */
 
         @media (max-width: 1100px) {
-          .about-main {
+          .about-page .about-main {
             padding: 75px 28px;
           }
 
-          .about-layout {
+          .about-page .about-layout {
             gap: 40px;
           }
 
-          .about-image-box {
+          .about-page .about-image-box {
             height: 510px;
           }
 
-          .about-step-card {
+          .about-page .about-step-card {
             padding: 18px;
             gap: 14px;
           }
         }
 
         @media (max-width: 850px) {
-          .about-main {
+          .about-page .about-main {
             max-width: 690px;
             padding: 55px 24px 80px;
           }
 
-          .about-layout {
+          .about-page .about-layout {
             grid-template-columns: 1fr;
             gap: 45px;
           }
 
-          .about-image-side {
+          .about-page .about-image-side {
             max-width: 520px;
             margin: 0 auto;
           }
 
-          .about-image-box {
+          .about-page .about-image-box {
             height: 470px;
           }
 
-          .about-text-side h1 {
+          .about-page .about-text-side h1 {
             font-size: 40px;
           }
         }
 
         @media (max-width: 520px) {
-          .about-main {
+          .about-page .about-main {
             padding: 35px 17px 60px;
           }
 
-          .about-image-side {
+          .about-page .about-image-side {
             padding: 20px 8px;
           }
 
-          .about-image-box {
+          .about-page .about-image-box {
             height: 350px;
+
             border-radius:
               75px 25px 85px 30px;
           }
 
-          .about-floating-card {
+          .about-page .about-floating-card {
             left: -5px;
             bottom: 35px;
             padding: 12px 14px;
           }
 
-          .about-floating-card svg {
+          .about-page .about-floating-card svg {
             font-size: 20px;
           }
 
-          .about-floating-card p {
+          .about-page .about-floating-card p {
             font-size: 11px;
           }
 
-          .about-text-side h1 {
+          .about-page .about-text-side h1 {
             font-size: 34px;
           }
 
-          .about-description {
+          .about-page .about-description {
             font-size: 14px;
           }
 
-          .about-step {
+          .about-page .about-step {
             grid-template-columns: 38px minmax(0, 1fr);
             gap: 10px;
           }
 
-          .about-step-number {
+          .about-page .about-step-number {
             width: 38px;
             height: 38px;
             font-size: 15px;
           }
 
-          .about-timeline::before {
+          .about-page .about-timeline::before {
             left: 18px;
           }
 
-          .about-step-card {
+          .about-page .about-step-card {
             padding: 15px 12px;
             min-height: 110px;
             gap: 12px;
           }
 
-          .about-step-icon {
+          .about-page .about-step-icon {
             width: 43px;
             height: 43px;
             font-size: 18px;
           }
 
-          .about-step-content h3 {
+          .about-page .about-step-content h3 {
             font-size: 15px;
           }
 
-          .about-step-content p {
+          .about-page .about-step-content p {
             font-size: 12px;
           }
         }
       `}</style>
-
       <StoreHeader />
 
       <main className="about-main">
         <div className="about-layout">
+
+          {/* =====================================
+              IMAGE SIDE
+          ===================================== */}
+
           <div className="about-image-side">
             <div className="about-image-bg" />
 
@@ -499,6 +603,7 @@ function About() {
 
             <div className="about-floating-card">
               <FaPaw />
+
               <p>
                 Healthy Pets
                 <br />
@@ -506,6 +611,10 @@ function About() {
               </p>
             </div>
           </div>
+
+          {/* =====================================
+              TEXT SIDE
+          ===================================== */}
 
           <div className="about-text-side">
             <div className="about-eyebrow">
@@ -521,9 +630,14 @@ function About() {
               </p>
             )}
 
+            {/* =====================================
+                JOURNEY TIMELINE
+            ===================================== */}
+
             <div className="about-timeline">
               {timeline.map((step) => (
                 <div className="about-step" key={step.number}>
+
                   <div className="about-step-number">
                     {step.number}
                   </div>
@@ -541,10 +655,12 @@ function About() {
                       )}
                     </div>
                   </div>
+
                 </div>
               ))}
             </div>
           </div>
+
         </div>
       </main>
     </div>
@@ -552,3 +668,4 @@ function About() {
 }
 
 export default About;
+

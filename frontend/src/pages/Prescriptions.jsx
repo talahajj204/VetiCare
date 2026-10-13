@@ -1249,7 +1249,7 @@ function Prescriptions() {
                               title="Print PDF"
                             >
                               <FaPrint />
-                              <span>Print</span>
+                              <span></span>
                             </button>
                           </div>
                         </td>

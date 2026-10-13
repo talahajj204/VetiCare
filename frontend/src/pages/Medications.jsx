@@ -935,7 +935,7 @@ function Medications() {
                               title="Create Prescription"
                             >
                               <FaPrescription />
-                              <span>Create Prescription</span>
+                              <span></span>
                             </button>
                           )}
                         </div>

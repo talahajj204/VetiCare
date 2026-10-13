@@ -261,8 +261,7 @@ const COLOR_PRESETS = [
 const getColorHex = (color) => {
   const preset = COLOR_PRESETS.find(
     (item) =>
-      item.name.toLowerCase() ===
-      String(color || "").toLowerCase()
+      item.name.toLowerCase() === String(color || "").toLowerCase()
   );
 
   return preset?.value || "#55b7b2";
@@ -878,8 +877,7 @@ function Pets() {
         Photo & Notes
       </button>
     </div>
-  );
-  return (
+  );  return (
     <div className="dashboard-layout">
       <Sidebar />
 
@@ -964,7 +962,6 @@ function Pets() {
 
         {/* =================================================
             SEARCH + FILTERS
-            SAME STRUCTURE / SPACING AS MEDICAL RECORDS
         ================================================= */}
 
         <div
@@ -976,8 +973,6 @@ function Pets() {
             marginBottom: "24px",
           }}
         >
-          {/* SEARCH */}
-
           <div
             style={{
               position: "relative",
@@ -1051,8 +1046,6 @@ function Pets() {
             )}
           </div>
 
-          {/* SPECIES */}
-
           <select
             value={speciesFilter}
             onChange={(e) => {
@@ -1081,8 +1074,6 @@ function Pets() {
               </option>
             ))}
           </select>
-
-          {/* SORT */}
 
           <div
             style={{
@@ -1137,7 +1128,7 @@ function Pets() {
         </div>
 
         {/* =================================================
-            TABLE — SAME CARD STYLE AS MEDICAL RECORDS
+            TABLE
         ================================================= */}
 
         <div className="owners-table-container">
@@ -1158,13 +1149,9 @@ function Pets() {
                 currentPets.map((pet) => (
                   <tr key={pet.id}>
                     <td>{pet.name}</td>
-
                     <td>{pet.owner}</td>
-
                     <td>{pet.species}</td>
-
                     <td>{pet.breed}</td>
-
                     <td>{pet.age}</td>
 
                     <td>
@@ -1219,7 +1206,7 @@ function Pets() {
         </div>
 
         {/* =================================================
-            PAGINATION — OUTSIDE CARD LIKE MEDICAL RECORDS
+            PAGINATION
         ================================================= */}
 
         <div
@@ -1232,8 +1219,6 @@ function Pets() {
             flexWrap: "wrap",
           }}
         >
-          {/* ROWS PER PAGE — LEFT */}
-
           <div
             style={{
               display: "flex",
@@ -1270,8 +1255,6 @@ function Pets() {
             </select>
           </div>
 
-          {/* PAGINATION — RIGHT */}
-
           <div
             style={{
               display: "flex",
@@ -1280,8 +1263,6 @@ function Pets() {
               gap: "6px",
             }}
           >
-            {/* PREVIOUS */}
-
             <button
               type="button"
               onClick={() =>
@@ -1297,19 +1278,13 @@ function Pets() {
                 border: "1px solid #c9dddd",
                 borderRadius: "7px",
                 background:
-                  safeCurrentPage === 1
-                    ? "#f4f7f7"
-                    : "#ffffff",
+                  safeCurrentPage === 1 ? "#f4f7f7" : "#ffffff",
                 color:
-                  safeCurrentPage === 1
-                    ? "#b6c0c0"
-                    : "#526666",
+                  safeCurrentPage === 1 ? "#b6c0c0" : "#526666",
                 fontSize: "18px",
                 lineHeight: 1,
                 cursor:
-                  safeCurrentPage === 1
-                    ? "not-allowed"
-                    : "pointer",
+                  safeCurrentPage === 1 ? "not-allowed" : "pointer",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
@@ -1317,8 +1292,6 @@ function Pets() {
             >
               &lt;
             </button>
-
-            {/* CURRENT PAGE */}
 
             <button
               type="button"
@@ -1340,8 +1313,6 @@ function Pets() {
             >
               {safeCurrentPage}
             </button>
-
-            {/* NEXT */}
 
             <button
               type="button"
@@ -1403,15 +1374,9 @@ function Pets() {
                 </button>
               </div>
 
-              <ModalTabs
-                activeTab={addTab}
-                onChange={setAddTab}
-              />
+              <ModalTabs activeTab={addTab} onChange={setAddTab} />
 
-              <form
-                className="pet-tab-form"
-                onSubmit={handleAddPet}
-              >
+              <form className="pet-tab-form" onSubmit={handleAddPet}>
                 <div className="pet-tab-content">
                   {addTab === "basic" && (
                     <div className="pet-tab-panel">
@@ -1451,15 +1416,10 @@ function Pets() {
                             onChange={handleNewPetChange}
                             required
                           >
-                            <option value="">
-                              Select species
-                            </option>
+                            <option value="">Select species</option>
 
                             {PET_SPECIES.map((species) => (
-                              <option
-                                key={species}
-                                value={species}
-                              >
+                              <option key={species} value={species}>
                                 {species}
                               </option>
                             ))}
@@ -1483,10 +1443,7 @@ function Pets() {
                             </option>
 
                             {newPetBreeds.map((breed) => (
-                              <option
-                                key={breed}
-                                value={breed}
-                              >
+                              <option key={breed} value={breed}>
                                 {breed}
                               </option>
                             ))}
@@ -1501,15 +1458,9 @@ function Pets() {
                             value={newPet.sex}
                             onChange={handleNewPetChange}
                           >
-                            <option value="">
-                              Select sex
-                            </option>
-                            <option value="Female">
-                              Female
-                            </option>
-                            <option value="Male">
-                              Male
-                            </option>
+                            <option value="">Select sex</option>
+                            <option value="Female">Female</option>
+                            <option value="Male">Male</option>
                           </select>
                         </div>
 
@@ -1539,8 +1490,8 @@ function Pets() {
 
                           {newPet.estimatedDOB && (
                             <span className="pet-field-hint">
-                              Estimated from age. You can
-                              replace it with the exact date.
+                              Estimated from age. You can replace it
+                              with the exact date.
                             </span>
                           )}
                         </div>
@@ -1570,18 +1521,14 @@ function Pets() {
                               className="pet-color-picker"
                               type="color"
                               value={newPet.colorHex}
-                              onChange={
-                                handleNewPetColorChange
-                              }
+                              onChange={handleNewPetColorChange}
                             />
 
                             <input
                               type="text"
                               name="color"
                               value={newPet.color}
-                              onChange={
-                                handleNewPetColorNameChange
-                              }
+                              onChange={handleNewPetColorNameChange}
                               placeholder="Example: Golden, Black & White, Cream"
                             />
                           </div>
@@ -1592,8 +1539,8 @@ function Pets() {
 
                   {addTab === "health" && (
                     <div className="pet-tab-panel">
-                      <div className="pet-form-grid">
-                        <div className="form-field">
+                      <div className="pet-form-grid pet-health-grid">
+                        <div className="form-field pet-full-field">
                           <label>Blood Type</label>
 
                           <input
@@ -1617,10 +1564,8 @@ function Pets() {
                           />
                         </div>
 
-                        <div className="form-field pet-full-field">
-                          <label>
-                            Chronic Conditions
-                          </label>
+                        <div className="form-field">
+                          <label>Chronic Conditions</label>
 
                           <textarea
                             name="chronicConditions"
@@ -1638,9 +1583,7 @@ function Pets() {
                     <div className="pet-tab-panel">
                       <div className="pet-form-grid">
                         <div className="form-field pet-full-field">
-                          <label>
-                            Microchip Number
-                          </label>
+                          <label>Microchip Number</label>
 
                           <input
                             type="text"
@@ -1656,36 +1599,28 @@ function Pets() {
 
                   {addTab === "photo" && (
                     <div className="pet-tab-panel">
-                      <div className="pet-form-grid">
+                      <div className="pet-form-grid pet-photo-notes-grid">
                         <div className="form-field">
                           <label>Profile Photo</label>
 
-                          <label className="pet-photo-upload">
-                            {newPet.profilePhoto ? (
+                          <div className="pet-photo-box">
+                            {newPet.profilePhoto && (
                               <img
                                 src={newPet.profilePhoto}
                                 alt="Pet preview"
                               />
-                            ) : (
-                              <>
-                                <FaCamera />
-
-                                <strong>
-                                  Choose Pet Photo
-                                </strong>
-
-                                <span>
-                                  Click to upload an image
-                                </span>
-                              </>
                             )}
 
-                            <input
-                              type="file"
-                              accept="image/*"
-                              onChange={handleNewPetPhoto}
-                            />
-                          </label>
+                            <label className="pet-choose-image">
+                              Choose Image
+                              <input
+                                type="file"
+                                accept="image/*"
+                                aria-label="Choose Image"
+                                onChange={handleNewPetPhoto}
+                              />
+                            </label>
+                          </div>
                         </div>
 
                         <div className="form-field">
@@ -1734,20 +1669,17 @@ function Pets() {
           </div>
         )}
 
-        {/* PART 3 CONTINUES HERE */}
-                {/* =================================================
+        {/* =================================================
             EDIT PET MODAL
         ================================================= */}
 
-{showEditModal && selectedPet && (
+        {showEditModal && selectedPet && (
           <div className="modal-overlay">
             <div className="modal-container pet-form-modal">
               <div className="modal-header">
                 <div>
                   <h2>Edit Pet</h2>
-                  <p>
-                    Update {selectedPet.name}'s information
-                  </p>
+                  <p>Update {selectedPet.name}'s information</p>
                 </div>
 
                 <button
@@ -1759,20 +1691,13 @@ function Pets() {
                 </button>
               </div>
 
-              <ModalTabs
-                activeTab={editTab}
-                onChange={setEditTab}
-              />
+              <ModalTabs activeTab={editTab} onChange={setEditTab} />
 
               <form
                 className="pet-tab-form"
                 onSubmit={handleUpdatePet}
               >
                 <div className="pet-tab-content">
-                  {/* =======================================
-                      BASIC INFO
-                  ======================================= */}
-
                   {editTab === "basic" && (
                     <div className="pet-tab-panel">
                       <div className="pet-form-grid">
@@ -1809,15 +1734,10 @@ function Pets() {
                             onChange={handleEditChange}
                             required
                           >
-                            <option value="">
-                              Select species
-                            </option>
+                            <option value="">Select species</option>
 
                             {PET_SPECIES.map((species) => (
-                              <option
-                                key={species}
-                                value={species}
-                              >
+                              <option key={species} value={species}>
                                 {species}
                               </option>
                             ))}
@@ -1841,10 +1761,7 @@ function Pets() {
                             </option>
 
                             {editPetBreeds.map((breed) => (
-                              <option
-                                key={breed}
-                                value={breed}
-                              >
+                              <option key={breed} value={breed}>
                                 {breed}
                               </option>
                             ))}
@@ -1859,17 +1776,9 @@ function Pets() {
                             value={selectedPet.sex || ""}
                             onChange={handleEditChange}
                           >
-                            <option value="">
-                              Select sex
-                            </option>
-
-                            <option value="Female">
-                              Female
-                            </option>
-
-                            <option value="Male">
-                              Male
-                            </option>
+                            <option value="">Select sex</option>
+                            <option value="Female">Female</option>
+                            <option value="Male">Male</option>
                           </select>
                         </div>
 
@@ -1892,16 +1801,14 @@ function Pets() {
                           <input
                             type="date"
                             name="dateOfBirth"
-                            value={
-                              selectedPet.dateOfBirth || ""
-                            }
+                            value={selectedPet.dateOfBirth || ""}
                             onChange={handleEditChange}
                           />
 
                           {selectedPet.estimatedDOB && (
                             <span className="pet-field-hint">
-                              Estimated from age. Change it
-                              if the exact birthday is known.
+                              Estimated from age. Change it if the
+                              exact birthday is known.
                             </span>
                           )}
                         </div>
@@ -1931,8 +1838,7 @@ function Pets() {
                               className="pet-color-picker"
                               type="color"
                               value={
-                                selectedPet.colorHex ||
-                                "#55b7b2"
+                                selectedPet.colorHex || "#55b7b2"
                               }
                               onChange={handleEditColorChange}
                             />
@@ -1940,9 +1846,7 @@ function Pets() {
                             <input
                               type="text"
                               value={selectedPet.color || ""}
-                              onChange={
-                                handleEditColorNameChange
-                              }
+                              onChange={handleEditColorNameChange}
                               placeholder="Example: Golden, Black & White, Cream"
                             />
                           </div>
@@ -1951,22 +1855,16 @@ function Pets() {
                     </div>
                   )}
 
-                  {/* =======================================
-                      HEALTH
-                  ======================================= */}
-
                   {editTab === "health" && (
                     <div className="pet-tab-panel">
-                      <div className="pet-form-grid">
-                        <div className="form-field">
+                      <div className="pet-form-grid pet-health-grid">
+                        <div className="form-field pet-full-field">
                           <label>Blood Type</label>
 
                           <input
                             type="text"
                             name="bloodType"
-                            value={
-                              selectedPet.bloodType || ""
-                            }
+                            value={selectedPet.bloodType || ""}
                             onChange={handleEditChange}
                             placeholder="Enter blood type"
                           />
@@ -1977,25 +1875,20 @@ function Pets() {
 
                           <textarea
                             name="allergies"
-                            value={
-                              selectedPet.allergies || ""
-                            }
+                            value={selectedPet.allergies || ""}
                             onChange={handleEditChange}
                             placeholder="Enter allergies"
                             rows="5"
                           />
                         </div>
 
-                        <div className="form-field pet-full-field">
-                          <label>
-                            Chronic Conditions
-                          </label>
+                        <div className="form-field">
+                          <label>Chronic Conditions</label>
 
                           <textarea
                             name="chronicConditions"
                             value={
-                              selectedPet.chronicConditions ||
-                              ""
+                              selectedPet.chronicConditions || ""
                             }
                             onChange={handleEditChange}
                             placeholder="Enter chronic conditions"
@@ -2006,25 +1899,16 @@ function Pets() {
                     </div>
                   )}
 
-                  {/* =======================================
-                      IDENTIFICATION
-                  ======================================= */}
-
                   {editTab === "identification" && (
                     <div className="pet-tab-panel">
                       <div className="pet-form-grid">
                         <div className="form-field pet-full-field">
-                          <label>
-                            Microchip Number
-                          </label>
+                          <label>Microchip Number</label>
 
                           <input
                             type="text"
                             name="microchipNumber"
-                            value={
-                              selectedPet.microchipNumber ||
-                              ""
-                            }
+                            value={selectedPet.microchipNumber || ""}
                             onChange={handleEditChange}
                             placeholder="Enter microchip number"
                           />
@@ -2033,44 +1917,30 @@ function Pets() {
                     </div>
                   )}
 
-                  {/* =======================================
-                      PHOTO & NOTES
-                  ======================================= */}
-
                   {editTab === "photo" && (
                     <div className="pet-tab-panel">
-                      <div className="pet-form-grid">
+                      <div className="pet-form-grid pet-photo-notes-grid">
                         <div className="form-field">
                           <label>Profile Photo</label>
 
-                          <label className="pet-photo-upload">
-                            {selectedPet.profilePhoto ? (
+                          <div className="pet-photo-box">
+                            {selectedPet.profilePhoto && (
                               <img
-                                src={
-                                  selectedPet.profilePhoto
-                                }
+                                src={selectedPet.profilePhoto}
                                 alt="Pet preview"
                               />
-                            ) : (
-                              <>
-                                <FaCamera />
-
-                                <strong>
-                                  Choose Pet Photo
-                                </strong>
-
-                                <span>
-                                  Click to upload an image
-                                </span>
-                              </>
                             )}
 
-                            <input
-                              type="file"
-                              accept="image/*"
-                              onChange={handleEditPetPhoto}
-                            />
-                          </label>
+                            <label className="pet-choose-image">
+                              Choose Image
+                              <input
+                                type="file"
+                                accept="image/*"
+                                aria-label="Choose Image"
+                                onChange={handleEditPetPhoto}
+                              />
+                            </label>
+                          </div>
                         </div>
 
                         <div className="form-field">
@@ -2089,10 +1959,6 @@ function Pets() {
                   )}
                 </div>
 
-                {/* =========================================
-                    EDIT FOOTER
-                ========================================= */}
-
                 <div className="pet-modal-footer">
                   <button
                     type="button"
@@ -2102,10 +1968,7 @@ function Pets() {
                     Cancel
                   </button>
 
-                  <button
-                    type="submit"
-                    className="save-button"
-                  >
+                  <button type="submit" className="save-button">
                     Save Changes
                   </button>
                 </div>
@@ -2143,8 +2006,7 @@ function Pets() {
                 </p>
 
                 <span>
-                  The pet profile will be permanently
-                  deleted.
+                  The pet profile will be permanently deleted.
                 </span>
               </div>
 
@@ -2196,9 +2058,6 @@ function Pets() {
             color: #788888;
             font-size: 13px;
           }
-
-          /* Keep the Pets table exactly inside the same
-             container used by Medical Records */
 
           .owners-table-container {
             width: 100%;
@@ -2325,9 +2184,7 @@ function getPetModalCSS() {
     .pet-form-modal > .modal-header p,
     .pet-delete-modal > .modal-header p {
       margin: 5px 0 0 !important;
-
       color: rgba(255, 255, 255, 0.9) !important;
-
       font-size: 13px !important;
     }
 
@@ -2369,14 +2226,16 @@ function getPetModalCSS() {
       border-bottom: 1px solid #e1ebeb;
     }
 
-    .pet-modal-tab {
+    .pet-form-modal .pet-modal-tabs .pet-modal-tab {
       min-height: 44px;
 
       border: 1px solid #dce7e7;
       border-radius: 9px;
 
-      background: #ffffff;
-      color: #617575;
+      background: #ffffff !important;
+      color: #617575 !important;
+      -webkit-text-fill-color: currentColor !important;
+      opacity: 1 !important;
 
       display: flex;
       align-items: center;
@@ -2393,18 +2252,39 @@ function getPetModalCSS() {
       transition: 0.18s ease;
     }
 
-    .pet-modal-tab:hover {
-      border-color: #55b7b2;
-      color: #159f9f;
+    .pet-form-modal .pet-modal-tabs .pet-modal-tab svg {
+      color: inherit !important;
+      fill: currentColor !important;
+      opacity: 1 !important;
+      flex-shrink: 0;
     }
 
-    .pet-modal-tab.active {
-      background: #159f9f;
-      border-color: #159f9f;
-      color: #ffffff;
+    .pet-form-modal .pet-modal-tabs .pet-modal-tab:hover,
+    .pet-form-modal .pet-modal-tabs .pet-modal-tab:active {
+      background: #ffffff !important;
+      border-color: #55b7b2 !important;
+      color: #159f9f !important;
+      -webkit-text-fill-color: currentColor !important;
+      opacity: 1 !important;
+    }
+
+    .pet-form-modal .pet-modal-tabs .pet-modal-tab.active,
+    .pet-form-modal .pet-modal-tabs .pet-modal-tab.active:hover,
+    .pet-form-modal .pet-modal-tabs .pet-modal-tab.active:focus,
+    .pet-form-modal .pet-modal-tabs .pet-modal-tab.active:active {
+      background: #159f9f !important;
+      border-color: #159f9f !important;
+      color: #ffffff !important;
+      -webkit-text-fill-color: #ffffff !important;
+      opacity: 1 !important;
 
       box-shadow:
         0 4px 12px rgba(21, 159, 159, 0.18);
+    }
+
+    .pet-form-modal .pet-modal-tabs .pet-modal-tab.active svg {
+      color: #ffffff !important;
+      fill: currentColor !important;
     }
 
     .pet-tab-form {
@@ -2452,8 +2332,7 @@ function getPetModalCSS() {
 
     .pet-form-grid {
       display: grid;
-      grid-template-columns:
-        repeat(2, minmax(0, 1fr));
+      grid-template-columns: repeat(2, minmax(0, 1fr));
 
       gap: 20px 24px;
 
@@ -2462,7 +2341,6 @@ function getPetModalCSS() {
 
     .pet-form-grid .form-field {
       min-width: 0;
-
       margin: 0 !important;
 
       display: flex;
@@ -2486,7 +2364,6 @@ function getPetModalCSS() {
     .pet-form-grid select,
     .pet-form-grid textarea {
       width: 100% !important;
-
       box-sizing: border-box !important;
 
       border: 1px solid #d8e2e2 !important;
@@ -2499,7 +2376,6 @@ function getPetModalCSS() {
       font-size: 14px !important;
 
       outline: none !important;
-
       transition: 0.15s ease !important;
     }
 
@@ -2514,9 +2390,7 @@ function getPetModalCSS() {
 
     .pet-form-grid textarea {
       min-height: 110px !important;
-
       padding: 11px 12px !important;
-
       resize: vertical !important;
     }
 
@@ -2532,7 +2406,6 @@ function getPetModalCSS() {
     .pet-form-grid select:disabled {
       background: #f4f7f7 !important;
       color: #9ba8a8 !important;
-
       cursor: not-allowed;
     }
 
@@ -2542,7 +2415,6 @@ function getPetModalCSS() {
 
     .pet-field-hint {
       display: block;
-
       color: #849393;
 
       font-size: 11px;
@@ -2555,7 +2427,6 @@ function getPetModalCSS() {
       display: grid;
       grid-template-columns: 58px 1fr;
       gap: 10px;
-
       align-items: center;
     }
 
@@ -2572,62 +2443,129 @@ function getPetModalCSS() {
       background: #ffffff !important;
 
       cursor: pointer;
-
       box-sizing: border-box;
     }
-    .pet-photo-upload {
-      min-height: 190px;
 
-      border: 2px dashed #cfe0df !important;
-      border-radius: 12px;
+    /* Health fields */
 
-      background: #f9fcfc;
-      color: #6f8181 !important;
+    .pet-form-modal .pet-health-grid {
+      align-items: start;
+    }
+
+    .pet-form-modal .pet-health-grid .form-field > label,
+    .pet-form-modal .pet-photo-notes-grid .form-field > label {
+      min-height: 18px;
+    }
+
+    .pet-form-modal .pet-health-grid textarea {
+      height: 130px !important;
+      min-height: 130px !important;
+      margin: 0 !important;
+    }
+
+    /* Photo and Notes */
+
+    .pet-form-modal .pet-photo-notes-grid {
+      align-items: start;
+    }
+
+    .pet-form-modal .pet-photo-notes-grid textarea {
+      height: 190px !important;
+      min-height: 190px !important;
+      max-height: 190px !important;
+      margin: 0 !important;
+      resize: none !important;
+    }
+
+    .pet-form-modal .pet-photo-box {
+      width: 100% !important;
+      height: 190px !important;
+      min-height: 190px !important;
+
+      margin: 0 !important;
+      padding: 12px !important;
+      box-sizing: border-box !important;
+
+      border: 1px solid #d8e2e2 !important;
+      border-radius: 8px !important;
+      background: #ffffff !important;
 
       display: flex !important;
       flex-direction: column !important;
       align-items: center !important;
       justify-content: center !important;
-
-      gap: 8px !important;
-
-      cursor: pointer;
+      gap: 10px !important;
 
       overflow: hidden;
-
-      padding: 15px !important;
-
-      box-sizing: border-box;
-
-      text-align: center;
     }
 
-    .pet-photo-upload svg {
-      color: #55b7b2;
-      font-size: 29px;
-    }
-
-    .pet-photo-upload strong {
-      color: #405656;
-      font-size: 14px;
-    }
-
-    .pet-photo-upload span {
-      color: #899898;
-      font-size: 11px;
-    }
-
-    .pet-photo-upload img {
+    .pet-form-modal .pet-photo-box img {
+      display: block;
       width: 100%;
-      height: 190px;
-
-      border-radius: 9px;
-
-      object-fit: cover;
+      height: 110px;
+      min-height: 0;
+      border-radius: 5px;
+      object-fit: contain;
     }
 
-    .pet-photo-upload input {
-      display: none !important;
+    .pet-form-modal .pet-photo-box .pet-choose-image {
+      position: relative !important;
+
+      display: inline-flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+
+      flex: 0 0 auto !important;
+      width: auto !important;
+      min-height: 36px !important;
+      height: 36px !important;
+
+      margin: 0 !important;
+      padding: 0 16px !important;
+      box-sizing: border-box !important;
+
+      border: 1px solid #55b7b2 !important;
+      border-radius: 6px !important;
+
+      background: #ffffff !important;
+      color: #159f9f !important;
+      -webkit-text-fill-color: currentColor !important;
+
+      font-family: inherit !important;
+      font-size: 13px !important;
+      font-weight: 700 !important;
+      line-height: 1 !important;
+
+      cursor: pointer !important;
+      overflow: hidden !important;
+    }
+
+    .pet-form-modal .pet-photo-box .pet-choose-image:hover {
+      background: #f7fbfb !important;
+      color: #159f9f !important;
+    }
+
+    .pet-form-modal .pet-photo-box .pet-choose-image:focus-within {
+      box-shadow:
+        0 0 0 3px rgba(85, 183, 178, 0.12) !important;
+    }
+
+    .pet-form-modal .pet-choose-image input[type="file"] {
+      position: absolute !important;
+      inset: 0 !important;
+
+      display: block !important;
+      width: 100% !important;
+      height: 100% !important;
+      min-height: 0 !important;
+
+      margin: 0 !important;
+      padding: 0 !important;
+      border: 0 !important;
+
+      opacity: 0 !important;
+      cursor: pointer !important;
+      box-sizing: border-box !important;
     }
 
     .pet-modal-footer {
@@ -2636,7 +2574,6 @@ function getPetModalCSS() {
       padding: 16px 30px;
 
       border-top: 1px solid #e4ecec;
-
       background: #ffffff;
 
       display: flex;
@@ -2644,9 +2581,7 @@ function getPetModalCSS() {
       align-items: center;
 
       gap: 10px;
-
       flex-wrap: wrap;
-
       box-sizing: border-box;
     }
 
@@ -2660,7 +2595,6 @@ function getPetModalCSS() {
       height: 42px;
 
       padding: 0 17px !important;
-
       border-radius: 8px !important;
 
       display: inline-flex !important;
@@ -2678,7 +2612,6 @@ function getPetModalCSS() {
 
     .pet-modal-footer .modal-cancel-button {
       border: 1px solid #d6e0e0 !important;
-
       background: #ffffff !important;
       color: #607272 !important;
     }
@@ -2689,7 +2622,6 @@ function getPetModalCSS() {
 
     .pet-modal-footer .save-button {
       border: 1px solid #159f9f !important;
-
       background: #159f9f !important;
       color: #ffffff !important;
     }
@@ -2701,7 +2633,6 @@ function getPetModalCSS() {
 
     .pet-modal-footer .pets-delete-confirm {
       border: 1px solid #d94b4b !important;
-
       background: #d94b4b !important;
       color: #ffffff !important;
     }
@@ -2720,11 +2651,9 @@ function getPetModalCSS() {
       max-width: 450px !important;
 
       padding: 0 !important;
-
       overflow: hidden !important;
 
       background: #ffffff !important;
-
       border-radius: 16px !important;
 
       box-shadow:
@@ -2738,7 +2667,6 @@ function getPetModalCSS() {
     @media (max-width: 720px) {
       .pet-modal-tabs {
         grid-template-columns: repeat(2, 1fr);
-
         padding: 12px 15px;
       }
 

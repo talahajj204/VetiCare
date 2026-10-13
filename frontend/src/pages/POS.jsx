@@ -1,4 +1,3 @@
-
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
@@ -56,20 +55,20 @@ function POS() {
   // INVENTORY PRODUCTS AND CATEGORIES
   // ========================================
 
-  const [inventoryProducts, setInventoryProducts] =
-    useState(() => readStoredArray(PRODUCTS_KEY));
+  const [inventoryProducts, setInventoryProducts] = useState(() =>
+    readStoredArray(PRODUCTS_KEY)
+  );
 
-  const [inventoryCategories, setInventoryCategories] =
-    useState(() => readStoredArray(CATEGORIES_KEY));
+  const [inventoryCategories, setInventoryCategories] = useState(() =>
+    readStoredArray(CATEGORIES_KEY)
+  );
 
   // ========================================
   // SEARCH AND CATEGORY FILTER
   // ========================================
 
   const [search, setSearch] = useState("");
-
-  const [category, setCategory] =
-    useState("All categories");
+  const [category, setCategory] = useState("All categories");
 
   // ========================================
   // SYNC WITH INVENTORY AND CATEGORIES
@@ -77,13 +76,8 @@ function POS() {
 
   useEffect(() => {
     const refreshInventory = () => {
-      setInventoryProducts(
-        readStoredArray(PRODUCTS_KEY)
-      );
-
-      setInventoryCategories(
-        readStoredArray(CATEGORIES_KEY)
-      );
+      setInventoryProducts(readStoredArray(PRODUCTS_KEY));
+      setInventoryCategories(readStoredArray(CATEGORIES_KEY));
     };
 
     const onStorage = (event) => {
@@ -100,9 +94,7 @@ function POS() {
       if (Array.isArray(event.detail)) {
         setInventoryProducts(event.detail);
       } else {
-        setInventoryProducts(
-          readStoredArray(PRODUCTS_KEY)
-        );
+        setInventoryProducts(readStoredArray(PRODUCTS_KEY));
       }
     };
 
@@ -110,27 +102,16 @@ function POS() {
       if (Array.isArray(event.detail)) {
         setInventoryCategories(event.detail);
       } else {
-        setInventoryCategories(
-          readStoredArray(CATEGORIES_KEY)
-        );
+        setInventoryCategories(readStoredArray(CATEGORIES_KEY));
       }
     };
 
-    window.addEventListener(
-      "storage",
-      onStorage
-    );
-
-    window.addEventListener(
-      "focus",
-      refreshInventory
-    );
-
+    window.addEventListener("storage", onStorage);
+    window.addEventListener("focus", refreshInventory);
     window.addEventListener(
       "vetClinicProductsUpdated",
       onProductsUpdated
     );
-
     window.addEventListener(
       "vetClinicCategoriesUpdated",
       onCategoriesUpdated
@@ -139,21 +120,12 @@ function POS() {
     refreshInventory();
 
     return () => {
-      window.removeEventListener(
-        "storage",
-        onStorage
-      );
-
-      window.removeEventListener(
-        "focus",
-        refreshInventory
-      );
-
+      window.removeEventListener("storage", onStorage);
+      window.removeEventListener("focus", refreshInventory);
       window.removeEventListener(
         "vetClinicProductsUpdated",
         onProductsUpdated
       );
-
       window.removeEventListener(
         "vetClinicCategoriesUpdated",
         onCategoriesUpdated
@@ -167,22 +139,13 @@ function POS() {
 
   const products = useMemo(() => {
     return inventoryProducts
-      .filter(
-        (product) =>
-          product.showOnPOS === true
-      )
+      .filter((product) => product.showOnPOS === true)
       .map((product) => ({
         id: product.id,
         name: String(product.name || ""),
-        category: String(
-          product.category || ""
-        ),
-        price:
-          Number(product.sellingPrice) || 0,
-        stock: Math.max(
-          0,
-          Number(product.quantity) || 0
-        ),
+        category: String(product.category || ""),
+        price: Number(product.sellingPrice) || 0,
+        stock: Math.max(0, Number(product.quantity) || 0),
         image: product.image || "",
       }));
   }, [inventoryProducts]);
@@ -194,40 +157,27 @@ function POS() {
   // ========================================
 
   const categories = useMemo(() => {
-    const sortedCategories = [
-      ...inventoryCategories,
-    ].sort((a, b) => {
-      const orderA =
-        Number(a?.sortOrder) || 0;
-
-      const orderB =
-        Number(b?.sortOrder) || 0;
+    const sortedCategories = [...inventoryCategories].sort((a, b) => {
+      const orderA = Number(a?.sortOrder) || 0;
+      const orderB = Number(b?.sortOrder) || 0;
 
       if (orderA !== orderB) {
         return orderA - orderB;
       }
 
-      return String(
-        a?.title || ""
-      ).localeCompare(
+      return String(a?.title || "").localeCompare(
         String(b?.title || "")
       );
     });
 
     const categoryNames = sortedCategories
-      .map((item) =>
-        String(item?.title || "").trim()
-      )
+      .map((item) => String(item?.title || "").trim())
       .filter(Boolean);
 
-    return [
-      "All categories",
-      ...new Set(categoryNames),
-    ];
+    return ["All categories", ...new Set(categoryNames)];
   }, [inventoryCategories]);
 
   // Reset category when deleted
-
   useEffect(() => {
     if (!categories.includes(category)) {
       setCategory("All categories");
@@ -240,27 +190,19 @@ function POS() {
   // ========================================
 
   const filteredProducts = useMemo(() => {
-    const searchValue =
-      search.toLowerCase().trim();
+    const searchValue = search.toLowerCase().trim();
 
     return products.filter((product) => {
       const matchesSearch =
         !searchValue ||
-        product.name
-          .toLowerCase()
-          .includes(searchValue) ||
-        product.category
-          .toLowerCase()
-          .includes(searchValue);
+        product.name.toLowerCase().includes(searchValue) ||
+        product.category.toLowerCase().includes(searchValue);
 
       const matchesCategory =
         category === "All categories" ||
         product.category === category;
 
-      return (
-        matchesSearch &&
-        matchesCategory
-      );
+      return matchesSearch && matchesCategory;
     });
   }, [products, search, category]);
 
@@ -268,43 +210,25 @@ function POS() {
   // OWNER INPUT
   // ========================================
 
-  const [ownerSearch, setOwnerSearch] =
-    useState("");
+  const [ownerSearch, setOwnerSearch] = useState("");
 
   // ========================================
   // CART STATES
   // ========================================
 
   const [cart, setCart] = useState([]);
+  const [checkoutOpen, setCheckoutOpen] = useState(false);
 
-  const [checkoutOpen, setCheckoutOpen] =
-    useState(false);
+  const [amountReceived, setAmountReceived] = useState("");
+  const [amountReceivedLbp, setAmountReceivedLbp] = useState("");
 
-  const [amountReceived, setAmountReceived] =
-    useState("");
+  const [discount, setDiscount] = useState("0");
+  const [paymentMethod, setPaymentMethod] = useState("Cash");
+  const [hasDelivery, setHasDelivery] = useState(false);
 
-  const [
-    amountReceivedLbp,
-    setAmountReceivedLbp,
-  ] = useState("");
-
-  const [discount, setDiscount] =
-    useState("0");
-
-  const [paymentMethod, setPaymentMethod] =
-    useState("Cash");
-
-  const [hasDelivery, setHasDelivery] =
-    useState(false);
-
-  const [saleComplete, setSaleComplete] =
-    useState(false);
-
-  const [lastSale, setLastSale] =
-    useState(null);
-
-  const [accountOpen, setAccountOpen] =
-    useState(false);
+  const [saleComplete, setSaleComplete] = useState(false);
+  const [lastSale, setLastSale] = useState(null);
+  const [accountOpen, setAccountOpen] = useState(false);
 
   const USD_TO_LBP = 89500;
 
@@ -313,8 +237,7 @@ function POS() {
   // ========================================
 
   const subtotal = cart.reduce(
-    (sum, item) =>
-      sum + item.price * item.quantity,
+    (sum, item) => sum + item.price * item.quantity,
     0
   );
 
@@ -323,32 +246,15 @@ function POS() {
     subtotal
   );
 
-  const total = Math.max(
-    subtotal - discountNumber,
-    0
-  );
+  const total = Math.max(subtotal - discountNumber, 0);
 
-  const received = Math.max(
-    Number(amountReceived) || 0,
-    0
-  );
+  const received = Math.max(Number(amountReceived) || 0, 0);
+  const receivedLbp = Math.max(Number(amountReceivedLbp) || 0, 0);
 
-  const receivedLbp = Math.max(
-    Number(amountReceivedLbp) || 0,
-    0
-  );
+  const totalPaid = received + receivedLbp / USD_TO_LBP;
+  const change = Math.max(totalPaid - total, 0);
 
-  const totalPaid =
-    received +
-    receivedLbp / USD_TO_LBP;
-
-  const change = Math.max(
-    totalPaid - total,
-    0
-  );
-
-  const totalLbp =
-    total * USD_TO_LBP;
+  const totalLbp = total * USD_TO_LBP;
 
   // ========================================
   // ADD PRODUCT TO CART
@@ -359,25 +265,19 @@ function POS() {
 
     setCart((current) => {
       const existing = current.find(
-        (item) =>
-          String(item.id) ===
-          String(product.id)
+        (item) => String(item.id) === String(product.id)
       );
 
       if (existing) {
-        if (
-          existing.quantity >= product.stock
-        ) {
+        if (existing.quantity >= product.stock) {
           return current;
         }
 
         return current.map((item) =>
-          String(item.id) ===
-          String(product.id)
+          String(item.id) === String(product.id)
             ? {
                 ...item,
-                quantity:
-                  item.quantity + 1,
+                quantity: item.quantity + 1,
               }
             : item
         );
@@ -400,22 +300,15 @@ function POS() {
   const increaseQuantity = (id) => {
     setCart((current) =>
       current.map((item) => {
-        if (
-          String(item.id) !== String(id)
-        ) {
+        if (String(item.id) !== String(id)) {
           return item;
         }
 
         const product = products.find(
-          (productItem) =>
-            String(productItem.id) ===
-            String(id)
+          (productItem) => String(productItem.id) === String(id)
         );
 
-        if (
-          !product ||
-          item.quantity >= product.stock
-        ) {
+        if (!product || item.quantity >= product.stock) {
           return item;
         }
 
@@ -438,14 +331,11 @@ function POS() {
           String(item.id) === String(id)
             ? {
                 ...item,
-                quantity:
-                  item.quantity - 1,
+                quantity: item.quantity - 1,
               }
             : item
         )
-        .filter(
-          (item) => item.quantity > 0
-        )
+        .filter((item) => item.quantity > 0)
     );
   };
 
@@ -455,10 +345,7 @@ function POS() {
 
   const deleteItem = (id) => {
     setCart((current) =>
-      current.filter(
-        (item) =>
-          String(item.id) !== String(id)
-      )
+      current.filter((item) => String(item.id) !== String(id))
     );
   };
 
@@ -482,36 +369,24 @@ function POS() {
   const openCheckout = () => {
     if (cart.length === 0) return;
 
-    const latestInventory =
-      readStoredArray(PRODUCTS_KEY);
+    const latestInventory = readStoredArray(PRODUCTS_KEY);
 
-    const unavailable = cart.find(
-      (item) => {
-        const product =
-          latestInventory.find(
-            (inventoryItem) =>
-              String(inventoryItem.id) ===
-              String(item.id)
-          );
+    const unavailable = cart.find((item) => {
+      const product = latestInventory.find(
+        (inventoryItem) => String(inventoryItem.id) === String(item.id)
+      );
 
-        return (
-          !product ||
-          product.showOnPOS !== true ||
-          Number(product.quantity) <
-            item.quantity
-        );
-      }
-    );
+      return (
+        !product ||
+        product.showOnPOS !== true ||
+        Number(product.quantity) < item.quantity
+      );
+    });
 
     if (unavailable) {
-      setInventoryProducts(
-        latestInventory
-      );
+      setInventoryProducts(latestInventory);
 
-      alert(
-        `Not enough stock for ${unavailable.name}.`
-      );
-
+      alert(`Not enough stock for ${unavailable.name}.`);
       return;
     }
 
@@ -527,28 +402,19 @@ function POS() {
   // ========================================
 
   const handleExactPayment = () => {
-    setAmountReceived(
-      total.toFixed(2)
-    );
-
+    setAmountReceived(total.toFixed(2));
     setAmountReceivedLbp("");
   };
 
   const addQuickUsd = (amount) => {
     setAmountReceived((current) =>
-      (
-        (Number(current) || 0) +
-        amount
-      ).toFixed(2)
+      ((Number(current) || 0) + amount).toFixed(2)
     );
   };
 
   const addQuickLbp = (amount) => {
     setAmountReceivedLbp((current) =>
-      String(
-        (Number(current) || 0) +
-          amount
-      )
+      String((Number(current) || 0) + amount)
     );
   };
 
@@ -572,50 +438,34 @@ function POS() {
     if (cart.length === 0) return;
 
     if (totalPaid + 0.000001 < total) {
-      alert(
-        "Amount received is less than the amount due."
-      );
+      alert("Amount received is less than the amount due.");
       return;
     }
 
-    const latestInventory =
-      readStoredArray(PRODUCTS_KEY);
+    const latestInventory = readStoredArray(PRODUCTS_KEY);
 
     // Verify stock
-
     for (const item of cart) {
-      const product =
-        latestInventory.find(
-          (inventoryItem) =>
-            String(inventoryItem.id) ===
-            String(item.id)
-        );
+      const product = latestInventory.find(
+        (inventoryItem) => String(inventoryItem.id) === String(item.id)
+      );
 
       if (
         !product ||
         product.showOnPOS !== true ||
-        Number(product.quantity) <
-          item.quantity
+        Number(product.quantity) < item.quantity
       ) {
-        setInventoryProducts(
-          latestInventory
-        );
+        setInventoryProducts(latestInventory);
 
-        alert(
-          `Not enough stock for ${item.name}.`
-        );
-
+        alert(`Not enough stock for ${item.name}.`);
         return;
       }
     }
 
     // Prepare sale
-
     const sale = {
       id: `POS-${Date.now()}`,
-      owner:
-        ownerSearch.trim() ||
-        "Walk-in Customer",
+      owner: ownerSearch.trim() || "Walk-in Customer",
       ownerId: null,
       items: cart.map((item) => ({
         ...item,
@@ -631,116 +481,72 @@ function POS() {
     };
 
     // Deduct purchased quantities
+    const updatedInventory = latestInventory.map((product) => {
+      const soldProduct = cart.find(
+        (item) => String(item.id) === String(product.id)
+      );
 
-    const updatedInventory =
-      latestInventory.map((product) => {
-        const soldProduct = cart.find(
-          (item) =>
-            String(item.id) ===
-            String(product.id)
-        );
+      if (!soldProduct) {
+        return product;
+      }
 
-        if (!soldProduct) {
-          return product;
-        }
-
-        return {
-          ...product,
-          quantity: Math.max(
-            Number(product.quantity) -
-              soldProduct.quantity,
-            0
-          ),
-        };
-      });
+      return {
+        ...product,
+        quantity: Math.max(
+          Number(product.quantity) - soldProduct.quantity,
+          0
+        ),
+      };
+    });
 
     // Read sales history
-
     let previousSales;
 
     try {
-      const savedSales =
-        localStorage.getItem(
-          SALES_KEY
-        );
+      const savedSales = localStorage.getItem(SALES_KEY);
 
-      const parsed = savedSales
-        ? JSON.parse(savedSales)
-        : [];
+      const parsed = savedSales ? JSON.parse(savedSales) : [];
 
       if (!Array.isArray(parsed)) {
-        throw new Error(
-          "Invalid sales history"
-        );
+        throw new Error("Invalid sales history");
       }
 
       previousSales = parsed;
     } catch (error) {
       console.error(error);
-
-      alert(
-        "Could not read sales history."
-      );
-
+      alert("Could not read sales history.");
       return;
     }
 
     // Save sale and inventory
-
-    const oldProducts =
-      localStorage.getItem(
-        PRODUCTS_KEY
-      );
-
-    const oldSales =
-      localStorage.getItem(
-        SALES_KEY
-      );
+    const oldProducts = localStorage.getItem(PRODUCTS_KEY);
+    const oldSales = localStorage.getItem(SALES_KEY);
 
     try {
       localStorage.setItem(
         PRODUCTS_KEY,
-        JSON.stringify(
-          updatedInventory
-        )
+        JSON.stringify(updatedInventory)
       );
 
       localStorage.setItem(
         SALES_KEY,
-        JSON.stringify([
-          sale,
-          ...previousSales,
-        ])
+        JSON.stringify([sale, ...previousSales])
       );
     } catch (error) {
-      console.error(
-        "Could not save sale:",
-        error
-      );
+      console.error("Could not save sale:", error);
 
       // Restore previous data
-
       try {
         if (oldProducts === null) {
-          localStorage.removeItem(
-            PRODUCTS_KEY
-          );
+          localStorage.removeItem(PRODUCTS_KEY);
         } else {
-          localStorage.setItem(
-            PRODUCTS_KEY,
-            oldProducts
-          );
+          localStorage.setItem(PRODUCTS_KEY, oldProducts);
         }
 
         if (oldSales === null) {
-          localStorage.removeItem(
-            SALES_KEY
-          );
+          localStorage.removeItem(SALES_KEY);
         } else {
-          localStorage.setItem(
-            SALES_KEY,
-            oldSales
-          );
+          localStorage.setItem(SALES_KEY, oldSales);
         }
       } catch (restoreError) {
         console.error(
@@ -754,24 +560,16 @@ function POS() {
     }
 
     // Update inventory immediately
+    setInventoryProducts(updatedInventory);
 
-    setInventoryProducts(
-      updatedInventory
+    window.dispatchEvent(
+      new CustomEvent("vetClinicProductsUpdated", {
+        detail: updatedInventory,
+      })
     );
 
     window.dispatchEvent(
-      new CustomEvent(
-        "vetClinicProductsUpdated",
-        {
-          detail: updatedInventory,
-        }
-      )
-    );
-
-    window.dispatchEvent(
-      new Event(
-        "vetClinicPOSSalesUpdated"
-      )
+      new Event("vetClinicPOSSalesUpdated")
     );
 
     setLastSale(sale);
@@ -788,13 +586,7 @@ function POS() {
   const handleLogout = () => {
     setAccountOpen(false);
     navigate("/");
-  };
-
-  // ========================================
-  // PART 2 STARTS WITH return (
-  // ========================================
-
-  return (
+  };  return (
     <div className="dashboard-layout pos-dashboard-layout">
       <Sidebar />
 
@@ -965,7 +757,7 @@ function POS() {
             background: #f5f9f8;
           }
 
-          /* MAIN LAYOUT - CART WIDTH UNCHANGED */
+          /* MAIN LAYOUT */
 
           .pos-content {
             height: calc(100vh - 64px);
@@ -1027,7 +819,7 @@ function POS() {
             font-size: 10px;
           }
 
-          /* PRODUCTS - 4 PER ROW */
+          /* PRODUCTS — SAME FOUR PER ROW */
 
           .pos-products-grid {
             display: grid;
@@ -1051,8 +843,6 @@ function POS() {
             border-color: #9ed9d5;
             box-shadow: 0 5px 15px rgba(16,24,40,.06);
           }
-
-          /* BIGGER IMAGE AREA */
 
           .pos-product-image {
             height: 105px;
@@ -1129,7 +919,7 @@ function POS() {
             cursor: not-allowed;
           }
 
-          /* CART - SAME LAYOUT */
+          /* CART */
 
           .pos-cart-panel {
             min-width: 0;
@@ -1757,57 +1547,162 @@ function POS() {
               border-bottom: 1px solid #e6eceb;
             }
           }
+
+          /* ONLY FIXES: STABLE ADD BUTTON + WORKING SCROLL */
+
+          html body #root .pos-dashboard-layout {
+            height: 100vh !important;
+            height: 100dvh !important;
+            min-height: 0 !important;
+            max-height: 100dvh !important;
+            overflow: hidden !important;
+          }
+
+          html body #root .pos-dashboard-layout > .pos-main {
+            height: 100% !important;
+            min-height: 0 !important;
+            min-width: 0 !important;
+            max-height: 100% !important;
+
+            display: flex !important;
+            flex-direction: column !important;
+            overflow: hidden !important;
+          }
+
+          html body #root .pos-main > .pos-topbar {
+            flex: 0 0 64px !important;
+            height: 64px !important;
+            min-height: 64px !important;
+          }
+
+          html body #root .pos-main > .pos-content {
+            flex: 1 1 0 !important;
+            min-height: 0 !important;
+            min-width: 0 !important;
+            height: auto !important;
+
+            grid-template-rows: minmax(0, 1fr) !important;
+            align-items: stretch !important;
+            overflow: hidden !important;
+          }
+
+          html body #root .pos-content > .pos-products-section {
+            min-height: 0 !important;
+            min-width: 0 !important;
+            height: 100% !important;
+
+            overflow-y: auto !important;
+            overflow-x: hidden !important;
+            scrollbar-gutter: stable;
+            overscroll-behavior-y: contain;
+          }
+
+          html body #root .pos-products-section .pos-products-grid {
+            align-content: start !important;
+          }
+
+          html body #root .pos-product-bottom > .pos-add-button,
+          html body #root .pos-product-bottom > .pos-add-button:hover,
+          html body #root .pos-product-bottom > .pos-add-button:focus,
+          html body #root .pos-product-bottom > .pos-add-button:active,
+          html body #root .pos-product-bottom > .pos-add-button:disabled {
+            position: static !important;
+            inset: auto !important;
+            float: none !important;
+
+            flex: 0 0 27px !important;
+            width: 27px !important;
+            min-width: 27px !important;
+            max-width: 27px !important;
+            height: 27px !important;
+            min-height: 27px !important;
+            max-height: 27px !important;
+
+            margin: 0 !important;
+            padding: 0 !important;
+            transform: none !important;
+            translate: none !important;
+            scale: none !important;
+          }
+
+          html body #root .pos-content > .pos-cart-panel {
+            min-height: 0 !important;
+            height: 100% !important;
+            max-height: 100% !important;
+
+            display: flex !important;
+            flex-direction: column !important;
+            overflow: hidden !important;
+          }
+
+          html body #root .pos-cart-panel > .pos-cart-header,
+          html body #root .pos-cart-panel > .pos-cart-footer {
+            flex: 0 0 auto !important;
+          }
+
+          html body #root .pos-cart-panel > .pos-cart-body {
+            flex: 1 1 0 !important;
+            min-height: 0 !important;
+            height: auto !important;
+
+            overflow-y: auto !important;
+            overflow-x: hidden !important;
+            scrollbar-gutter: stable;
+            overscroll-behavior-y: contain;
+          }
+
+          @media (max-width: 760px) {
+            html body #root .pos-main > .pos-content {
+              display: block !important;
+              overflow-y: auto !important;
+              overflow-x: hidden !important;
+              scrollbar-gutter: stable;
+            }
+
+            html body #root .pos-content > .pos-products-section {
+              height: auto !important;
+              overflow: visible !important;
+            }
+
+            html body #root .pos-content > .pos-cart-panel {
+              height: 400px !important;
+              min-height: 400px !important;
+              max-height: none !important;
+            }
+          }
         `}</style>
 
         {/* HEADER */}
 
         <header className="pos-topbar">
-          <h1 className="pos-page-title">
-            POS
-          </h1>
+          <h1 className="pos-page-title">POS</h1>
 
           <div className="pos-account-wrapper">
             <button
               type="button"
               className="pos-account-button"
-              onClick={() =>
-                setAccountOpen(!accountOpen)
-              }
+              onClick={() => setAccountOpen(!accountOpen)}
             >
-              <div className="pos-staff-avatar">
-                CS
-              </div>
+              <div className="pos-staff-avatar">CS</div>
 
               <div className="pos-staff-info">
-                <div className="pos-staff-name">
-                  Clinic Staff
-                </div>
-                <div className="pos-staff-role">
-                  Staff
-                </div>
+                <div className="pos-staff-name">Clinic Staff</div>
+                <div className="pos-staff-role">Staff</div>
               </div>
 
-              <FaChevronDown
-                className="pos-account-arrow"
-              />
+              <FaChevronDown className="pos-account-arrow" />
             </button>
 
             {accountOpen && (
               <div className="pos-account-menu">
                 <div className="pos-account-menu-header">
-                  <div className="pos-staff-name">
-                    Clinic Staff
-                  </div>
-                  <div className="pos-staff-role">
-                    Staff Account
-                  </div>
+                  <div className="pos-staff-name">Clinic Staff</div>
+                  <div className="pos-staff-role">Staff Account</div>
                 </div>
 
                 <button
                   type="button"
-                  onClick={() =>
-                    setAccountOpen(false)
-                  }
+                  onClick={() => setAccountOpen(false)}
                 >
                   <FaUser />
                   Profile
@@ -1815,18 +1710,13 @@ function POS() {
 
                 <button
                   type="button"
-                  onClick={() =>
-                    setAccountOpen(false)
-                  }
+                  onClick={() => setAccountOpen(false)}
                 >
                   <FaCog />
                   Settings
                 </button>
 
-                <button
-                  type="button"
-                  onClick={handleLogout}
-                >
+                <button type="button" onClick={handleLogout}>
                   <FaSignOutAlt />
                   Logout
                 </button>
@@ -1840,8 +1730,6 @@ function POS() {
 
           <section className="pos-products-section">
             <div className="pos-tools">
-              {/* SEARCH WITH ICON */}
-
               <div className="pos-search-box">
                 <FaSearch />
 
@@ -1849,54 +1737,34 @@ function POS() {
                   type="text"
                   placeholder="Search products..."
                   value={search}
-                  onChange={(event) =>
-                    setSearch(event.target.value)
-                  }
+                  onChange={(event) => setSearch(event.target.value)}
                 />
               </div>
-
-              {/* DYNAMIC CATEGORIES */}
 
               <select
                 className="pos-category-select"
                 value={category}
-                onChange={(event) =>
-                  setCategory(event.target.value)
-                }
+                onChange={(event) => setCategory(event.target.value)}
               >
                 {categories.map((item) => (
-                  <option
-                    key={item}
-                    value={item}
-                  >
+                  <option key={item} value={item}>
                     {item}
                   </option>
                 ))}
               </select>
             </div>
 
-            {/* FOUR PRODUCTS PER ROW */}
-
             <div className="pos-products-grid">
               {filteredProducts.map((product) => {
                 const cartItem = cart.find(
-                  (item) =>
-                    String(item.id) ===
-                    String(product.id)
+                  (item) => String(item.id) === String(product.id)
                 );
 
-                const quantityInCart =
-                  cartItem?.quantity || 0;
-
-                const canAdd =
-                  product.stock >
-                  quantityInCart;
+                const quantityInCart = cartItem?.quantity || 0;
+                const canAdd = product.stock > quantityInCart;
 
                 return (
-                  <div
-                    className="pos-product-card"
-                    key={product.id}
-                  >
+                  <div className="pos-product-card" key={product.id}>
                     <div className="pos-product-image">
                       {product.image ? (
                         <img
@@ -1919,8 +1787,7 @@ function POS() {
                     <div className="pos-product-bottom">
                       <div>
                         <div className="pos-product-price">
-                          $
-                          {product.price.toFixed(2)}
+                          ${product.price.toFixed(2)}
                         </div>
 
                         <div className="pos-product-stock">
@@ -1931,15 +1798,9 @@ function POS() {
                       <button
                         type="button"
                         className="pos-add-button"
-                        onClick={() =>
-                          addToCart(product)
-                        }
+                        onClick={() => addToCart(product)}
                         disabled={!canAdd}
-                        title={
-                          canAdd
-                            ? "Add to cart"
-                            : "Out of stock"
-                        }
+                        title={canAdd ? "Add to cart" : "Out of stock"}
                       >
                         <FaPlus />
                       </button>
@@ -1965,14 +1826,12 @@ function POS() {
                   }}
                 />
 
-                <div>
-                  No products found.
-                </div>
+                <div>No products found.</div>
               </div>
             )}
           </section>
 
-          {/* CART - SAME POSITION AND DESIGN */}
+          {/* CART */}
 
           <aside className="pos-cart-panel">
             <div className="pos-cart-header">
@@ -1983,9 +1842,7 @@ function POS() {
                 className="pos-owner-select"
                 placeholder="Enter owner name"
                 value={ownerSearch}
-                onChange={(event) =>
-                  setOwnerSearch(event.target.value)
-                }
+                onChange={(event) => setOwnerSearch(event.target.value)}
               />
             </div>
 
@@ -1996,28 +1853,19 @@ function POS() {
                     <FaShoppingCart />
                   </div>
 
-                  <strong>
-                    Your cart is empty
-                  </strong>
-
-                  <span>
-                    Add products to get started
-                  </span>
+                  <strong>Your cart is empty</strong>
+                  <span>Add products to get started</span>
                 </div>
               ) : (
                 cart.map((item) => (
-                  <div
-                    className="pos-cart-item"
-                    key={item.id}
-                  >
+                  <div className="pos-cart-item" key={item.id}>
                     <div className="pos-cart-item-name">
                       {item.name}
                     </div>
 
                     <div className="pos-cart-item-row">
                       <div className="pos-cart-price">
-                        $
-                        {item.price.toFixed(2)}
+                        ${item.price.toFixed(2)}
                         {" x "}
                         {item.quantity}
                       </div>
@@ -2026,11 +1874,7 @@ function POS() {
                         <button
                           type="button"
                           className="pos-quantity-button"
-                          onClick={() =>
-                            decreaseQuantity(
-                              item.id
-                            )
-                          }
+                          onClick={() => decreaseQuantity(item.id)}
                         >
                           <FaMinus />
                         </button>
@@ -2042,22 +1886,13 @@ function POS() {
                         <button
                           type="button"
                           className="pos-quantity-button"
-                          onClick={() =>
-                            increaseQuantity(
-                              item.id
-                            )
-                          }
+                          onClick={() => increaseQuantity(item.id)}
                           disabled={
                             item.quantity >=
-                            (
-                              products.find(
-                                (product) =>
-                                  String(
-                                    product.id
-                                  ) ===
-                                  String(item.id)
-                              )?.stock || 0
-                            )
+                            (products.find(
+                              (product) =>
+                                String(product.id) === String(item.id)
+                            )?.stock || 0)
                           }
                         >
                           <FaPlus />
@@ -2066,9 +1901,7 @@ function POS() {
                         <button
                           type="button"
                           className="pos-delete-button"
-                          onClick={() =>
-                            deleteItem(item.id)
-                          }
+                          onClick={() => deleteItem(item.id)}
                         >
                           <FaTrash />
                         </button>
@@ -2082,18 +1915,12 @@ function POS() {
             <div className="pos-cart-footer">
               <div className="pos-summary-row">
                 <span>Subtotal</span>
-
-                <strong>
-                  ${subtotal.toFixed(2)}
-                </strong>
+                <strong>${subtotal.toFixed(2)}</strong>
               </div>
 
               <div className="pos-summary-row total">
                 <span>Total</span>
-
-                <strong>
-                  ${subtotal.toFixed(2)}
-                </strong>
+                <strong>${subtotal.toFixed(2)}</strong>
               </div>
 
               <button
@@ -2121,15 +1948,9 @@ function POS() {
                   className={`pos-bottom-action ${
                     hasDelivery ? "active" : ""
                   }`}
-                  onClick={() =>
-                    setHasDelivery(
-                      !hasDelivery
-                    )
-                  }
+                  onClick={() => setHasDelivery(!hasDelivery)}
                 >
-                  <span className="pos-bottom-action-emoji">
-                    🚚
-                  </span>
+                  <span className="pos-bottom-action-emoji">🚚</span>
                   Delivery
                 </button>
 
@@ -2138,9 +1959,7 @@ function POS() {
                   className="pos-bottom-action"
                   onClick={handleRecall}
                 >
-                  <span className="pos-bottom-action-emoji">
-                    ↩️
-                  </span>
+                  <span className="pos-bottom-action-emoji">↩️</span>
                   Recall
                 </button>
 
@@ -2149,9 +1968,7 @@ function POS() {
                   className="pos-bottom-action"
                   onClick={handleRefund}
                 >
-                  <span className="pos-bottom-action-emoji">
-                    ↪️
-                  </span>
+                  <span className="pos-bottom-action-emoji">↪️</span>
                   Refund
                 </button>
               </div>
@@ -2167,17 +1984,13 @@ function POS() {
               <div className="pos-reference-checkout-header">
                 <div>
                   <h2>Checkout</h2>
-                  <p>
-                    Complete your transaction
-                  </p>
+                  <p>Complete your transaction</p>
                 </div>
 
                 <button
                   type="button"
                   className="pos-reference-close"
-                  onClick={() =>
-                    setCheckoutOpen(false)
-                  }
+                  onClick={() => setCheckoutOpen(false)}
                 >
                   <FaTimes />
                 </button>
@@ -2208,9 +2021,7 @@ function POS() {
                         step="0.01"
                         value={discount}
                         onChange={(event) =>
-                          setDiscount(
-                            event.target.value
-                          )
+                          setDiscount(event.target.value)
                         }
                       />
                     </div>
@@ -2219,8 +2030,7 @@ function POS() {
                       <label>Discount Applied</label>
 
                       <div className="pos-financial-value">
-                        $
-                        {discountNumber.toFixed(2)}
+                        ${discountNumber.toFixed(2)}
                       </div>
                     </div>
 
@@ -2228,25 +2038,17 @@ function POS() {
                       <label>Total (LBP)</label>
 
                       <div className="pos-financial-value">
-                        {totalLbp.toLocaleString(
-                          "en-US",
-                          {
-                            maximumFractionDigits: 0,
-                          }
-                        )}
+                        {totalLbp.toLocaleString("en-US", {
+                          maximumFractionDigits: 0,
+                        })}
                         {" LBP"}
                       </div>
                     </div>
                   </div>
 
                   <div className="pos-reference-total-box">
-                    <span>
-                      Total Amount Due
-                    </span>
-
-                    <strong>
-                      ${total.toFixed(2)}
-                    </strong>
+                    <span>Total Amount Due</span>
+                    <strong>${total.toFixed(2)}</strong>
                   </div>
 
                   <label className="pos-delivery-checkbox">
@@ -2254,12 +2056,9 @@ function POS() {
                       type="checkbox"
                       checked={hasDelivery}
                       onChange={(event) =>
-                        setHasDelivery(
-                          event.target.checked
-                        )
+                        setHasDelivery(event.target.checked)
                       }
                     />
-
                     Delivery Order
                   </label>
 
@@ -2272,24 +2071,17 @@ function POS() {
                         className="pos-checkout-mini-item"
                       >
                         <div>
-                          <strong>
-                            {item.name}
-                          </strong>
+                          <strong>{item.name}</strong>
 
                           <span>
-                            $
-                            {item.price.toFixed(2)}
+                            ${item.price.toFixed(2)}
                             {" x "}
                             {item.quantity}
                           </span>
                         </div>
 
                         <strong>
-                          $
-                          {(
-                            item.price *
-                            item.quantity
-                          ).toFixed(2)}
+                          ${(item.price * item.quantity).toFixed(2)}
                         </strong>
                       </div>
                     ))}
@@ -2303,10 +2095,7 @@ function POS() {
 
                   <div className="pos-reference-amount-due">
                     <span>Amount Due</span>
-
-                    <strong>
-                      ${total.toFixed(2)}
-                    </strong>
+                    <strong>${total.toFixed(2)}</strong>
                   </div>
 
                   <div className="pos-received-title">
@@ -2314,24 +2103,14 @@ function POS() {
                   </div>
 
                   <div className="pos-reference-payment-methods">
-                    {[
-                      "Cash",
-                      "Card",
-                    ].map((method) => (
+                    {["Cash", "Card"].map((method) => (
                       <button
                         key={method}
                         type="button"
                         className={
-                          paymentMethod ===
-                          method
-                            ? "active"
-                            : ""
+                          paymentMethod === method ? "active" : ""
                         }
-                        onClick={() =>
-                          setPaymentMethod(
-                            method
-                          )
-                        }
+                        onClick={() => setPaymentMethod(method)}
                       >
                         {method}
                       </button>
@@ -2339,9 +2118,7 @@ function POS() {
                   </div>
 
                   <div className="pos-reference-field">
-                    <label>
-                      Amount Received (USD)
-                    </label>
+                    <label>Amount Received (USD)</label>
 
                     <input
                       type="number"
@@ -2350,44 +2127,32 @@ function POS() {
                       placeholder="0.00"
                       value={amountReceived}
                       onChange={(event) =>
-                        setAmountReceived(
-                          event.target.value
-                        )
+                        setAmountReceived(event.target.value)
                       }
                     />
 
                     <div className="pos-reference-quick-payments">
                       <button
                         type="button"
-                        onClick={
-                          handleExactPayment
-                        }
+                        onClick={handleExactPayment}
                       >
                         Exact
                       </button>
 
-                      {[5, 10, 20, 50, 100].map(
-                        (amount) => (
-                          <button
-                            key={amount}
-                            type="button"
-                            onClick={() =>
-                              addQuickUsd(
-                                amount
-                              )
-                            }
-                          >
-                            +${amount}
-                          </button>
-                        )
-                      )}
+                      {[5, 10, 20, 50, 100].map((amount) => (
+                        <button
+                          key={amount}
+                          type="button"
+                          onClick={() => addQuickUsd(amount)}
+                        >
+                          +${amount}
+                        </button>
+                      ))}
                     </div>
                   </div>
 
                   <div className="pos-reference-field">
-                    <label>
-                      Amount Received (LBP)
-                    </label>
+                    <label>Amount Received (LBP)</label>
 
                     <input
                       type="number"
@@ -2395,31 +2160,18 @@ function POS() {
                       placeholder="0"
                       value={amountReceivedLbp}
                       onChange={(event) =>
-                        setAmountReceivedLbp(
-                          event.target.value
-                        )
+                        setAmountReceivedLbp(event.target.value)
                       }
                     />
 
                     <div className="pos-reference-quick-payments">
-                      {[
-                        100000,
-                        500000,
-                        1000000,
-                      ].map((amount) => (
+                      {[100000, 500000, 1000000].map((amount) => (
                         <button
                           key={amount}
                           type="button"
-                          onClick={() =>
-                            addQuickLbp(
-                              amount
-                            )
-                          }
+                          onClick={() => addQuickLbp(amount)}
                         >
-                          +
-                          {amount.toLocaleString(
-                            "en-US"
-                          )}
+                          +{amount.toLocaleString("en-US")}
                         </button>
                       ))}
                     </div>
@@ -2428,31 +2180,20 @@ function POS() {
                   <div className="pos-reference-payment-summary">
                     <div>
                       <span>Total Paid</span>
-
-                      <strong>
-                        $
-                        {totalPaid.toFixed(2)}
-                      </strong>
+                      <strong>${totalPaid.toFixed(2)}</strong>
                     </div>
 
                     <div>
                       <span>Remaining</span>
 
                       <strong>
-                        $
-                        {Math.max(
-                          total - totalPaid,
-                          0
-                        ).toFixed(2)}
+                        ${Math.max(total - totalPaid, 0).toFixed(2)}
                       </strong>
                     </div>
 
                     <div>
                       <span>Change</span>
-
-                      <strong>
-                        ${change.toFixed(2)}
-                      </strong>
+                      <strong>${change.toFixed(2)}</strong>
                     </div>
                   </div>
                 </div>
@@ -2461,9 +2202,7 @@ function POS() {
               <div className="pos-reference-checkout-footer">
                 <button
                   type="button"
-                  onClick={() =>
-                    setCheckoutOpen(false)
-                  }
+                  onClick={() => setCheckoutOpen(false)}
                 >
                   Cancel
                 </button>
@@ -2472,10 +2211,7 @@ function POS() {
                   type="button"
                   className="pos-complete-sale"
                   onClick={finishSale}
-                  disabled={
-                    totalPaid + 0.000001 <
-                    total
-                  }
+                  disabled={totalPaid + 0.000001 < total}
                 >
                   Complete Sale
                 </button>
@@ -2494,31 +2230,21 @@ function POS() {
               <h2>Sale Completed!</h2>
 
               <p>
-                Your transaction was
-                completed successfully.
+                Your transaction was completed successfully.
               </p>
 
               {lastSale && (
                 <>
-                  <p>
-                    Sale ID: {lastSale.id}
-                  </p>
-
-                  <p>
-                    Total: $
-                    {lastSale.total.toFixed(2)}
-                  </p>
+                  <p>Sale ID: {lastSale.id}</p>
+                  <p>Total: ${lastSale.total.toFixed(2)}</p>
                 </>
               )}
 
               <button
                 type="button"
                 className="pos-success-button"
-                onClick={() =>
-                  setSaleComplete(false)
-                }
+                onClick={() => setSaleComplete(false)}
               >
-                Done
               </button>
             </div>
           </div>

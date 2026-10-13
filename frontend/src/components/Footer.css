@@ -1,43 +1,41 @@
+
 /* =========================================
    STORE FOOTER
-   VET CLINIC TEAL / TURQUOISE THEME
+   DYNAMIC COLORS FROM SETTINGS
 ========================================= */
 
 .store-footer {
   width: 100%;
   margin-top: 80px;
 
-  /* VET CLINIC COLORS */
-  --footer-color: #1aa6a6;
+  position: relative;
+
+  --footer-color: #11797b;
   --footer-dark: #11797b;
   --footer-light: #e8f7f7;
   --footer-text: #ffffff;
   --footer-muted: rgba(255, 255, 255, 0.82);
-
-  position: relative;
 }
 
 /* =========================================
    WAVE
 ========================================= */
 
-.footer-wave {
+.store-footer .footer-wave {
   width: 100%;
   height: 110px;
 
   overflow: hidden;
-
   margin-bottom: -2px;
 }
 
-.footer-wave svg {
+.store-footer .footer-wave svg {
   display: block;
-
   width: 100%;
   height: 100%;
 }
 
-.footer-wave-line {
+.store-footer .footer-wave-line {
   fill: none;
 
   stroke: var(--footer-color);
@@ -46,15 +44,15 @@
   opacity: 0.35;
 }
 
-.footer-wave-line-one {
+.store-footer .footer-wave-line-one {
   opacity: 0.2;
 }
 
-.footer-wave-line-two {
+.store-footer .footer-wave-line-two {
   opacity: 0.45;
 }
 
-.footer-wave-fill {
+.store-footer .footer-wave-fill {
   fill: var(--footer-color);
 }
 
@@ -62,17 +60,15 @@
    MAIN
 ========================================= */
 
-.footer-main {
+.store-footer .footer-main {
   background: var(--footer-color);
-
   color: var(--footer-text);
 
   padding: 25px 0 55px;
 }
 
-.footer-container {
+.store-footer .footer-container {
   width: min(1180px, calc(100% - 48px));
-
   margin: 0 auto;
 
   display: grid;
@@ -90,57 +86,59 @@
    BRAND
 ========================================= */
 
-.footer-brand {
+.store-footer .footer-brand {
   min-width: 0;
 }
 
-/* Dynamic banner uploaded from Settings */
+.store-footer .footer-banner {
+  width: 90px;
+  height: 90px;
 
-.footer-banner {
-  width: 100%;
-  max-width: 270px;
+  min-width: 90px;
+  min-height: 90px;
 
-  height: 100px;
+  max-width: 90px;
+  max-height: 90px;
 
+  padding: 0;
   margin-bottom: 20px;
 
   overflow: hidden;
-
   border-radius: 12px;
 
   display: flex;
   align-items: center;
-  justify-content: flex-start;
+  justify-content: center;
 }
 
-.footer-banner img {
+.store-footer .footer-banner img {
+  display: block;
+
   width: 100%;
   height: 100%;
 
-  display: block;
+  object-fit: cover;
+  object-position: center;
 
-  object-fit: contain;
-  object-position: left center;
+  border-radius: 12px;
 }
 
-.footer-brand h2 {
+.store-footer .footer-brand h2 {
   margin: 0 0 10px;
 
   font-size: 25px;
   font-weight: 700;
 
-  color: #ffffff;
+  color: var(--footer-text);
 }
 
-.footer-brand p {
+.store-footer .footer-brand p {
   max-width: 320px;
-
   margin: 0;
 
   color: var(--footer-muted);
 
   line-height: 1.7;
-
   font-size: 14px;
 }
 
@@ -148,29 +146,27 @@
    COLUMNS
 ========================================= */
 
-.footer-column {
+.store-footer .footer-column {
   display: flex;
   flex-direction: column;
 
   align-items: flex-start;
-
   gap: 12px;
 }
 
-.footer-column h3 {
+.store-footer .footer-column h3 {
   margin: 0 0 8px;
 
-  color: #ffffff;
+  color: var(--footer-text);
 
   font-size: 17px;
   font-weight: 700;
 }
 
-.footer-column a {
+.store-footer .footer-column a {
   color: var(--footer-muted);
 
   text-decoration: none;
-
   font-size: 14px;
 
   transition:
@@ -178,9 +174,8 @@
     transform 0.2s ease;
 }
 
-.footer-column a:hover {
-  color: #ffffff;
-
+.store-footer .footer-column a:hover {
+  color: var(--footer-text);
   transform: translateX(3px);
 }
 
@@ -188,32 +183,29 @@
    CONTACT
 ========================================= */
 
-.footer-contact-link {
+.store-footer .footer-contact-link {
   display: flex;
   align-items: center;
 
   gap: 10px;
-
   min-width: 0;
 }
 
-.footer-contact-link svg {
+.store-footer .footer-contact-link svg {
   flex-shrink: 0;
 
   font-size: 15px;
-
-  color: #ffffff;
+  color: var(--footer-text);
 }
 
-.footer-contact-link span {
+.store-footer .footer-contact-link span {
   overflow-wrap: anywhere;
 }
 
-.footer-address {
+.store-footer .footer-address {
   color: var(--footer-muted);
 
   font-size: 14px;
-
   line-height: 1.5;
 }
 
@@ -221,17 +213,15 @@
    BOTTOM BAR
 ========================================= */
 
-.footer-bottom {
+.store-footer .footer-bottom {
   background: var(--footer-dark);
-
-  color: rgba(255, 255, 255, 0.85);
+  color: var(--footer-muted);
 
   padding: 18px 0;
 }
 
-.footer-bottom-container {
+.store-footer .footer-bottom-container {
   width: min(1180px, calc(100% - 48px));
-
   margin: 0 auto;
 
   position: relative;
@@ -243,17 +233,16 @@
   min-height: 24px;
 }
 
-.footer-bottom p {
+.store-footer .footer-bottom p {
   margin: 0;
-
   font-size: 13px;
 }
 
 /* =========================================
-   POWERED BY DIRAYA - CENTER
+   POWERED BY DIRAYA
 ========================================= */
 
-.diraya-link {
+.store-footer .diraya-link {
   position: absolute;
 
   left: 50%;
@@ -261,24 +250,21 @@
 
   transform: translate(-50%, -50%);
 
-  color: #ffffff;
+  color: var(--footer-text);
 
   text-decoration: none;
-
   font-size: 13px;
-
   white-space: nowrap;
 
   transition: opacity 0.2s ease;
 }
 
-.diraya-link:hover {
+.store-footer .diraya-link:hover {
   opacity: 0.75;
 }
 
-.diraya-link strong {
-  color: #ffffff;
-
+.store-footer .diraya-link strong {
+  color: var(--footer-text);
   font-weight: 700;
 }
 
@@ -287,9 +273,8 @@
 ========================================= */
 
 @media (max-width: 950px) {
-  .footer-container {
+  .store-footer .footer-container {
     grid-template-columns: 1.5fr 1fr;
-
     gap: 45px;
   }
 }
@@ -303,33 +288,26 @@
     margin-top: 55px;
   }
 
-  .footer-wave {
+  .store-footer .footer-wave {
     height: 70px;
   }
 
-  .footer-main {
+  .store-footer .footer-main {
     padding: 20px 0 40px;
   }
 
-  .footer-container {
+  .store-footer .footer-container {
     width: min(100% - 32px, 1180px);
 
     grid-template-columns: 1fr;
-
     gap: 35px;
   }
 
-  .footer-banner {
-    max-width: 240px;
-
-    height: 90px;
-  }
-
-  .footer-bottom {
+  .store-footer .footer-bottom {
     padding: 16px 0;
   }
 
-  .footer-bottom-container {
+  .store-footer .footer-bottom-container {
     width: min(100% - 32px, 1180px);
 
     display: flex;
@@ -339,50 +317,19 @@
     justify-content: center;
 
     gap: 8px;
-
     text-align: center;
 
     min-height: auto;
   }
 
-  .footer-bottom p {
+  .store-footer .footer-bottom p {
     margin: 0;
-
     text-align: center;
   }
 
-  .diraya-link {
+  .store-footer .diraya-link {
     position: static;
-
     transform: none;
-
     text-align: center;
   }
-}
-
-/* FOOTER LOGO - BIGGER */
-
-.store-footer .footer-banner {
-  width: 90px !important;
-  height: 90px !important;
-  min-width: 90px !important;
-  min-height: 90px !important;
-  max-width: 90px !important;
-  max-height: 90px !important;
-
-  padding: 0 !important;
-  margin-bottom: 20px;
-
-  border-radius: 12px !important;
-  overflow: hidden !important;
-}
-
-.store-footer .footer-banner img {
-  display: block !important;
-  width: 100% !important;
-  height: 100% !important;
-
-  object-fit: cover !important;
-  object-position: center !important;
-  border-radius: 12px !important;
 }

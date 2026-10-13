@@ -4,7 +4,6 @@ import Sidebar from "../components/Sidebar";
 import {
   FaSearch,
   FaTimes,
-  FaClipboardList,
 } from "react-icons/fa";
 
 function AuditLog() {
@@ -100,18 +99,14 @@ function AuditLog() {
   // =====================================================
 
   const [search, setSearch] = useState("");
-  const [actionFilter, setActionFilter] =
-    useState("All");
+  const [actionFilter, setActionFilter] = useState("All");
 
   // =====================================================
   // PAGINATION
   // =====================================================
 
-  const [rowsPerPage, setRowsPerPage] =
-    useState(5);
-
-  const [currentPage, setCurrentPage] =
-    useState(1);
+  const [rowsPerPage, setRowsPerPage] = useState(5);
+  const [currentPage, setCurrentPage] = useState(1);
 
   // =====================================================
   // FORMAT DATE
@@ -120,8 +115,7 @@ function AuditLog() {
   const formatDate = (date) => {
     if (!date) return "-";
 
-    const [year, month, day] =
-      date.split("-");
+    const [year, month, day] = date.split("-");
 
     return `${day}/${month}/${year}`;
   };
@@ -131,42 +125,23 @@ function AuditLog() {
   // =====================================================
 
   const filteredLogs = useMemo(() => {
-    const searchText =
-      search.trim().toLowerCase();
+    const searchText = search.trim().toLowerCase();
 
     return auditLogs.filter((log) => {
       const matchesSearch =
         searchText === "" ||
-        log.user
-          .toLowerCase()
-          .includes(searchText) ||
-        log.date
-          .toLowerCase()
-          .includes(searchText) ||
-        log.time
-          .toLowerCase()
-          .includes(searchText) ||
-        log.action
-          .toLowerCase()
-          .includes(searchText) ||
-        log.record
-          .toLowerCase()
-          .includes(searchText);
+        log.user.toLowerCase().includes(searchText) ||
+        log.date.toLowerCase().includes(searchText) ||
+        log.time.toLowerCase().includes(searchText) ||
+        log.action.toLowerCase().includes(searchText) ||
+        log.record.toLowerCase().includes(searchText);
 
       const matchesAction =
-        actionFilter === "All" ||
-        log.action === actionFilter;
+        actionFilter === "All" || log.action === actionFilter;
 
-      return (
-        matchesSearch &&
-        matchesAction
-      );
+      return matchesSearch && matchesAction;
     });
-  }, [
-    auditLogs,
-    search,
-    actionFilter,
-  ]);
+  }, [auditLogs, search, actionFilter]);
 
   // =====================================================
   // PAGINATION
@@ -174,37 +149,25 @@ function AuditLog() {
 
   const totalPages = Math.max(
     1,
-    Math.ceil(
-      filteredLogs.length / rowsPerPage
-    )
+    Math.ceil(filteredLogs.length / rowsPerPage)
   );
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [
-    search,
-    actionFilter,
-    rowsPerPage,
-  ]);
+  }, [search, actionFilter, rowsPerPage]);
 
   useEffect(() => {
     if (currentPage > totalPages) {
       setCurrentPage(totalPages);
     }
-  }, [
-    currentPage,
-    totalPages,
-  ]);
+  }, [currentPage, totalPages]);
 
-  const startIndex =
-    (currentPage - 1) *
-    rowsPerPage;
+  const startIndex = (currentPage - 1) * rowsPerPage;
 
-  const paginatedLogs =
-    filteredLogs.slice(
-      startIndex,
-      startIndex + rowsPerPage
-    );
+  const paginatedLogs = filteredLogs.slice(
+    startIndex,
+    startIndex + rowsPerPage
+  );
 
   // =====================================================
   // CLEAR FILTERS
@@ -217,8 +180,7 @@ function AuditLog() {
   };
 
   const hasActiveFilters =
-    search.trim() !== "" ||
-    actionFilter !== "All";
+    search.trim() !== "" || actionFilter !== "All";
 
   // =====================================================
   // ACTION CLASS
@@ -263,11 +225,6 @@ function AuditLog() {
     boxShadow: "none",
   };
 
-  const normalPageStyle = {
-    ...paginationButtonStyle,
-    fontSize: "13px",
-  };
-
   const activePageStyle = {
     ...paginationButtonStyle,
     border: "1px solid #159f9f",
@@ -285,11 +242,6 @@ function AuditLog() {
       <Sidebar />
 
       <main className="dashboard-main audit-page">
-
-        {/* ===============================================
-            AUDIT LOG CSS
-        =============================================== */}
-
         <style>{`
           .audit-page {
             min-width: 0;
@@ -555,29 +507,17 @@ function AuditLog() {
           }
         `}</style>
 
-        {/* ===============================================
-            HEADER
-        =============================================== */}
+        {/* HEADER */}
 
         <div className="audit-page-header">
           <div className="audit-title">
             <h1>Audit Log</h1>
 
-            <p>
-              View system activity and record changes
-            </p>
+            <p>View system activity and record changes</p>
           </div>
-
-          {/* <div className="audit-view-only">
-            <FaClipboardList />
-
-            <span>View Only</span>
-          </div> */}
         </div>
 
-        {/* ===============================================
-            SEARCH + FILTER
-        =============================================== */}
+        {/* SEARCH + FILTER */}
 
         <div className="audit-filter-row">
           <div className="audit-search-box">
@@ -587,9 +527,7 @@ function AuditLog() {
               type="text"
               placeholder="Search audit log..."
               value={search}
-              onChange={(e) =>
-                setSearch(e.target.value)
-              }
+              onChange={(e) => setSearch(e.target.value)}
             />
 
             {hasActiveFilters && (
@@ -608,31 +546,16 @@ function AuditLog() {
           <select
             className="audit-filter-select"
             value={actionFilter}
-            onChange={(e) =>
-              setActionFilter(e.target.value)
-            }
+            onChange={(e) => setActionFilter(e.target.value)}
           >
-            <option value="All">
-              All Actions
-            </option>
-
-            <option value="Created">
-              Created
-            </option>
-
-            <option value="Updated">
-              Updated
-            </option>
-
-            <option value="Deactivated">
-              Deactivated
-            </option>
+            <option value="All">All Actions</option>
+            <option value="Created">Created</option>
+            <option value="Updated">Updated</option>
+            <option value="Deactivated">Deactivated</option>
           </select>
         </div>
 
-        {/* ===============================================
-            TABLE
-        =============================================== */}
+        {/* TABLE */}
 
         <div className="owners-table-container audit-table-container">
           <div className="audit-table-scroll">
@@ -667,11 +590,7 @@ function AuditLog() {
                       </td>
 
                       <td>
-                        <span
-                          className={getActionClass(
-                            log.action
-                          )}
-                        >
+                        <span className={getActionClass(log.action)}>
                           {log.action}
                         </span>
                       </td>
@@ -685,10 +604,7 @@ function AuditLog() {
                   ))
                 ) : (
                   <tr>
-                    <td
-                      colSpan="4"
-                      className="audit-empty"
-                    >
+                    <td colSpan="4" className="audit-empty">
                       No audit log records found
                     </td>
                   </tr>
@@ -698,9 +614,7 @@ function AuditLog() {
           </div>
         </div>
 
-        {/* ===============================================
-            PAGINATION
-        =============================================== */}
+        {/* PAGINATION */}
 
         <div className="audit-pagination">
           <div className="audit-rows">
@@ -709,9 +623,7 @@ function AuditLog() {
             <select
               value={rowsPerPage}
               onChange={(e) =>
-                setRowsPerPage(
-                  Number(e.target.value)
-                )
+                setRowsPerPage(Number(e.target.value))
               }
             >
               <option value={5}>5</option>
@@ -731,10 +643,7 @@ function AuditLog() {
               }
               style={{
                 ...paginationButtonStyle,
-                opacity:
-                  currentPage === 1
-                    ? 0.45
-                    : 1,
+                opacity: currentPage === 1 ? 0.45 : 1,
                 cursor:
                   currentPage === 1
                     ? "not-allowed"
@@ -745,45 +654,30 @@ function AuditLog() {
               &lt;
             </button>
 
-            {Array.from(
-              { length: totalPages },
-              (_, index) => index + 1
-            ).map((page) => (
-              <button
-                type="button"
-                key={page}
-                onClick={() =>
-                  setCurrentPage(page)
-                }
-                style={
-                  currentPage === page
-                    ? activePageStyle
-                    : normalPageStyle
-                }
-              >
-                {page}
-              </button>
-            ))}
+            <button
+              type="button"
+              style={{
+                ...activePageStyle,
+                cursor: "default",
+              }}
+              aria-current="page"
+              aria-label={`Page ${currentPage}`}
+            >
+              {currentPage}
+            </button>
 
             <button
               type="button"
-              disabled={
-                currentPage === totalPages
-              }
+              disabled={currentPage === totalPages}
               onClick={() =>
                 setCurrentPage((previous) =>
-                  Math.min(
-                    previous + 1,
-                    totalPages
-                  )
+                  Math.min(previous + 1, totalPages)
                 )
               }
               style={{
                 ...paginationButtonStyle,
                 opacity:
-                  currentPage === totalPages
-                    ? 0.45
-                    : 1,
+                  currentPage === totalPages ? 0.45 : 1,
                 cursor:
                   currentPage === totalPages
                     ? "not-allowed"

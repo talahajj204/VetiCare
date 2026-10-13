@@ -1,5 +1,6 @@
 
 import { useRef, useState } from "react";
+
 import Sidebar from "../components/Sidebar";
 
 import {
@@ -20,6 +21,39 @@ import { FaTiktok } from "react-icons/fa6";
 
 const STORAGE_KEY = "storeSettings";
 
+/* =====================================================
+   STORE COLORS - NEW
+   These are the original Store Header colors.
+===================================================== */
+
+const DEFAULT_STORE_COLORS = {
+  primaryColor: "#1aa6a6",
+  secondaryColor: "#11797b",
+  lightColor: "#e8f7f7",
+  borderColor: "#dcebea",
+  backgroundColor: "#ffffff",
+  textColor: "#344054",
+  buttonColor: "#1aa6a6",
+  buttonTextColor: "#ffffff",
+  footerColor: "#11797b",
+};
+
+const STORE_COLOR_FIELDS = [
+  ["primaryColor", "Primary Color"],
+  ["secondaryColor", "Secondary Color"],
+  ["lightColor", "Light Color"],
+  ["borderColor", "Border Color"],
+  ["backgroundColor", "Background Color"],
+  ["textColor", "Text Color"],
+  ["buttonColor", "Button Color"],
+  ["buttonTextColor", "Button Text Color"],
+  ["footerColor", "Footer Color"],
+];
+
+const isValidStoreColor = (value) =>
+  typeof value === "string" &&
+  /^#[0-9a-fA-F]{6}$/.test(value);
+
 const DEFAULT_STATUSES = [
   "Active",
   "Inactive",
@@ -32,11 +66,18 @@ function readSettings() {
   try {
     const data = localStorage.getItem(STORAGE_KEY);
     const parsed = data ? JSON.parse(data) : {};
-    return parsed && typeof parsed === "object" ? parsed : {};
+
+    return parsed && typeof parsed === "object"
+      ? parsed
+      : {};
   } catch {
     return {};
   }
 }
+
+/* =====================================================
+   IMAGE UPLOADER - ORIGINAL
+===================================================== */
 
 function ImageUploader({
   label,
@@ -162,12 +203,17 @@ function ImageUploader({
           </button>
 
           <small>PNG, JPG, WEBP · Max 2 MB</small>
+
           {description && <small>{description}</small>}
         </div>
       )}
     </div>
   );
 }
+
+/* =====================================================
+   SETTINGS
+===================================================== */
 
 function Settings() {
   const [form, setForm] = useState(readSettings);
@@ -184,6 +230,8 @@ function Settings() {
   const [saved, setSaved] = useState(false);
   const [activeTab, setActiveTab] = useState("store");
 
+  /* ORIGINAL UPDATE FIELD */
+
   const updateField = (key, value) => {
     setForm((current) => ({
       ...current,
@@ -192,6 +240,36 @@ function Settings() {
 
     setSaved(false);
   };
+
+  /* NEW: UPDATE STORE COLOR */
+
+  const updateStoreColor = (key, value) => {
+    setForm((current) => ({
+      ...current,
+      storeColors: {
+        ...DEFAULT_STORE_COLORS,
+        ...(current.storeColors || {}),
+        [key]: value,
+      },
+    }));
+
+    setSaved(false);
+  };
+
+  /* NEW: RESTORE ORIGINAL STORE COLORS */
+
+  const resetStoreColors = () => {
+    setForm((current) => ({
+      ...current,
+      storeColors: {
+        ...DEFAULT_STORE_COLORS,
+      },
+    }));
+
+    setSaved(false);
+  };
+
+  /* ORIGINAL UPDATE IMAGE */
 
   const updateImage = (key, value) => {
     const updated = {
@@ -215,16 +293,41 @@ function Settings() {
       );
     } catch (error) {
       console.error("Image save error:", error);
+
       alert("Could not save image. Try a smaller image.");
     }
   };
 
+  /* SAVE SETTINGS
+     Original saving behavior preserved.
+     Store colors are included automatically in ...form.
+  */
+
   const handleSave = (event) => {
     event.preventDefault();
+
+    const colors = {
+      ...DEFAULT_STORE_COLORS,
+      ...(form.storeColors || {}),
+    };
+
+    const invalidColor = STORE_COLOR_FIELDS.some(
+      ([key]) => !isValidStoreColor(colors[key])
+    );
+
+    if (invalidColor) {
+      alert(
+        "Please enter valid HEX colors (example: #1aa6a6)."
+      );
+
+      setActiveTab("colors");
+      return;
+    }
 
     const updated = {
       ...readSettings(),
       ...form,
+      storeColors: colors,
       statuses,
     };
 
@@ -242,12 +345,18 @@ function Settings() {
       setSaved(true);
     } catch (error) {
       console.error("Settings save error:", error);
-      alert("Could not save settings. Try smaller images.");
+
+      alert(
+        "Could not save settings. Try smaller images."
+      );
     }
   };
 
+  /* ORIGINAL STATUS MANAGEMENT */
+
   const addStatus = () => {
     const value = newStatus.trim();
+
     if (!value) return;
 
     if (
@@ -272,6 +381,8 @@ function Settings() {
 
     setSaved(false);
   };
+
+  /* ORIGINAL INPUT HELPERS */
 
   const renderInput = (
     label,
@@ -461,7 +572,7 @@ function Settings() {
           .settings-field textarea:focus {
             border-color: #19a49f;
             background: #fff;
-            box-shadow: 0 0 0 3px rgba(25,164,159,0.07);
+            box-shadow: 0 0 0 3px rgba(25,164,159,.07);
           }
 
           .settings-field input::placeholder,
@@ -471,7 +582,7 @@ function Settings() {
 
           .settings-row {
             display: grid;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
+            grid-template-columns: repeat(2,minmax(0,1fr));
             column-gap: 18px;
           }
 
@@ -499,7 +610,7 @@ function Settings() {
             align-items: center;
             gap: 8px;
             text-align: center;
-            transition: 0.2s;
+            transition: .2s;
           }
 
           .settings-upload-zone.dragging {
@@ -590,7 +701,7 @@ function Settings() {
             line-height: 1.5;
           }
 
-          /* SMALL BUTTONS */
+          /* BUTTONS */
 
           .settings-btn {
             display: inline-flex;
@@ -609,7 +720,7 @@ function Settings() {
             line-height: 1.2;
             white-space: nowrap;
             cursor: pointer;
-            transition: 0.18s;
+            transition: .18s;
           }
 
           .settings-btn svg {
@@ -649,9 +760,8 @@ function Settings() {
           /* ABOUT TIMELINE */
 
           .settings-timeline {
-
             display: grid;
-            grid-template-columns: repeat(3, minmax(0, 1fr));
+            grid-template-columns: repeat(3,minmax(0,1fr));
             gap: 13px;
           }
 
@@ -807,47 +917,7 @@ function Settings() {
             font-size: 12px;
           }
 
-          @media (max-width: 1100px) {
-            .settings-timeline {
-              grid-template-columns: 1fr;
-            }
-          }
-
-          @media (max-width: 700px) {
-            .settings-page {
-              padding: 18px 14px 45px;
-            }
-
-            .settings-page-header h1 {
-              font-size: 24px;
-            }
-
-            .settings-card {
-              padding: 20px 16px;
-              border-radius: 13px;
-            }
-
-            .settings-row {
-              grid-template-columns: 1fr;
-            }
-
-            .settings-image-preview {
-              flex-direction: column;
-              align-items: stretch;
-              gap: 13px;
-            }
-
-            .settings-preview-picture {
-              width: 100%;
-              height: 150px;
-            }
-
-            .settings-save-bar {
-              justify-content: flex-start;
-            }
-          }
-
-          /* SETTINGS TABS */
+          /* TABS */
 
           .settings-tabs {
             display: flex;
@@ -860,7 +930,7 @@ function Settings() {
           }
 
           .settings-tab {
-            width: auto;
+            width: auto !important;
             min-height: 39px;
             padding: 9px 16px;
             border: 1px solid #dce7e9;
@@ -883,467 +953,819 @@ function Settings() {
             border-color: #159d99;
             color: #ffffff;
           }
+
+          /* NEW STORE COLORS */
+
+          .settings-colors-grid {
+            display: grid;
+            grid-template-columns:
+              repeat(2, minmax(0, 1fr));
+            gap: 16px;
+          }
+
+          .settings-color-item {
+            min-width: 0;
+            padding: 16px;
+            border: 1px solid #e0edeb;
+            border-radius: 12px;
+            background: #f8fbfa;
+          }
+
+          .settings-color-controls {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-top: 12px;
+          }
+
+          .settings-color-picker {
+            width: 55px;
+            min-width: 55px;
+            height: 43px;
+            padding: 3px;
+            border: 1px solid #dce7e9;
+            border-radius: 9px;
+            background: #fff;
+            cursor: pointer;
+          }
+
+          .settings-color-hex {
+            flex: 1;
+            width: 100%;
+            min-width: 0;
+            height: 43px;
+            padding: 10px 12px;
+            border: 1px solid #dce7e9;
+            border-radius: 9px;
+            background: #fff;
+            color: #29434a;
+            font-family: inherit;
+            font-size: 12px;
+          }
+
+          .settings-color-preview {
+            margin-top: 20px;
+            padding: 18px;
+            border: 1px solid #e0edeb;
+            border-radius: 12px;
+          }
+
+          .settings-color-preview button {
+            width: auto !important;
+            padding: 10px 16px;
+            border: 0;
+            border-radius: 8px;
+            font-family: inherit;
+            font-size: 12px;
+            font-weight: 700;
+          }
+
+          @media (max-width: 1100px) {
+            .settings-timeline {
+              grid-template-columns: 1fr;
+            }
+          }
+
+          @media (max-width: 700px) {
+            .settings-page {
+              padding: 18px 14px 45px;
+            }
+
+            .settings-page-header h1 {
+              font-size: 24px;
+            }
+
+            .settings-card {
+              padding: 20px 16px;
+              border-radius: 13px;
+            }
+
+            .settings-row,
+            .settings-colors-grid {
+              grid-template-columns: 1fr;
+            }
+
+            .settings-image-preview {
+              flex-direction: column;
+              align-items: stretch;
+              gap: 13px;
+            }
+
+            .settings-preview-picture {
+              width: 100%;
+              height: 150px;
+            }
+
+            .settings-save-bar {
+              justify-content: flex-start;
+            }
+          }
         `}</style>
 
-        <div className="settings-container">
-          <div className="settings-page-header">
-            <div>
-              <h1>Settings</h1>
-              <p>
-                Manage your store information, branding,
-                public pages and preferences.
-              </p>
-            </div>
+<div className="settings-container">
 
-            <div className="settings-header-icon">
-              <FaPaw />
-            </div>
+{/* =========================================
+    PAGE HEADER
+========================================= */}
+
+<div className="settings-page-header">
+  <div>
+    <h1>Settings</h1>
+
+    <p>
+      Manage your store information, branding,
+      public pages and preferences.
+    </p>
+  </div>
+
+  <div className="settings-header-icon">
+    <FaPaw />
+  </div>
+</div>
+
+{/* =========================================
+    SETTINGS TABS
+========================================= */}
+
+<div className="settings-tabs">
+
+  <button
+    type="button"
+    className={`settings-tab ${
+      activeTab === "store" ? "active" : ""
+    }`}
+    onClick={() => setActiveTab("store")}
+  >
+    Store Settings
+  </button>
+
+  <button
+    type="button"
+    className={`settings-tab ${
+      activeTab === "about" ? "active" : ""
+    }`}
+    onClick={() => setActiveTab("about")}
+  >
+    About Us
+  </button>
+
+  <button
+    type="button"
+    className={`settings-tab ${
+      activeTab === "contact" ? "active" : ""
+    }`}
+    onClick={() => setActiveTab("contact")}
+  >
+    Contact & Social Media
+  </button>
+
+  {/* NEW STORE COLORS TAB */}
+
+  <button
+    type="button"
+    className={`settings-tab ${
+      activeTab === "colors" ? "active" : ""
+    }`}
+    onClick={() => setActiveTab("colors")}
+  >
+    Store Colors
+  </button>
+
+  <button
+    type="button"
+    className={`settings-tab ${
+      activeTab === "options" ? "active" : ""
+    }`}
+    onClick={() => setActiveTab("options")}
+  >
+    Option List
+  </button>
+
+</div>
+
+{/* =========================================
+    SETTINGS FORM
+========================================= */}
+
+<form
+  className="settings-form"
+  onSubmit={handleSave}
+>
+
+  {/* =====================================
+      STORE SETTINGS
+  ===================================== */}
+
+  {activeTab === "store" && (
+    <>
+
+      {/* STORE INFORMATION */}
+
+      <section className="settings-card">
+
+        <div className="settings-card-header">
+          <h2>Store Information</h2>
+
+          <p>
+            Basic contact details and information
+            displayed across your store.
+          </p>
+        </div>
+
+        {renderInput(
+          "Store Name",
+          "storeName",
+          "Enter store name"
+        )}
+
+        {renderTextarea(
+          "Store Description",
+          "storeDescription",
+          "Write a short description about your store"
+        )}
+
+        <div className="settings-row">
+
+          {renderInput(
+            "Email",
+            "email",
+            "Enter store email",
+            "email"
+          )}
+
+          {renderInput(
+            "Phone Number",
+            "phone",
+            "Enter phone number",
+            "tel"
+          )}
+
+        </div>
+
+        {renderInput(
+          "WhatsApp Number",
+          "whatsapp",
+          "Enter WhatsApp number",
+          "tel"
+        )}
+
+        {renderInput(
+          "Address",
+          "address",
+          "Enter store address"
+        )}
+
+      </section>
+
+      {/* STORE BRANDING */}
+
+      <section className="settings-card">
+
+        <div className="settings-card-header">
+          <h2>Store Branding</h2>
+
+          <p>
+            Upload the branding image displayed
+            across your store.
+          </p>
+        </div>
+
+        <ImageUploader
+          label="Store Banner"
+          image={form.storeBanner}
+          onChange={(value) =>
+            updateImage("storeBanner", value)
+          }
+          onRemove={() =>
+            updateImage("storeBanner", "")
+          }
+          description="Recommended: use a high-quality horizontal image."
+        />
+
+      </section>
+
+      {/* HOME BANNER */}
+
+      <section className="settings-card">
+
+        <div className="settings-card-header">
+          <h2>Home Banner</h2>
+
+          <p>
+            Customize the main banner displayed
+            on your store homepage.
+          </p>
+        </div>
+
+        <ImageUploader
+          label="Home Banner Image"
+          image={form.homeBanner}
+          onChange={(value) =>
+            updateImage("homeBanner", value)
+          }
+          onRemove={() =>
+            updateImage("homeBanner", "")
+          }
+          description="Recommended: a wide landscape image."
+        />
+
+        <div className="settings-section-divider" />
+
+        {renderInput(
+          "Banner Badge",
+          "homeBannerBadge",
+          "Enter banner badge"
+        )}
+
+        {renderInput(
+          "Banner Title",
+          "homeBannerTitle",
+          "Enter banner title"
+        )}
+
+        {renderTextarea(
+          "Banner Description",
+          "homeBannerDescription",
+          "Enter banner description"
+        )}
+
+        {renderInput(
+          "Button Text",
+          "homeBannerButtonText",
+          "Example: Shop Now"
+        )}
+
+      </section>
+
+    </>
+  )}
+
+  {/* =====================================
+      ABOUT US
+  ===================================== */}
+
+  {activeTab === "about" && (
+
+    <section className="settings-card">
+
+      <div className="settings-card-header">
+        <h2>About Us</h2>
+
+        <p>
+          Customize the content displayed on
+          your store's About Us page.
+        </p>
+      </div>
+
+      {renderInput(
+        "About Page Title",
+        "aboutTitle",
+        "Enter About Us title"
+      )}
+
+      {renderTextarea(
+        "About Description",
+        "aboutDescription",
+        "Write your store story"
+      )}
+
+      <ImageUploader
+        label="About Us Image"
+        image={form.aboutImage}
+        onChange={(value) =>
+          updateImage("aboutImage", value)
+        }
+        onRemove={() =>
+          updateImage("aboutImage", "")
+        }
+      />
+
+      <div className="settings-section-divider" />
+
+      <div className="settings-card-header">
+        <h2>Our Journey</h2>
+
+        <p>
+          Manage the three timeline sections
+          displayed on your About Us page.
+        </p>
+      </div>
+
+      <div className="settings-timeline">
+
+        {/* TIMELINE 1 */}
+
+        <div className="settings-timeline-card">
+
+          <div className="settings-timeline-heading">
+            <span className="settings-timeline-number">
+              1
+            </span>
+
+            <h3>First Milestone</h3>
           </div>
 
-          {/* SETTINGS TABS */}
-          <div className="settings-tabs">
-            <button
-              type="button"
-              className={`settings-tab ${
-                activeTab === "store" ? "active" : ""
-              }`}
-              onClick={() => setActiveTab("store")}
-            >
-              Store Settings
-            </button>
+          {renderInput(
+            "Title",
+            "timeline1Title",
+            "Enter title"
+          )}
 
-            <button
-              type="button"
-              className={`settings-tab ${
-                activeTab === "about" ? "active" : ""
-              }`}
-              onClick={() => setActiveTab("about")}
-            >
-              About Us
-            </button>
+          {renderTextarea(
+            "Description",
+            "timeline1Description",
+            "Enter description"
+          )}
 
-            <button
-              type="button"
-              className={`settings-tab ${
-                activeTab === "contact" ? "active" : ""
-              }`}
-              onClick={() => setActiveTab("contact")}
-            >
-              Contact & Social Media
-            </button>
+        </div>
 
-            <button
-              type="button"
-              className={`settings-tab ${
-                activeTab === "options" ? "active" : ""
-              }`}
-              onClick={() => setActiveTab("options")}
-            >
-              Option List
-            </button>
+        {/* TIMELINE 2 */}
+
+        <div className="settings-timeline-card">
+
+          <div className="settings-timeline-heading">
+            <span className="settings-timeline-number">
+              2
+            </span>
+
+            <h3>Second Milestone</h3>
           </div>
 
-          <form
-            className="settings-form"
-            onSubmit={handleSave}
-          >
-            {/* STORE SETTINGS */}
-            {activeTab === "store" && (
-              <>
-                {/* STORE INFORMATION */}
-                <section className="settings-card">
-                  <div className="settings-card-header">
-                    <h2>Store Information</h2>
-                    <p>
-                      Basic contact details and information
-                      displayed across your store.
-                    </p>
-                  </div>
+          {renderInput(
+            "Title",
+            "timeline2Title",
+            "Enter title"
+          )}
 
-                  {renderInput(
-                    "Store Name",
-                    "storeName",
-                    "Enter store name"
-                  )}
+          {renderTextarea(
+            "Description",
+            "timeline2Description",
+            "Enter description"
+          )}
 
-                  {renderTextarea(
-                    "Store Description",
-                    "storeDescription",
-                    "Write a short description about your store"
-                  )}
+        </div>
 
-                  <div className="settings-row">
-                    {renderInput(
-                      "Email",
-                      "email",
-                      "Enter store email",
-                      "email"
-                    )}
+        {/* TIMELINE 3 */}
 
-                    {renderInput(
-                      "Phone Number",
-                      "phone",
-                      "Enter phone number",
-                      "tel"
-                    )}
-                  </div>
+        <div className="settings-timeline-card">
 
-                  <div className="settings-row">
-                    {renderInput(
-                      "WhatsApp",
-                      "whatsapp",
-                      "Example: +961 3 123 456",
-                      "tel"
-                    )}
+          <div className="settings-timeline-heading">
+            <span className="settings-timeline-number">
+              3
+            </span>
 
-                    {renderInput(
-                      "Address",
-                      "address",
-                      "Enter store address"
-                    )}
-                  </div>
-                </section>
+            <h3>Third Milestone</h3>
+          </div>
 
-                {/* STORE BRANDING */}
-                <section className="settings-card">
-                  <div className="settings-card-header">
-                    <h2>Store Branding</h2>
-                    <p>
-                      Upload the logo displayed in your
-                      store header and footer.
-                    </p>
-                  </div>
+          {renderInput(
+            "Title",
+            "timeline3Title",
+            "Enter title"
+          )}
 
-                  <ImageUploader
-                    label="Store Logo"
-                    image={form.storeBanner}
-                    onChange={(image) =>
-                      updateImage("storeBanner", image)
-                    }
-                    onRemove={() =>
-                      updateImage("storeBanner", null)
-                    }
-                  />
-                </section>
+          {renderTextarea(
+            "Description",
+            "timeline3Description",
+            "Enter description"
+          )}
 
-                {/* HOME BANNER */}
-                <section className="settings-card">
-                  <div className="settings-card-header">
-                    <h2>Home Banner</h2>
-                    <p>
-                      Control all text and images displayed
-                      in the center of your store homepage.
-                      Empty fields will not display text.
-                    </p>
-                  </div>
+        </div>
 
-                  <ImageUploader
-                    label="Home Banner"
-                    image={form.homeBanner}
-                    onChange={(image) =>
-                      updateImage("homeBanner", image)
-                    }
-                    onRemove={() =>
-                      updateImage("homeBanner", null)
-                    }
-                  />
+      </div>
 
-                  <div className="settings-section-divider" />
+    </section>
 
-                  {renderInput(
-                    "Banner Badge Text",
-                    "homeBannerBadge",
-                    "Enter the small text above your banner title"
-                  )}
+  )}
 
-                  {renderInput(
-                    "Banner Title",
-                    "homeBannerTitle",
-                    "Enter the main banner title"
-                  )}
+  {/* =====================================
+      CONTACT & SOCIAL MEDIA
+  ===================================== */}
 
-                  {renderTextarea(
-                    "Banner Description",
-                    "homeBannerDescription",
-                    "Enter the banner description"
-                  )}
+  {activeTab === "contact" && (
+    <>
 
-                  {renderInput(
-                    "Button Text",
-                    "homeBannerButtonText",
-                    "Enter button text"
-                  )}
-                </section>
-              </>
-            )}
+      {/* CONTACT INFORMATION */}
 
-            {/* ABOUT US - ORIGINAL FIELDS */}
-            {activeTab === "about" && (
-              <section className="settings-card">
-                <div className="settings-card-header">
-                  <h2>About Us Page</h2>
-                  <p>
-                    Customize your story, image and journey
-                    timeline. Content is saved dynamically.
-                  </p>
-                </div>
+      <section className="settings-card">
 
-                {renderInput(
-                  "About Title",
-                  "aboutTitle",
-                  "Enter your About Us title"
-                )}
+        <div className="settings-card-header">
+          <h2>Contact Us</h2>
 
-                {renderTextarea(
-                  "About Description",
-                  "aboutDescription",
-                  "Write your clinic or store story"
-                )}
+          <p>
+            Manage the contact details displayed
+            on your store's Contact Us page.
+          </p>
+        </div>
 
-                <ImageUploader
-                  label="About Us Image"
-                  image={form.aboutImage}
-                  onChange={(image) =>
-                    updateImage("aboutImage", image)
+        <div className="settings-row">
+
+          {renderInput(
+            "Contact Email",
+            "contactEmail",
+            "Enter contact email",
+            "email"
+          )}
+
+          {renderInput(
+            "Contact Phone",
+            "contactPhone",
+            "Enter contact phone",
+            "tel"
+          )}
+
+        </div>
+
+        {renderInput(
+          "Contact Address",
+          "contactAddress",
+          "Enter contact address"
+        )}
+
+        {renderTextarea(
+          "Contact Description",
+          "contactDescription",
+          "Enter contact page description"
+        )}
+
+      </section>
+
+      {/* SOCIAL MEDIA */}
+
+      <section className="settings-card">
+
+        <div className="settings-card-header">
+          <h2>Social Media</h2>
+
+          <p>
+            Add your social media links so
+            customers can connect with your store.
+          </p>
+        </div>
+
+        <div className="settings-social-icons">
+          <span><FaInstagram /></span>
+          <span><FaFacebookF /></span>
+          <span><FaWhatsapp /></span>
+          <span><FaTiktok /></span>
+        </div>
+
+        <div className="settings-section-divider" />
+
+        {renderInput(
+          "Instagram",
+          "instagram",
+          "Enter Instagram URL",
+          "url"
+        )}
+
+        {renderInput(
+          "Facebook",
+          "facebook",
+          "Enter Facebook URL",
+          "url"
+        )}
+
+        {renderInput(
+          "WhatsApp",
+          "socialWhatsapp",
+          "Enter WhatsApp URL"
+        )}
+
+        {renderInput(
+          "TikTok",
+          "tiktok",
+          "Enter TikTok URL",
+          "url"
+        )}
+
+      </section>
+
+    </>
+  )}
+
+  {/* =====================================
+      NEW: STORE COLORS
+  ===================================== */}
+
+  {activeTab === "colors" && (
+
+    <section className="settings-card">
+
+      <div className="settings-card-header">
+        <h2>Store Colors</h2>
+
+        <p>
+          Customize your store appearance.
+          Choose your colors, preview them,
+          and click Save Settings to apply changes.
+        </p>
+      </div>
+
+      {/* COLOR PICKERS */}
+
+      <div className="settings-colors-grid">
+
+        {STORE_COLOR_FIELDS.map(([key, label]) => {
+
+          const value =
+            form.storeColors?.[key] ??
+            DEFAULT_STORE_COLORS[key];
+
+          return (
+
+            <div
+              className="settings-color-item"
+              key={key}
+            >
+
+              <label className="settings-label">
+                {label}
+              </label>
+
+              <div className="settings-color-controls">
+
+                <input
+                  className="settings-color-picker"
+                  type="color"
+                  aria-label={`Choose ${label}`}
+                  value={
+                    isValidStoreColor(value)
+                      ? value
+                      : DEFAULT_STORE_COLORS[key]
                   }
-                  onRemove={() =>
-                    updateImage("aboutImage", null)
+                  onChange={(event) =>
+                    updateStoreColor(
+                      key,
+                      event.target.value
+                    )
                   }
-                  description="Recommended: 1200 × 900 px"
                 />
 
-                <div className="settings-section-divider" />
+                <input
+                  className="settings-color-hex"
+                  type="text"
+                  aria-label={`${label} HEX value`}
+                  value={value}
+                  maxLength={7}
+                  placeholder="#000000"
+                  onChange={(event) =>
+                    updateStoreColor(
+                      key,
+                      event.target.value
+                    )
+                  }
+                />
 
-                <div className="settings-card-header">
-                  <h2>
-                    <FaPaw
-                      style={{
-                        color: "#159c97",
-                        marginRight: 8,
-                        fontSize: 14,
-                      }}
-                    />
-                    Our Journey Timeline
-                  </h2>
+              </div>
 
-                  <p>
-                    Customize the three milestones displayed
-                    beside your About Us image.
-                  </p>
-                </div>
-
-                <div className="settings-timeline">
-                  {[1, 2, 3].map((number) => (
-                    <div
-                      className="settings-timeline-card"
-                      key={number}
-                    >
-                      <div className="settings-timeline-heading">
-                        <span className="settings-timeline-number">
-                          {number}
-                        </span>
-
-                        <h3>Timeline Step {number}</h3>
-                      </div>
-
-                      {renderInput(
-                        `Step ${number} Title`,
-                        `aboutStep${number}Title`,
-                        `Enter step ${number} title`
-                      )}
-
-                      {renderTextarea(
-                        `Step ${number} Description`,
-                        `aboutStep${number}Description`,
-                        `Enter step ${number} description`
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </section>
-            )}
-
-            {/* CONTACT & SOCIAL MEDIA */}
-            {activeTab === "contact" && (
-              <>
-                {/* CONTACT US */}
-                <section className="settings-card">
-                  <div className="settings-card-header">
-                    <h2>Contact Us Page</h2>
-                    <p>
-                      Manage the contact details displayed
-                      on your Contact Us page.
-                    </p>
-                  </div>
-
-                  <div className="settings-row">
-                    {renderInput(
-                      "Contact Email",
-                      "contactEmail",
-                      "Enter contact email",
-                      "email"
-                    )}
-
-                    {renderInput(
-                      "Contact Phone",
-                      "contactPhone",
-                      "Enter contact phone number",
-                      "tel"
-                    )}
-                  </div>
-
-                  {renderInput(
-                    "Contact Address",
-                    "contactAddress",
-                    "Enter clinic address"
-                  )}
-
-                  {renderTextarea(
-                    "Contact Description",
-                    "contactDescription",
-                    "Enter a short message for visitors"
-                  )}
-                </section>
-
-                {/* SOCIAL MEDIA */}
-                <section className="settings-card">
-                  <div className="settings-card-header">
-                    <h2>Social Media</h2>
-                    <p>
-                      Manage your clinic social media links.
-                    </p>
-
-                    <div className="settings-social-icons">
-                      <span>
-                        <FaInstagram />
-                      </span>
-
-                      <span>
-                        <FaFacebookF />
-                      </span>
-
-                      <span>
-                        <FaWhatsapp />
-                      </span>
-
-                      <span>
-                        <FaTiktok />
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="settings-row">
-                    {renderInput(
-                      "Instagram",
-                      "instagram",
-                      "https://instagram.com/..."
-                    )}
-
-                    {renderInput(
-                      "Facebook",
-                      "facebook",
-                      "https://facebook.com/..."
-                    )}
-                  </div>
-
-                  <div className="settings-row">
-                    {renderInput(
-                      "WhatsApp",
-                      "socialWhatsapp",
-                      "Enter WhatsApp link or number"
-                    )}
-
-                    {renderInput(
-                      "TikTok",
-                      "tiktok",
-                      "https://tiktok.com/@..."
-                    )}
-                  </div>
-                </section>
-              </>
-            )}
-
-            {/* OPTION LIST */}
-            {activeTab === "options" && (
-              <section className="settings-card">
-                <div className="settings-card-header">
-                  <h2>Option List</h2>
-                  <p>
-                    Manage the available status options
-                    used across your system.
-                  </p>
-                </div>
-
-                <div className="settings-status-list">
-                  {statuses.map((status) => (
-                    <div
-                      className="settings-status"
-                      key={status}
-                    >
-                      <span>{status}</span>
-
-                      <button
-                        type="button"
-                        onClick={() => removeStatus(status)}
-                        title={`Remove ${status}`}
-                        aria-label={`Remove ${status}`}
-                      >
-                        <FaTimes />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="settings-add-status">
-                  <input
-                    type="text"
-                    placeholder="Enter new status"
-                    value={newStatus}
-                    onChange={(event) =>
-                      setNewStatus(event.target.value)
-                    }
-                    onKeyDown={(event) => {
-                      if (event.key === "Enter") {
-                        event.preventDefault();
-                        addStatus();
-                      }
-                    }}
-                  />
-
-                  <button
-                    type="button"
-                    className="settings-btn settings-btn-outline"
-                    onClick={addStatus}
-                  >
-                    <FaPlus />
-                    Add Status
-                  </button>
-                </div>
-              </section>
-            )}
-
-            {/* SAVE SETTINGS */}
-            <div className="settings-save-bar">
-              {saved && (
-                <span className="settings-saved">
-                  <FaCheckCircle />
-                  Settings saved successfully
-                </span>
-              )}
-
-              <button
-                type="submit"
-                className="settings-btn settings-btn-primary"
-              >
-                <FaSave />
-                Save Settings
-              </button>
             </div>
-          </form>
-        </div>
-      </main>
-    </div>
-  );
+
+          );
+
+        })}
+
+      </div>
+
+
+      {/* DEFAULT COLORS BUTTON */}
+
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "flex-end",
+          flexWrap: "wrap",
+          gap: 12,
+          marginTop: 23,
+        }}
+      >
+
+        <button
+          type="button"
+          className="settings-btn settings-btn-outline"
+          onClick={resetStoreColors}
+        >
+          Default Colors
+        </button>
+
+      </div>
+
+    </section>
+
+  )}
+
+  {/* =====================================
+      OPTION LIST
+  ===================================== */}
+
+  {activeTab === "options" && (
+
+    <section className="settings-card">
+
+      <div className="settings-card-header">
+        <h2>Option List</h2>
+
+        <p>
+          Manage the available statuses used
+          throughout your system.
+        </p>
+      </div>
+
+      {/* EXISTING STATUSES */}
+
+      <div className="settings-status-list">
+
+        {statuses.map((status) => (
+
+          <div
+            className="settings-status"
+            key={status}
+          >
+
+            <span>{status}</span>
+
+            <button
+              type="button"
+              aria-label={`Remove ${status}`}
+              onClick={() =>
+                removeStatus(status)
+              }
+            >
+              <FaTimes />
+            </button>
+
+          </div>
+
+        ))}
+
+      </div>
+
+      {/* ADD NEW STATUS */}
+
+      <div className="settings-add-status">
+
+        <input
+          type="text"
+          value={newStatus}
+          placeholder="Enter new status"
+          onChange={(event) =>
+            setNewStatus(event.target.value)
+          }
+          onKeyDown={(event) => {
+            if (event.key === "Enter") {
+              event.preventDefault();
+              addStatus();
+            }
+          }}
+        />
+
+        <button
+          type="button"
+          className="settings-btn settings-btn-primary"
+          onClick={addStatus}
+        >
+          <FaPlus />
+          Add Status
+        </button>
+
+      </div>
+
+    </section>
+
+  )}
+
+  {/* =====================================
+      SAVE SETTINGS
+  ===================================== */}
+
+  <div className="settings-save-bar">
+
+    {saved && (
+
+      <span className="settings-saved">
+        <FaCheckCircle />
+        Settings saved successfully
+      </span>
+
+    )}
+
+    <button
+      type="submit"
+      className="settings-btn settings-btn-primary"
+    >
+      <FaSave />
+      Save Settings
+    </button>
+
+  </div>
+
+</form>
+
+</div>
+
+</main>
+
+</div>
+);
 }
 
 export default Settings;

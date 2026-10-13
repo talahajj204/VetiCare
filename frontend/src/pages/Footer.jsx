@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 
 import {
@@ -12,64 +13,135 @@ import { FaTiktok } from "react-icons/fa6";
 
 import "../components/Footer.css";
 
-function Footer() {
-  const [storeSettings, setStoreSettings] = useState({
-    storeName: "",
-    storeDescription: "",
-    email: "",
-    phone: "",
-    whatsapp: "",
-    address: "",
-    instagram: "",
-    tiktok: "",
-    storeBanner: null,
-  });
+/* =========================================
+   DEFAULT FOOTER COLOR
+========================================= */
 
-  // =========================================
-  // LOAD STORE SETTINGS
-  // =========================================
+const DEFAULT_FOOTER_COLOR = "#11797b";
+
+/* =========================================
+   READ SETTINGS FROM LOCAL STORAGE
+========================================= */
+
+const readFooterSettings = () => {
+  try {
+    const settings = JSON.parse(
+      localStorage.getItem("storeSettings") || "{}"
+    );
+
+    return {
+      storeName: settings.storeName || "",
+      storeDescription: settings.storeDescription || "",
+      email: settings.email || "",
+      phone: settings.phone || "",
+      whatsapp: settings.whatsapp || "",
+      address: settings.address || "",
+      instagram: settings.instagram || "",
+      tiktok: settings.tiktok || "",
+      storeBanner: settings.storeBanner || null,
+
+      footerColor:
+        settings.storeColors?.footerColor ||
+        DEFAULT_FOOTER_COLOR,
+    };
+  } catch (error) {
+    console.error(
+      "Could not load store settings:",
+      error
+    );
+
+    return {
+      storeName: "",
+      storeDescription: "",
+      email: "",
+      phone: "",
+      whatsapp: "",
+      address: "",
+      instagram: "",
+      tiktok: "",
+      storeBanner: null,
+      footerColor: DEFAULT_FOOTER_COLOR,
+    };
+  }
+};
+
+/* =========================================
+   AUTOMATIC READABLE TEXT COLOR
+========================================= */
+
+const getReadableFooterText = (hex) => {
+  const color = String(hex || "").replace("#", "");
+
+  if (!/^[0-9a-fA-F]{6}$/.test(color)) {
+    return "#ffffff";
+  }
+
+  const red = parseInt(color.slice(0, 2), 16) / 255;
+  const green = parseInt(color.slice(2, 4), 16) / 255;
+  const blue = parseInt(color.slice(4, 6), 16) / 255;
+
+  const linearize = (value) => {
+    return value <= 0.04045
+      ? value / 12.92
+      : ((value + 0.055) / 1.055) ** 2.4;
+  };
+
+  const luminance =
+    0.2126 * linearize(red) +
+    0.7152 * linearize(green) +
+    0.0722 * linearize(blue);
+
+  return luminance > 0.179
+    ? "#172b2b"
+    : "#ffffff";
+};
+
+/* =========================================
+   FOOTER COMPONENT
+========================================= */
+
+function Footer() {
+  const [storeSettings, setStoreSettings] = useState(
+    readFooterSettings
+  );
+
+  /* =========================================
+     LOAD SETTINGS + LISTEN FOR ADMIN UPDATES
+  ========================================= */
 
   useEffect(() => {
     const loadSettings = () => {
-      try {
-        const savedSettings =
-          localStorage.getItem("storeSettings");
-
-        if (!savedSettings) return;
-
-        const settings = JSON.parse(savedSettings);
-
-        setStoreSettings({
-          storeName: settings.storeName || "",
-          storeDescription: settings.storeDescription || "",
-          email: settings.email || "",
-          phone: settings.phone || "",
-          whatsapp: settings.whatsapp || "",
-          address: settings.address || "",
-          instagram: settings.instagram || "",
-          tiktok: settings.tiktok || "",
-          storeBanner: settings.storeBanner || null,
-        });
-      } catch (error) {
-        console.error(
-          "Could not load store settings:",
-          error
-        );
-      }
+      setStoreSettings(readFooterSettings());
     };
 
     loadSettings();
 
-    window.addEventListener("storage", loadSettings);
+    window.addEventListener(
+      "storeSettingsUpdated",
+      loadSettings
+    );
+
+    window.addEventListener(
+      "storage",
+      loadSettings
+    );
 
     return () => {
-      window.removeEventListener("storage", loadSettings);
+      window.removeEventListener(
+        "storeSettingsUpdated",
+        loadSettings
+      );
+
+      window.removeEventListener(
+        "storage",
+        loadSettings
+      );
     };
   }, []);
 
-  // =========================================
-  // HELPERS
-  // =========================================
+  /* =========================================
+     HELPERS
+  ========================================= */
 
   const getSocialLink = (value, platform) => {
     if (!value) return "#";
@@ -104,9 +176,34 @@ function Footer() {
 
   const currentYear = new Date().getFullYear();
 
-  return (
-    <footer className="store-footer">
+  /* =========================================
+     DYNAMIC FOOTER COLORS
+  ========================================= */
 
+  const footerColor =
+    storeSettings.footerColor ||
+    DEFAULT_FOOTER_COLOR;
+
+  const footerTextColor =
+    getReadableFooterText(footerColor);
+
+  const footerMutedColor =
+    footerTextColor === "#ffffff"
+      ? "rgba(255, 255, 255, 0.82)"
+      : "rgba(23, 43, 43, 0.82)";
+
+  const footerStyles = {
+    "--footer-color": footerColor,
+    "--footer-dark": footerColor,
+    "--footer-text": footerTextColor,
+    "--footer-muted": footerMutedColor,
+  };
+
+  return (
+    <footer
+      className="store-footer"
+      style={footerStyles}
+    >
       {/* =====================================
           CURVED TOP
       ===================================== */}
@@ -138,15 +235,11 @@ function Footer() {
       ===================================== */}
 
       <div className="footer-main">
-
         <div className="footer-container">
 
-          {/* =================================
-              BRAND
-          ================================= */}
+          {/* BRAND */}
 
           <div className="footer-brand">
-
             {storeSettings.storeBanner && (
               <div className="footer-banner">
                 <img
@@ -168,15 +261,11 @@ function Footer() {
                 {storeSettings.storeDescription}
               </p>
             )}
-
           </div>
 
-          {/* =================================
-              EXPLORE
-          ================================= */}
+          {/* EXPLORE */}
 
           <div className="footer-column">
-
             <h3>Explore</h3>
 
             <a href="/">Home</a>
@@ -192,15 +281,13 @@ function Footer() {
             <a href="/contact">
               Contact
             </a>
-
           </div>
 
           {/* =================================
               CONTACT
           ================================= */}
 
-          <div className="footer-column">
-
+<div className="footer-column">
             <h3>Contact</h3>
 
             {storeSettings.phone && (
@@ -253,7 +340,6 @@ function Footer() {
                 </span>
               </div>
             )}
-
           </div>
 
           {/* =================================
@@ -261,7 +347,6 @@ function Footer() {
           ================================= */}
 
           <div className="footer-column">
-
             <h3>Follow</h3>
 
             {storeSettings.instagram && (
@@ -295,11 +380,9 @@ function Footer() {
                 <span>TikTok</span>
               </a>
             )}
-
           </div>
 
         </div>
-
       </div>
 
       {/* =====================================
@@ -307,7 +390,6 @@ function Footer() {
       ===================================== */}
 
       <div className="footer-bottom">
-
         <div className="footer-bottom-container">
 
           <p>
@@ -326,7 +408,6 @@ function Footer() {
           </a>
 
         </div>
-
       </div>
 
     </footer>
@@ -334,3 +415,5 @@ function Footer() {
 }
 
 export default Footer;
+
+
