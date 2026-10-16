@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 
@@ -8,7 +7,6 @@ import {
   FaUsers,
   FaLayerGroup,
   FaCreditCard,
-  FaGear,
   FaChevronLeft,
   FaChevronRight,
   FaArrowRightFromBracket,
@@ -34,11 +32,6 @@ const menuItems = [
     label: "Subscriptions",
     path: "/super-admin/subscriptions",
     icon: FaCreditCard,
-  },
-  {
-    label: "Settings",
-    path: "/super-admin/settings",
-    icon: FaGear,
   },
 ];
 
@@ -451,7 +444,6 @@ export default function SuperAdminSidebar({
         aria-label="Super Admin Navigation"
       >
         {/* HEADER */}
-
         <div className="myclinic-super-header">
           <button
             type="button"
@@ -487,7 +479,6 @@ export default function SuperAdminSidebar({
         </div>
 
         {/* NAVIGATION */}
-
         <nav className="myclinic-super-nav">
           {menuItems.map(({ label, path, icon: Icon }) => (
             <NavLink
@@ -512,7 +503,6 @@ export default function SuperAdminSidebar({
         </nav>
 
         {/* LOGOUT */}
-
         <div className="myclinic-super-bottom">
           <button
             type="button"

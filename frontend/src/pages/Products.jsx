@@ -1,7 +1,7 @@
-
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import StoreHeader from "./StoreHeader";
+
 import {
   FaSearch,
   FaHeart,
@@ -46,9 +46,11 @@ function Products() {
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [search, setSearch] = useState("");
+
   const [category, setCategory] = useState(
     categoryFromUrl || "All categories"
   );
+
   const [favorites, setFavorites] = useState([]);
 
   const [cart, setCart] = useState(() => {
@@ -56,6 +58,7 @@ function Products() {
       const saved = JSON.parse(
         localStorage.getItem("vetClinicStoreCart") || "[]"
       );
+
       return Array.isArray(saved) ? saved : [];
     } catch {
       return [];
@@ -67,6 +70,7 @@ function Products() {
   }, []);
 
   // LIVE STORE COLORS
+
   useEffect(() => {
     const refreshColors = () => setColors(readStoreColors());
 
@@ -80,12 +84,14 @@ function Products() {
   }, []);
 
   // PRODUCTS FROM ADMIN INVENTORY
+
   useEffect(() => {
     const loadProducts = () => {
       try {
         const saved = JSON.parse(
           localStorage.getItem("vetClinicProducts") || "[]"
         );
+
         setProducts(Array.isArray(saved) ? saved : []);
       } catch (error) {
         console.error("Could not load store products:", error);
@@ -107,6 +113,7 @@ function Products() {
       "vetClinicProductsUpdated",
       handleProductsUpdated
     );
+
     window.addEventListener("storage", loadProducts);
 
     return () => {
@@ -114,11 +121,13 @@ function Products() {
         "vetClinicProductsUpdated",
         handleProductsUpdated
       );
+
       window.removeEventListener("storage", loadProducts);
     };
   }, []);
 
   // CATEGORIES FROM ADMIN
+
   useEffect(() => {
     const sortCategories = (list) =>
       [...list].sort((a, b) => {
@@ -163,6 +172,7 @@ function Products() {
       "vetClinicCategoriesUpdated",
       handleCategoriesUpdated
     );
+
     window.addEventListener("storage", loadCategories);
 
     return () => {
@@ -170,6 +180,7 @@ function Products() {
         "vetClinicCategoriesUpdated",
         handleCategoriesUpdated
       );
+
       window.removeEventListener("storage", loadCategories);
     };
   }, []);
@@ -179,6 +190,7 @@ function Products() {
   }, [categoryFromUrl]);
 
   // SAVE CART
+
   useEffect(() => {
     localStorage.setItem(
       "vetClinicStoreCart",
@@ -198,9 +210,11 @@ function Products() {
 
     return storeProducts.filter((product) => {
       const name = String(product.name || "").toLowerCase();
+
       const productCategory = String(
         product.category || ""
       ).toLowerCase();
+
       const description = String(
         product.description || ""
       ).toLowerCase();
@@ -243,6 +257,7 @@ function Products() {
     event.stopPropagation();
 
     const stock = getProductStock(product);
+
     if (stock <= 0) return;
 
     const price = getProductPrice(product);
@@ -289,6 +304,7 @@ function Products() {
   };
 
   // ADMIN SETTINGS -> CSS VARIABLES
+
   const pageColors = {
     "--teal": colors.primaryColor,
     "--teal-dark": colors.secondaryColor,
@@ -319,9 +335,9 @@ function Products() {
           overflow-x: hidden;
         }
 
-        .products-page button,
-        .products-page input,
-        .products-page select {
+        .products-page .products-container button,
+        .products-page .products-container input,
+        .products-page .products-container select {
           font: inherit;
         }
 
@@ -481,9 +497,7 @@ function Products() {
           color: var(--teal-dark);
           font-size: 10px;
           font-weight: 800;
-        }
-
-        /* PRODUCT GRID */
+        }        /* PRODUCT GRID */
 
         .products-grid {
           display: grid;
@@ -500,6 +514,7 @@ function Products() {
           background: var(--page-bg);
           cursor: pointer;
           outline: none;
+
           transition:
             transform 0.2s,
             box-shadow 0.2s,
@@ -651,6 +666,7 @@ function Products() {
           font-size: 15px;
           cursor: pointer;
           box-shadow: 0 6px 14px rgba(0,0,0,0.10);
+
           transition:
             background 0.2s,
             transform 0.2s,
@@ -749,8 +765,9 @@ function Products() {
         }
       `}</style>
 
-<main className="products-container">
+      <main className="products-container">
         {/* PAGE HEADING */}
+
         <div className="products-heading">
           <div className="products-heading-badge">
             <FaPaw />
@@ -765,6 +782,7 @@ function Products() {
         </div>
 
         {/* SEARCH + CATEGORY FILTER */}
+
         <div className="products-toolbar">
           <div className="products-search">
             <FaSearch />
@@ -813,6 +831,7 @@ function Products() {
         </div>
 
         {/* RESULTS INFO */}
+
         <div className="products-results-row">
           <div className="products-results-count">
             Showing{" "}
@@ -829,6 +848,7 @@ function Products() {
         </div>
 
         {/* PRODUCT GRID */}
+
         <div className="products-grid">
           {filteredProducts.length === 0 ? (
             <div className="products-empty">
@@ -864,6 +884,7 @@ function Products() {
                   aria-label={`View ${product.name}`}
                 >
                   {/* FAVORITE BUTTON */}
+
                   <button
                     type="button"
                     className={`product-favorite ${
@@ -879,6 +900,7 @@ function Products() {
                   </button>
 
                   {/* PRODUCT IMAGE */}
+
                   <div className="product-image">
                     {product.image ? (
                       <img
@@ -891,6 +913,7 @@ function Products() {
                   </div>
 
                   {/* PRODUCT INFORMATION */}
+
                   <div className="product-info">
                     <h3 className="product-name">
                       {product.name}
@@ -901,6 +924,7 @@ function Products() {
                     </div>
 
                     {/* PRICE + STOCK + CART */}
+
                     <div className="product-action-row">
                       <span className="product-price">
                         ${price.toFixed(2)}
@@ -911,8 +935,8 @@ function Products() {
                           stock <= 0
                             ? "out"
                             : stock <= 5
-                            ? "low"
-                            : ""
+                              ? "low"
+                              : ""
                         }`}
                       >
                         {stock <= 0

@@ -1,4 +1,3 @@
-
 /* =========================================
    STORE FOOTER
    DYNAMIC COLORS FROM SETTINGS
@@ -6,7 +5,8 @@
 
 .store-footer {
   width: 100%;
-  margin-top: 80px;
+  margin-top: 0;
+  padding-top: 80px;
 
   position: relative;
 
@@ -15,6 +15,16 @@
   --footer-light: #e8f7f7;
   --footer-text: #ffffff;
   --footer-muted: rgba(255, 255, 255, 0.82);
+
+  background-color: var(--footer-page-background, #ffffff);
+}
+
+/* Keep the space before the wave inside the footer background. */
+
+html body #root footer.store-footer {
+  margin-top: 0 !important;
+  padding-top: 80px !important;
+  background-color: var(--footer-page-background, #ffffff) !important;
 }
 
 /* =========================================
@@ -27,12 +37,16 @@
 
   overflow: hidden;
   margin-bottom: -2px;
+
+  background-color: var(--footer-page-background, #ffffff);
 }
 
 .store-footer .footer-wave svg {
   display: block;
   width: 100%;
   height: 100%;
+
+  background-color: var(--footer-page-background, #ffffff);
 }
 
 .store-footer .footer-wave-line {
@@ -285,7 +299,13 @@
 
 @media (max-width: 600px) {
   .store-footer {
-    margin-top: 55px;
+    margin-top: 0;
+    padding-top: 55px;
+  }
+
+  html body #root footer.store-footer {
+    margin-top: 0 !important;
+    padding-top: 55px !important;
   }
 
   .store-footer .footer-wave {

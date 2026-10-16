@@ -23041,3 +23041,123 @@ html body #root .pos-main .pos-reference-checkout-footer {
     font-size: 13px !important;
   }
 }
+html body #root .orders-page .orders-container > button.orders-back {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  align-self: flex-start !important;
+  flex: 0 0 auto !important;
+  gap: 8px !important;
+
+  width: fit-content !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  height: 32px !important;
+  min-height: 32px !important;
+
+  margin: 0 0 25px !important;
+  padding: 0 10px !important;
+
+  border: none !important;
+  border-radius: 7px !important;
+  background: transparent !important;
+  color: #667085 !important;
+  -webkit-text-fill-color: #667085 !important;
+
+  font-size: 10px !important;
+  font-weight: 600 !important;
+  white-space: nowrap !important;
+  opacity: 1 !important;
+
+  transform: none !important;
+  box-shadow: none !important;
+  cursor: pointer !important;
+  transition: background-color 0.15s ease, color 0.15s ease !important;
+}
+
+html body #root .orders-page .orders-container > button.orders-back:hover,
+html body #root .orders-page .orders-container > button.orders-back:focus,
+html body #root .orders-page .orders-container > button.orders-back:active {
+  background: var(--orders-light, #eaf8f7) !important;
+  color: var(--orders-secondary, #118887) !important;
+  -webkit-text-fill-color: var(--orders-secondary, #118887) !important;
+  opacity: 1 !important;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+html body #root .orders-page .orders-container > button.orders-back svg {
+  color: inherit !important;
+  fill: currentColor !important;
+  flex-shrink: 0 !important;
+}
+
+html body #root .orders-page .orders-container > button.orders-back::before,
+html body #root .orders-page .orders-container > button.orders-back::after {
+  content: none !important;
+}
+html body #root .login-page
+.login-brand > .login-brand-icon {
+  background: transparent !important;
+  border: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+html body #root .login-page
+.login-brand-icon > .login-clinic-logo {
+  background: transparent !important;
+  border: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+html body #root .login-page .login-split-container
+.login-info-side .login-brand > div.login-brand-icon {
+  background: transparent !important;
+  border: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+html body #root .settings-page
+.settings-page-header > .settings-header-icon {
+  display: none !important;
+}
+html body #root .billing-page .billing-table .table-actions
+button.billing-print-button.icon-button {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  width: 32px !important;
+  min-width: 32px !important;
+  height: 32px !important;
+  min-height: 32px !important;
+  flex: 0 0 32px !important;
+
+  padding: 0 !important;
+  margin: 0 !important;
+  border: none !important;
+  border-radius: 8px !important;
+
+  background: #f2f4f7 !important;
+  color: #667085 !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  cursor: pointer !important;
+}
+
+html body #root .billing-page .billing-table .table-actions
+button.billing-print-button.icon-button svg {
+  display: block !important;
+  width: 14px !important;
+  height: 14px !important;
+  color: inherit !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+html body #root .billing-page .billing-table .table-actions
+button.billing-print-button.icon-button:hover {
+  background: #e8f3f2 !important;
+  color: #159f9f !important;
+}

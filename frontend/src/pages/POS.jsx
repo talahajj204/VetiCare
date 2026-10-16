@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
-
+import { readOwners } from "./Owners";
 import {
   FaSearch,
   FaShoppingCart,
@@ -17,26 +17,27 @@ import {
   FaSignOutAlt,
 } from "react-icons/fa";
 
-// ==========================================
-// LOCAL STORAGE KEYS
-// ==========================================
-
 const PRODUCTS_KEY = "vetClinicProducts";
 const CATEGORIES_KEY = "vetClinicCategories";
 const SALES_KEY = "vetClinicPOSSales";
+const OWNERS_KEY = "vetClinicOwners";
 
-// ==========================================
-// READ LOCAL STORAGE
-// ==========================================
+const emptyOwner = {
+  firstName: "",
+  lastName: "",
+  email: "",
+  phone: "",
+  address: "",
+  emergencyContact: "",
+  notes: "",
+  status: "active",
+};
 
 const readStoredArray = (key) => {
   try {
     const saved = localStorage.getItem(key);
-
     if (!saved) return [];
-
     const parsed = JSON.parse(saved);
-
     return Array.isArray(parsed) ? parsed : [];
   } catch (error) {
     console.error(`Failed to read ${key}:`, error);
@@ -44,16 +45,8 @@ const readStoredArray = (key) => {
   }
 };
 
-// ==========================================
-// POS COMPONENT
-// ==========================================
-
 function POS() {
   const navigate = useNavigate();
-
-  // ========================================
-  // INVENTORY PRODUCTS AND CATEGORIES
-  // ========================================
 
   const [inventoryProducts, setInventoryProducts] = useState(() =>
     readStoredArray(PRODUCTS_KEY)
@@ -63,16 +56,8 @@ function POS() {
     readStoredArray(CATEGORIES_KEY)
   );
 
-  // ========================================
-  // SEARCH AND CATEGORY FILTER
-  // ========================================
-
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("All categories");
-
-  // ========================================
-  // SYNC WITH INVENTORY AND CATEGORIES
-  // ========================================
 
   useEffect(() => {
     const refreshInventory = () => {
@@ -133,10 +118,6 @@ function POS() {
     };
   }, []);
 
-  // ========================================
-  // PRODUCTS DISPLAYED ON POS
-  // ========================================
-
   const products = useMemo(() => {
     return inventoryProducts
       .filter((product) => product.showOnPOS === true)
@@ -149,12 +130,6 @@ function POS() {
         image: product.image || "",
       }));
   }, [inventoryProducts]);
-
-  // ========================================
-  // DYNAMIC CATEGORIES
-  // SOURCE: Categories.jsx / Inventory.jsx
-  // localStorage: vetClinicCategories
-  // ========================================
 
   const categories = useMemo(() => {
     const sortedCategories = [...inventoryCategories].sort((a, b) => {
@@ -177,17 +152,11 @@ function POS() {
     return ["All categories", ...new Set(categoryNames)];
   }, [inventoryCategories]);
 
-  // Reset category when deleted
   useEffect(() => {
     if (!categories.includes(category)) {
       setCategory("All categories");
     }
   }, [categories, category]);
-
-  // ========================================
-  // FILTER PRODUCTS
-  // SEARCH + CATEGORY WORK TOGETHER
-  // ========================================
 
   const filteredProducts = useMemo(() => {
     const searchValue = search.toLowerCase().trim();
@@ -206,35 +175,75 @@ function POS() {
     });
   }, [products, search, category]);
 
-  // ========================================
-  // OWNER INPUT
-  // ========================================
-
   const [ownerSearch, setOwnerSearch] = useState("");
+  const [selectedOwnerId, setSelectedOwnerId] = useState(null);
+  const [showAddOwnerModal, setShowAddOwnerModal] = useState(false);
+  const [newOwner, setNewOwner] = useState({ ...emptyOwner });
 
-  // ========================================
-  // CART STATES
-  // ========================================
+  const openAddOwner = () => {
+    setNewOwner({ ...emptyOwner });
+    setShowAddOwnerModal(true);
+  };
+
+  const handleNewOwnerChange = (event) => {
+    const { name, value } = event.target;
+
+    setNewOwner((current) => ({
+      ...current,
+      [name]: value,
+    }));
+  };
+
+  const handleAddOwner = (event) => {
+    event.preventDefault();
+
+    const owner = {
+      ...newOwner,
+      id: Date.now(),
+      firstName: newOwner.firstName.trim(),
+      lastName: newOwner.lastName.trim(),
+      status: "active",
+      pets: [],
+      history: [],
+    };
+
+    if (!owner.firstName || !owner.lastName) return;
+
+    try {
+      const owners = readOwners();
+
+      if (!Array.isArray(owners)) {
+        throw new Error("Invalid owners data");
+      }
+
+      const updated = [...owners, owner];
+
+      localStorage.setItem(OWNERS_KEY, JSON.stringify(updated));
+      window.dispatchEvent(new Event("vetClinicOwnersUpdated"));
+    } catch (error) {
+      console.error("Could not save owner:", error);
+      alert("Could not save owner.");
+      return;
+    }
+
+    setOwnerSearch(`${owner.firstName} ${owner.lastName}`);
+    setSelectedOwnerId(owner.id);
+    setShowAddOwnerModal(false);
+    setNewOwner({ ...emptyOwner });
+  };
 
   const [cart, setCart] = useState([]);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
-
   const [amountReceived, setAmountReceived] = useState("");
   const [amountReceivedLbp, setAmountReceivedLbp] = useState("");
-
   const [discount, setDiscount] = useState("0");
   const [paymentMethod, setPaymentMethod] = useState("Cash");
   const [hasDelivery, setHasDelivery] = useState(false);
-
   const [saleComplete, setSaleComplete] = useState(false);
   const [lastSale, setLastSale] = useState(null);
   const [accountOpen, setAccountOpen] = useState(false);
 
   const USD_TO_LBP = 89500;
-
-  // ========================================
-  // TOTAL CALCULATIONS
-  // ========================================
 
   const subtotal = cart.reduce(
     (sum, item) => sum + item.price * item.quantity,
@@ -247,18 +256,11 @@ function POS() {
   );
 
   const total = Math.max(subtotal - discountNumber, 0);
-
   const received = Math.max(Number(amountReceived) || 0, 0);
   const receivedLbp = Math.max(Number(amountReceivedLbp) || 0, 0);
-
   const totalPaid = received + receivedLbp / USD_TO_LBP;
   const change = Math.max(totalPaid - total, 0);
-
   const totalLbp = total * USD_TO_LBP;
-
-  // ========================================
-  // ADD PRODUCT TO CART
-  // ========================================
 
   const addToCart = (product) => {
     if (product.stock <= 0) return;
@@ -293,10 +295,6 @@ function POS() {
     });
   };
 
-  // ========================================
-  // INCREASE CART QUANTITY
-  // ========================================
-
   const increaseQuantity = (id) => {
     setCart((current) =>
       current.map((item) => {
@@ -320,10 +318,6 @@ function POS() {
     );
   };
 
-  // ========================================
-  // DECREASE CART QUANTITY
-  // ========================================
-
   const decreaseQuantity = (id) => {
     setCart((current) =>
       current
@@ -339,32 +333,21 @@ function POS() {
     );
   };
 
-  // ========================================
-  // DELETE ITEM FROM CART
-  // ========================================
-
   const deleteItem = (id) => {
     setCart((current) =>
       current.filter((item) => String(item.id) !== String(id))
     );
   };
 
-  // ========================================
-  // CLEAR CART
-  // ========================================
-
   const clearCart = () => {
     setCart([]);
     setOwnerSearch("");
+    setSelectedOwnerId(null);
     setDiscount("0");
     setAmountReceived("");
     setAmountReceivedLbp("");
     setHasDelivery(false);
   };
-
-  // ========================================
-  // OPEN CHECKOUT
-  // ========================================
 
   const openCheckout = () => {
     if (cart.length === 0) return;
@@ -385,7 +368,6 @@ function POS() {
 
     if (unavailable) {
       setInventoryProducts(latestInventory);
-
       alert(`Not enough stock for ${unavailable.name}.`);
       return;
     }
@@ -396,10 +378,6 @@ function POS() {
     setPaymentMethod("Cash");
     setCheckoutOpen(true);
   };
-
-  // ========================================
-  // PAYMENT HELPERS
-  // ========================================
 
   const handleExactPayment = () => {
     setAmountReceived(total.toFixed(2));
@@ -418,10 +396,6 @@ function POS() {
     );
   };
 
-  // ========================================
-  // RECALL / REFUND
-  // ========================================
-
   const handleRecall = () => {
     alert("Recall selected");
   };
@@ -429,10 +403,6 @@ function POS() {
   const handleRefund = () => {
     alert("Refund selected");
   };
-
-  // ========================================
-  // COMPLETE SALE
-  // ========================================
 
   const finishSale = () => {
     if (cart.length === 0) return;
@@ -444,7 +414,6 @@ function POS() {
 
     const latestInventory = readStoredArray(PRODUCTS_KEY);
 
-    // Verify stock
     for (const item of cart) {
       const product = latestInventory.find(
         (inventoryItem) => String(inventoryItem.id) === String(item.id)
@@ -456,17 +425,15 @@ function POS() {
         Number(product.quantity) < item.quantity
       ) {
         setInventoryProducts(latestInventory);
-
         alert(`Not enough stock for ${item.name}.`);
         return;
       }
     }
 
-    // Prepare sale
     const sale = {
       id: `POS-${Date.now()}`,
       owner: ownerSearch.trim() || "Walk-in Customer",
-      ownerId: null,
+      ownerId: selectedOwnerId,
       items: cart.map((item) => ({
         ...item,
       })),
@@ -480,7 +447,6 @@ function POS() {
       date: new Date().toISOString(),
     };
 
-    // Deduct purchased quantities
     const updatedInventory = latestInventory.map((product) => {
       const soldProduct = cart.find(
         (item) => String(item.id) === String(product.id)
@@ -499,12 +465,10 @@ function POS() {
       };
     });
 
-    // Read sales history
     let previousSales;
 
     try {
       const savedSales = localStorage.getItem(SALES_KEY);
-
       const parsed = savedSales ? JSON.parse(savedSales) : [];
 
       if (!Array.isArray(parsed)) {
@@ -518,7 +482,6 @@ function POS() {
       return;
     }
 
-    // Save sale and inventory
     const oldProducts = localStorage.getItem(PRODUCTS_KEY);
     const oldSales = localStorage.getItem(SALES_KEY);
 
@@ -527,7 +490,6 @@ function POS() {
         PRODUCTS_KEY,
         JSON.stringify(updatedInventory)
       );
-
       localStorage.setItem(
         SALES_KEY,
         JSON.stringify([sale, ...previousSales])
@@ -535,7 +497,6 @@ function POS() {
     } catch (error) {
       console.error("Could not save sale:", error);
 
-      // Restore previous data
       try {
         if (oldProducts === null) {
           localStorage.removeItem(PRODUCTS_KEY);
@@ -559,7 +520,6 @@ function POS() {
       return;
     }
 
-    // Update inventory immediately
     setInventoryProducts(updatedInventory);
 
     window.dispatchEvent(
@@ -567,26 +527,20 @@ function POS() {
         detail: updatedInventory,
       })
     );
-
-    window.dispatchEvent(
-      new Event("vetClinicPOSSalesUpdated")
-    );
+    window.dispatchEvent(new Event("vetClinicPOSSalesUpdated"));
 
     setLastSale(sale);
     setCheckoutOpen(false);
     setSaleComplete(true);
-
     clearCart();
   };
-
-  // ========================================
-  // ACCOUNT / LOGOUT
-  // ========================================
 
   const handleLogout = () => {
     setAccountOpen(false);
     navigate("/");
-  };  return (
+  };
+
+  return (
     <div className="dashboard-layout pos-dashboard-layout">
       <Sidebar />
 
@@ -599,41 +553,6 @@ function POS() {
             overflow: hidden;
           }
 
-          .pos-dashboard-layout > .sidebar {
-            width: 74px !important;
-            min-width: 74px !important;
-            flex: 0 0 74px !important;
-            overflow-x: hidden !important;
-          }
-
-          .pos-dashboard-layout > .sidebar .sidebar-text,
-          .pos-dashboard-layout > .sidebar .sidebar-logo-text {
-            display: none !important;
-          }
-
-          .pos-dashboard-layout > .sidebar .sidebar-brand,
-          .pos-dashboard-layout > .sidebar .sidebar-logo {
-            justify-content: center !important;
-          }
-
-          .pos-dashboard-layout > .sidebar .sidebar-nav a,
-          .pos-dashboard-layout > .sidebar .sidebar-logout {
-            width: 50px !important;
-            min-width: 50px !important;
-            height: 48px !important;
-            margin-left: auto !important;
-            margin-right: auto !important;
-            padding: 0 !important;
-            display: flex !important;
-            justify-content: center !important;
-            align-items: center !important;
-          }
-
-          .pos-dashboard-layout > .sidebar .sidebar-icon {
-            margin: 0 !important;
-            font-size: 18px !important;
-          }
-
           .pos-main {
             flex: 1;
             min-width: 0;
@@ -642,11 +561,42 @@ function POS() {
             background: #f8fafb;
           }
 
+          @media (min-width: 769px) {
+            html body #root .dashboard-layout.pos-dashboard-layout {
+              --pos-sidebar-space: var(--vet-sidebar-open-width, 260px);
+
+              width: 100% !important;
+              max-width: 100% !important;
+              min-width: 0 !important;
+              margin-left: 0 !important;
+              padding-left: var(--pos-sidebar-space) !important;
+              box-sizing: border-box !important;
+              transition: padding-left .25s ease;
+            }
+
+            html body #root .dashboard-layout.pos-dashboard-layout:has(> .sidebar.sidebar-pos-collapsed) {
+              --pos-sidebar-space: var(--vet-sidebar-closed-width, 72px);
+
+              padding-left: var(--pos-sidebar-space) !important;
+            }
+
+            html body #root .dashboard-layout.pos-dashboard-layout > .pos-main {
+              position: relative !important;
+              left: auto !important;
+              right: auto !important;
+              flex: 1 1 0 !important;
+              width: 0 !important;
+              min-width: 0 !important;
+              max-width: 100% !important;
+              margin-left: 0 !important;
+              margin-right: 0 !important;
+              transform: none !important;
+            }
+          }
+
           .pos-main * {
             box-sizing: border-box;
           }
-
-          /* HEADER */
 
           .pos-topbar {
             height: 64px;
@@ -757,8 +707,6 @@ function POS() {
             background: #f5f9f8;
           }
 
-          /* MAIN LAYOUT */
-
           .pos-content {
             height: calc(100vh - 64px);
             display: grid;
@@ -770,8 +718,6 @@ function POS() {
             padding: 14px 16px 20px;
             overflow-y: auto;
           }
-
-          /* SEARCH AND CATEGORIES */
 
           .pos-tools {
             display: flex;
@@ -818,8 +764,6 @@ function POS() {
             outline: none;
             font-size: 10px;
           }
-
-          /* PRODUCTS — SAME FOUR PER ROW */
 
           .pos-products-grid {
             display: grid;
@@ -918,8 +862,6 @@ function POS() {
             opacity: .4;
             cursor: not-allowed;
           }
-
-          /* CART */
 
           .pos-cart-panel {
             min-width: 0;
@@ -1166,9 +1108,7 @@ function POS() {
             line-height: 1;
           }
 
-          /* CHECKOUT MODAL */
-
-          .pos-modal-overlay {
+          /* CHECKOUT MODAL */          .pos-modal-overlay {
             position: fixed;
             inset: 0;
             z-index: 9999;
@@ -1548,8 +1488,6 @@ function POS() {
             }
           }
 
-          /* ONLY FIXES: STABLE ADD BUTTON + WORKING SCROLL */
-
           html body #root .pos-dashboard-layout {
             height: 100vh !important;
             height: 100dvh !important;
@@ -1563,7 +1501,6 @@ function POS() {
             min-height: 0 !important;
             min-width: 0 !important;
             max-height: 100% !important;
-
             display: flex !important;
             flex-direction: column !important;
             overflow: hidden !important;
@@ -1580,7 +1517,6 @@ function POS() {
             min-height: 0 !important;
             min-width: 0 !important;
             height: auto !important;
-
             grid-template-rows: minmax(0, 1fr) !important;
             align-items: stretch !important;
             overflow: hidden !important;
@@ -1590,7 +1526,6 @@ function POS() {
             min-height: 0 !important;
             min-width: 0 !important;
             height: 100% !important;
-
             overflow-y: auto !important;
             overflow-x: hidden !important;
             scrollbar-gutter: stable;
@@ -1609,7 +1544,6 @@ function POS() {
             position: static !important;
             inset: auto !important;
             float: none !important;
-
             flex: 0 0 27px !important;
             width: 27px !important;
             min-width: 27px !important;
@@ -1617,7 +1551,6 @@ function POS() {
             height: 27px !important;
             min-height: 27px !important;
             max-height: 27px !important;
-
             margin: 0 !important;
             padding: 0 !important;
             transform: none !important;
@@ -1629,7 +1562,6 @@ function POS() {
             min-height: 0 !important;
             height: 100% !important;
             max-height: 100% !important;
-
             display: flex !important;
             flex-direction: column !important;
             overflow: hidden !important;
@@ -1644,7 +1576,6 @@ function POS() {
             flex: 1 1 0 !important;
             min-height: 0 !important;
             height: auto !important;
-
             overflow-y: auto !important;
             overflow-x: hidden !important;
             scrollbar-gutter: stable;
@@ -1670,9 +1601,55 @@ function POS() {
               max-height: none !important;
             }
           }
-        `}</style>
 
-        {/* HEADER */}
+          .pos-owner-control {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            min-width: 0;
+          }
+
+          .pos-owner-name {
+            display: flex;
+            align-items: center;
+            flex: 1;
+            min-width: 0;
+            height: auto;
+            min-height: 38px;
+            overflow-wrap: anywhere;
+          }
+
+          html body #root .pos-owner-control > .pos-owner-add {
+            position: static !important;
+            flex: 0 0 38px !important;
+            width: 38px !important;
+            min-width: 38px !important;
+            height: 38px !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            border: 1px solid #159f9f !important;
+            border-radius: 7px !important;
+            background: #159f9f !important;
+            color: #ffffff !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            transform: none !important;
+            cursor: pointer !important;
+          }
+
+          .pos-owner-modal-overlay {
+            position: fixed !important;
+            inset: 0 !important;
+            z-index: 10000 !important;
+            overflow-y: auto !important;
+          }
+
+          .pos-owner-modal-overlay > .modal-container {
+            max-height: calc(100dvh - 32px);
+            overflow-y: auto;
+          }
+        `}</style>
 
         <header className="pos-topbar">
           <h1 className="pos-page-title">POS</h1>
@@ -1726,8 +1703,6 @@ function POS() {
         </header>
 
         <div className="pos-content">
-          {/* PRODUCTS SECTION */}
-
           <section className="pos-products-section">
             <div className="pos-tools">
               <div className="pos-search-box">
@@ -1764,7 +1739,18 @@ function POS() {
                 const canAdd = product.stock > quantityInCart;
 
                 return (
-                  <div className="pos-product-card" key={product.id}>
+                  <div
+                    className="pos-product-card"
+                    key={product.id}
+                    role="group"
+                    aria-label={product.name}
+                    onClick={() => {
+                      if (canAdd) addToCart(product);
+                    }}
+                    style={{
+                      cursor: canAdd ? "pointer" : "not-allowed",
+                    }}
+                  >
                     <div className="pos-product-image">
                       {product.image ? (
                         <img
@@ -1798,7 +1784,10 @@ function POS() {
                       <button
                         type="button"
                         className="pos-add-button"
-                        onClick={() => addToCart(product)}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          addToCart(product);
+                        }}
                         disabled={!canAdd}
                         title={canAdd ? "Add to cart" : "Out of stock"}
                       >
@@ -1831,19 +1820,25 @@ function POS() {
             )}
           </section>
 
-          {/* CART */}
-
           <aside className="pos-cart-panel">
             <div className="pos-cart-header">
               <h2>Cart</h2>
 
-              <input
-                type="text"
-                className="pos-owner-select"
-                placeholder="Enter owner name"
-                value={ownerSearch}
-                onChange={(event) => setOwnerSearch(event.target.value)}
-              />
+              <div className="pos-owner-control">
+                <div className="pos-owner-select pos-owner-name">
+                  {ownerSearch || "Walk-in Customer"}
+                </div>
+
+                <button
+                  type="button"
+                  className="pos-owner-add"
+                  onClick={openAddOwner}
+                  title="Add Owner"
+                  aria-label="Add Owner"
+                >
+                  <FaPlus />
+                </button>
+              </div>
             </div>
 
             <div className="pos-cart-body">
@@ -1976,7 +1971,138 @@ function POS() {
           </aside>
         </div>
 
-        {/* CHECKOUT MODAL */}
+        {showAddOwnerModal && (
+          <div className="modal-overlay pos-owner-modal-overlay">
+            <div className="modal-container">
+              <div className="modal-header">
+                <div>
+                  <h2>Add Owner</h2>
+                  <p>Enter owner information</p>
+                </div>
+
+                <button
+                  type="button"
+                  className="modal-close"
+                  onClick={() => setShowAddOwnerModal(false)}
+                >
+                  ×
+                </button>
+              </div>
+
+              <form onSubmit={handleAddOwner}>
+                <div className="form-row">
+                  <div className="form-field">
+                    <label>First Name</label>
+
+                    <input
+                      type="text"
+                      name="firstName"
+                      placeholder="Enter first name"
+                      value={newOwner.firstName}
+                      onChange={handleNewOwnerChange}
+                      required
+                    />
+                  </div>
+
+                  <div className="form-field">
+                    <label>Last Name</label>
+
+                    <input
+                      type="text"
+                      name="lastName"
+                      placeholder="Enter last name"
+                      value={newOwner.lastName}
+                      onChange={handleNewOwnerChange}
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="form-row">
+                  <div className="form-field">
+                    <label>Email</label>
+
+                    <input
+                      type="email"
+                      name="email"
+                      placeholder="Enter email"
+                      value={newOwner.email}
+                      onChange={handleNewOwnerChange}
+                      required
+                    />
+                  </div>
+
+                  <div className="form-field">
+                    <label>Phone</label>
+
+                    <input
+                      type="tel"
+                      name="phone"
+                      placeholder="Enter phone number"
+                      value={newOwner.phone}
+                      onChange={handleNewOwnerChange}
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="form-field">
+                  <label>Address</label>
+
+                  <input
+                    type="text"
+                    name="address"
+                    placeholder="Enter address"
+                    value={newOwner.address}
+                    onChange={handleNewOwnerChange}
+                  />
+                </div>
+
+                <div className="form-field">
+                  <label>Emergency Contact</label>
+
+                  <input
+                    type="text"
+                    name="emergencyContact"
+                    placeholder="Enter emergency contact"
+                    value={newOwner.emergencyContact}
+                    onChange={handleNewOwnerChange}
+                  />
+                </div>
+
+                <div className="form-field">
+                  <label>Notes</label>
+
+                  <textarea
+                    name="notes"
+                    placeholder="Enter owner notes..."
+                    value={newOwner.notes}
+                    onChange={handleNewOwnerChange}
+                    rows="3"
+                  />
+                </div>
+
+                <div className="form-actions">
+                  <button
+                    type="button"
+                    className="modal-cancel-button"
+                    onClick={() => setShowAddOwnerModal(false)}
+                  >
+                    Cancel
+                  </button>
+
+                  <button
+                    type="submit"
+                    className="save-button"
+                    value="save-owner"
+                  >
+                    Add Owner
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
 
         {checkoutOpen && (
           <div className="pos-modal-overlay">
@@ -1997,8 +2123,6 @@ function POS() {
               </div>
 
               <div className="pos-reference-checkout-body">
-                {/* FINANCIAL SUMMARY */}
-
                 <div className="pos-financial-panel">
                   <h3>Financial Summary</h3>
 
@@ -2087,8 +2211,6 @@ function POS() {
                     ))}
                   </div>
                 </div>
-
-                {/* PAYMENT */}
 
                 <div className="pos-reference-payment">
                   <h3>Payment Details</h3>
@@ -2219,8 +2341,6 @@ function POS() {
             </div>
           </div>
         )}
-
-        {/* SALE SUCCESS */}
 
         {saleComplete && (
           <div className="pos-modal-overlay">

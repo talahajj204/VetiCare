@@ -1,8 +1,7 @@
-
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import StoreHeader from "./StoreHeader";
-import { FaPaw, FaArrowRight } from "react-icons/fa";
+import { FaPaw, FaArrowRight, FaShoppingCart } from "react-icons/fa";
 
 const DEFAULT_COLORS = {
   primaryColor: "#1aa6a6",
@@ -242,15 +241,18 @@ function Home() {
           min-height: 440px;
           margin: 30px auto 0;
           padding: 65px 7%;
+
           display: flex;
           align-items: center;
           overflow: hidden;
+
           border-radius: 24px;
           background: linear-gradient(
             120deg,
             var(--home-light) 0%,
             var(--home-background) 100%
           );
+
           background-size: cover;
           background-position: center;
         }
@@ -435,7 +437,6 @@ function Home() {
           from {
             transform: translateX(0);
           }
-
           to {
             transform: translateX(-50%);
           }
@@ -535,9 +536,7 @@ function Home() {
         .home-category-name {
           background: var(--home-background) !important;
           color: var(--home-primary) !important;
-        }
-
-        /* FEATURED PRODUCTS */
+        }        /* FEATURED PRODUCTS */
 
         .home-page .home-products-header {
           display: flex;
@@ -561,25 +560,34 @@ function Home() {
           align-items: center !important;
           justify-content: center !important;
           gap: 8px !important;
+
           width: max-content !important;
           min-width: 0 !important;
           max-width: max-content !important;
+
           height: 42px !important;
           min-height: 42px !important;
+
           flex: 0 0 auto !important;
           flex-grow: 0 !important;
           flex-shrink: 0 !important;
+
           margin: 0 0 0 auto !important;
           padding: 10px 16px !important;
+
           border: 1px solid var(--home-border) !important;
           border-radius: 9px !important;
+
           background: var(--home-background) !important;
           color: var(--home-primary) !important;
+
           font-size: 12px !important;
           font-weight: 800 !important;
           line-height: 1 !important;
           white-space: nowrap !important;
+
           cursor: pointer;
+
           transition:
             background .2s ease,
             border-color .2s ease;
@@ -606,6 +614,7 @@ function Home() {
           border: 1px solid var(--home-border);
           border-radius: 16px;
           background: var(--home-background);
+
           transition:
             transform .2s ease,
             box-shadow .2s ease,
@@ -688,17 +697,38 @@ function Home() {
         }
 
         .home-page button.home-add-cart {
-          padding: 9px 12px;
+          width: 36px !important;
+          min-width: 36px !important;
+          max-width: 36px !important;
+          height: 36px !important;
+          min-height: 36px !important;
+          padding: 0 !important;
+          flex: 0 0 36px !important;
+
+          display: inline-flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+
           border: 0 !important;
           border-radius: 8px;
+
           background: var(--home-light) !important;
           color: var(--home-secondary) !important;
-          font-size: 11px;
+
+          font-size: 16px;
           font-weight: 800;
           cursor: pointer;
+
           transition:
             background .2s ease,
             color .2s ease;
+        }
+
+        .home-page button.home-add-cart svg {
+          width: 16px;
+          height: 16px;
+          flex-shrink: 0;
+          color: inherit !important;
         }
 
         .home-page button.home-add-cart:hover {
@@ -979,8 +1009,10 @@ function Home() {
                         onClick={() =>
                           addToCart(product)
                         }
+                        title="Add to Cart"
+                        aria-label={`Add ${product.name} to cart`}
                       >
-                        Add to Cart
+                        <FaShoppingCart aria-hidden="true" />
                       </button>
                     </div>
                   </div>

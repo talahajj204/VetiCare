@@ -1,6 +1,4 @@
-
 import { useEffect, useState } from "react";
-
 import {
   FaPhoneAlt,
   FaEnvelope,
@@ -8,66 +6,73 @@ import {
   FaInstagram,
   FaMapMarkerAlt,
 } from "react-icons/fa";
-
 import { FaTiktok } from "react-icons/fa6";
-
 import "../components/Footer.css";
-
-/* =========================================
-   DEFAULT FOOTER COLOR
-========================================= */
 
 const DEFAULT_FOOTER_COLOR = "#11797b";
 
-/* =========================================
-   READ SETTINGS FROM LOCAL STORAGE
-========================================= */
+const getFooterPhoneNumbers = (settings) => {
+  const numbers = Array.isArray(settings?.phoneNumbers)
+    ? settings.phoneNumbers
+    : [];
+
+  const validNumbers = numbers
+    .map((number) => String(number ?? "").trim())
+    .filter(Boolean);
+
+  if (validNumbers.length > 0) {
+    return validNumbers;
+  }
+
+  const oldPhone = String(settings?.phone ?? "").trim();
+  return oldPhone ? [oldPhone] : [];
+};
 
 const readFooterSettings = () => {
   try {
-    const settings = JSON.parse(
+    const parsed = JSON.parse(
       localStorage.getItem("storeSettings") || "{}"
     );
+
+    const settings =
+      parsed && typeof parsed === "object" ? parsed : {};
 
     return {
       storeName: settings.storeName || "",
       storeDescription: settings.storeDescription || "",
       email: settings.email || "",
       phone: settings.phone || "",
+      phoneNumbers: getFooterPhoneNumbers(settings),
       whatsapp: settings.whatsapp || "",
       address: settings.address || "",
       instagram: settings.instagram || "",
       tiktok: settings.tiktok || "",
       storeBanner: settings.storeBanner || null,
-
+      backgroundColor:
+        settings.storeColors?.backgroundColor || "#ffffff",
       footerColor:
         settings.storeColors?.footerColor ||
         DEFAULT_FOOTER_COLOR,
     };
   } catch (error) {
-    console.error(
-      "Could not load store settings:",
-      error
-    );
+    console.error("Could not load store settings:", error);
 
     return {
       storeName: "",
       storeDescription: "",
       email: "",
       phone: "",
+      phoneNumbers: [],
       whatsapp: "",
       address: "",
       instagram: "",
       tiktok: "",
       storeBanner: null,
+      backgroundColor: "#ffffff",
       footerColor: DEFAULT_FOOTER_COLOR,
     };
   }
 };
-
-/* =========================================
-   AUTOMATIC READABLE TEXT COLOR
-========================================= */
 
 const getReadableFooterText = (hex) => {
   const color = String(hex || "").replace("#", "");
@@ -80,34 +85,23 @@ const getReadableFooterText = (hex) => {
   const green = parseInt(color.slice(2, 4), 16) / 255;
   const blue = parseInt(color.slice(4, 6), 16) / 255;
 
-  const linearize = (value) => {
-    return value <= 0.04045
+  const linearize = (value) =>
+    value <= 0.04045
       ? value / 12.92
       : ((value + 0.055) / 1.055) ** 2.4;
-  };
 
   const luminance =
     0.2126 * linearize(red) +
     0.7152 * linearize(green) +
     0.0722 * linearize(blue);
 
-  return luminance > 0.179
-    ? "#172b2b"
-    : "#ffffff";
+  return luminance > 0.179 ? "#172b2b" : "#ffffff";
 };
-
-/* =========================================
-   FOOTER COMPONENT
-========================================= */
 
 function Footer() {
   const [storeSettings, setStoreSettings] = useState(
     readFooterSettings
   );
-
-  /* =========================================
-     LOAD SETTINGS + LISTEN FOR ADMIN UPDATES
-  ========================================= */
 
   useEffect(() => {
     const loadSettings = () => {
@@ -120,28 +114,16 @@ function Footer() {
       "storeSettingsUpdated",
       loadSettings
     );
-
-    window.addEventListener(
-      "storage",
-      loadSettings
-    );
+    window.addEventListener("storage", loadSettings);
 
     return () => {
       window.removeEventListener(
         "storeSettingsUpdated",
         loadSettings
       );
-
-      window.removeEventListener(
-        "storage",
-        loadSettings
-      );
+      window.removeEventListener("storage", loadSettings);
     };
   }, []);
-
-  /* =========================================
-     HELPERS
-  ========================================= */
 
   const getSocialLink = (value, platform) => {
     if (!value) return "#";
@@ -170,22 +152,16 @@ function Footer() {
     if (!number) return "#";
 
     const cleanNumber = number.replace(/\D/g, "");
-
     return `https://wa.me/${cleanNumber}`;
   };
 
   const currentYear = new Date().getFullYear();
-
-  /* =========================================
-     DYNAMIC FOOTER COLORS
-  ========================================= */
+  const phoneNumbers = getFooterPhoneNumbers(storeSettings);
 
   const footerColor =
-    storeSettings.footerColor ||
-    DEFAULT_FOOTER_COLOR;
+    storeSettings.footerColor || DEFAULT_FOOTER_COLOR;
 
-  const footerTextColor =
-    getReadableFooterText(footerColor);
+  const footerTextColor = getReadableFooterText(footerColor);
 
   const footerMutedColor =
     footerTextColor === "#ffffff"
@@ -197,17 +173,24 @@ function Footer() {
     "--footer-dark": footerColor,
     "--footer-text": footerTextColor,
     "--footer-muted": footerMutedColor,
+    "--footer-page-background":
+      storeSettings.backgroundColor || "#ffffff",
   };
 
   return (
-    <footer
-      className="store-footer"
-      style={footerStyles}
-    >
-      {/* =====================================
-          CURVED TOP
-      ===================================== */}
+    <footer className="store-footer" style={footerStyles}>
+      <style>{`
+        html body #root footer.store-footer {
+          background-color: var(--footer-page-background) !important;
+        }
 
+        html body #root footer.store-footer > .footer-wave,
+        html body #root footer.store-footer > .footer-wave > svg {
+          background-color: var(--footer-page-background) !important;
+        }
+      `}</style>
+
+      {/* CURVED TOP */}
       <div className="footer-wave">
         <svg
           viewBox="0 0 1440 120"
@@ -228,25 +211,17 @@ function Footer() {
             d="M0,92 C300,150 560,40 850,75 C1110,110 1280,140 1440,85 L1440,120 L0,120 Z"
           />
         </svg>
-      </div>
-
-      {/* =====================================
-          FOOTER CONTENT
-      ===================================== */}
-
+      </div>      {/* FOOTER CONTENT */}
       <div className="footer-main">
         <div className="footer-container">
-
           {/* BRAND */}
-
           <div className="footer-brand">
             {storeSettings.storeBanner && (
               <div className="footer-banner">
                 <img
                   src={storeSettings.storeBanner}
                   alt={
-                    storeSettings.storeName ||
-                    "Store Banner"
+                    storeSettings.storeName || "Store Banner"
                   }
                 />
               </div>
@@ -257,51 +232,33 @@ function Footer() {
             )}
 
             {storeSettings.storeDescription && (
-              <p>
-                {storeSettings.storeDescription}
-              </p>
+              <p>{storeSettings.storeDescription}</p>
             )}
           </div>
 
           {/* EXPLORE */}
-
           <div className="footer-column">
             <h3>Explore</h3>
-
             <a href="/">Home</a>
-
-            <a href="/products">
-              All Products
-            </a>
-
-            <a href="/cart">
-              Cart
-            </a>
-
-            <a href="/contact">
-              Contact
-            </a>
+            <a href="/products">All Products</a>
+            <a href="/cart">Cart</a>
+            <a href="/contact">Contact</a>
           </div>
 
-          {/* =================================
-              CONTACT
-          ================================= */}
-
-<div className="footer-column">
+          {/* CONTACT */}
+          <div className="footer-column">
             <h3>Contact</h3>
 
-            {storeSettings.phone && (
+            {phoneNumbers.map((number, index) => (
               <a
-                href={`tel:${storeSettings.phone}`}
+                key={`${number}-${index}`}
+                href={`tel:${number}`}
                 className="footer-contact-link"
               >
                 <FaPhoneAlt />
-
-                <span>
-                  {storeSettings.phone}
-                </span>
+                <span>{number}</span>
               </a>
-            )}
+            ))}
 
             {storeSettings.email && (
               <a
@@ -309,24 +266,18 @@ function Footer() {
                 className="footer-contact-link"
               >
                 <FaEnvelope />
-
-                <span>
-                  {storeSettings.email}
-                </span>
+                <span>{storeSettings.email}</span>
               </a>
             )}
 
             {storeSettings.whatsapp && (
               <a
-                href={getWhatsAppLink(
-                  storeSettings.whatsapp
-                )}
+                href={getWhatsAppLink(storeSettings.whatsapp)}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="footer-contact-link"
               >
                 <FaWhatsapp />
-
                 <span>WhatsApp</span>
               </a>
             )}
@@ -334,18 +285,12 @@ function Footer() {
             {storeSettings.address && (
               <div className="footer-contact-link footer-address">
                 <FaMapMarkerAlt />
-
-                <span>
-                  {storeSettings.address}
-                </span>
+                <span>{storeSettings.address}</span>
               </div>
             )}
           </div>
 
-          {/* =================================
-              FOLLOW
-          ================================= */}
-
+          {/* FOLLOW */}
           <div className="footer-column">
             <h3>Follow</h3>
 
@@ -360,7 +305,6 @@ function Footer() {
                 className="footer-contact-link"
               >
                 <FaInstagram />
-
                 <span>Instagram</span>
               </a>
             )}
@@ -376,22 +320,16 @@ function Footer() {
                 className="footer-contact-link"
               >
                 <FaTiktok />
-
                 <span>TikTok</span>
               </a>
             )}
           </div>
-
         </div>
       </div>
 
-      {/* =====================================
-          BOTTOM BAR
-      ===================================== */}
-
+      {/* BOTTOM BAR */}
       <div className="footer-bottom">
         <div className="footer-bottom-container">
-
           <p>
             © {currentYear}{" "}
             {storeSettings.storeName || "Store"}.
@@ -406,14 +344,10 @@ function Footer() {
           >
             Powered by <strong>Diraya</strong>
           </a>
-
         </div>
       </div>
-
     </footer>
   );
 }
 
 export default Footer;
-
-

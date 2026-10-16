@@ -1,7 +1,5 @@
-
 import { useEffect, useState } from "react";
 import StoreHeader from "./StoreHeader";
-
 import {
   FaPaw,
   FaHeart,
@@ -45,7 +43,6 @@ function About() {
       "storeSettingsUpdated",
       refreshSettings
     );
-
     window.addEventListener("storage", refreshSettings);
 
     return () => {
@@ -53,7 +50,6 @@ function About() {
         "storeSettingsUpdated",
         refreshSettings
       );
-
       window.removeEventListener("storage", refreshSettings);
     };
   }, []);
@@ -72,8 +68,6 @@ function About() {
     "--about-text": colors.textColor,
     "--about-button": colors.buttonColor,
     "--about-button-text": colors.buttonTextColor,
-
-    // Shared footer colors
     "--footer-color": colors.footerColor,
     "--footer-light": colors.lightColor,
     "--footer-border": colors.borderColor,
@@ -87,20 +81,38 @@ function About() {
     {
       number: "1",
       icon: <FaSeedling />,
-      title: settings.aboutStep1Title || "",
-      description: settings.aboutStep1Description || "",
+      title:
+        settings.timeline1Title ??
+        settings.aboutStep1Title ??
+        "",
+      description:
+        settings.timeline1Description ??
+        settings.aboutStep1Description ??
+        "",
     },
     {
       number: "2",
       icon: <FaUsers />,
-      title: settings.aboutStep2Title || "",
-      description: settings.aboutStep2Description || "",
+      title:
+        settings.timeline2Title ??
+        settings.aboutStep2Title ??
+        "",
+      description:
+        settings.timeline2Description ??
+        settings.aboutStep2Description ??
+        "",
     },
     {
       number: "3",
       icon: <FaHeart />,
-      title: settings.aboutStep3Title || "",
-      description: settings.aboutStep3Description || "",
+      title:
+        settings.timeline3Title ??
+        settings.aboutStep3Title ??
+        "",
+      description:
+        settings.timeline3Description ??
+        settings.aboutStep3Description ??
+        "",
     },
   ];
 
@@ -120,7 +132,6 @@ function About() {
           min-height: 100vh;
           width: 100%;
           overflow-x: hidden;
-
           background: var(--about-background);
           color: var(--about-text);
         }
@@ -133,11 +144,9 @@ function About() {
 
         .about-page .about-layout {
           display: grid;
-
           grid-template-columns:
             minmax(0, 0.9fr)
             minmax(0, 1.1fr);
-
           gap: 75px;
           align-items: center;
         }
@@ -155,9 +164,7 @@ function About() {
         .about-page .about-image-bg {
           position: absolute;
           inset: 65px 0 10px 25px;
-
           background: var(--about-light);
-
           border-radius: 44% 56% 46% 54%;
           transform: rotate(-8deg);
         }
@@ -165,16 +172,12 @@ function About() {
         .about-page .about-image-box {
           position: relative;
           z-index: 2;
-
           width: 100%;
           height: 590px;
           overflow: hidden;
-
           border-radius:
             120px 38px 130px 45px;
-
           background: var(--about-light);
-
           box-shadow:
             0 24px 65px rgba(0, 0, 0, 0.12);
         }
@@ -189,12 +192,10 @@ function About() {
         .about-page .about-image-placeholder {
           width: 100%;
           height: 100%;
-
           display: flex;
           flex-direction: column;
           align-items: center;
           justify-content: center;
-
           gap: 15px;
           color: var(--about-secondary);
         }
@@ -215,16 +216,12 @@ function About() {
         .about-page .about-floating-card {
           position: absolute;
           z-index: 3;
-
           left: -12px;
           bottom: 75px;
-
           padding: 20px 23px;
-
           background: var(--about-background);
           border: 1px solid var(--about-border);
           border-radius: 23px;
-
           box-shadow:
             0 14px 45px rgba(0, 0, 0, 0.12);
         }
@@ -237,9 +234,7 @@ function About() {
 
         .about-page .about-floating-card p {
           margin: 0;
-
           color: var(--about-text);
-
           font-size: 14px;
           font-weight: 800;
           line-height: 1.5;
@@ -282,16 +277,12 @@ function About() {
         .about-page .about-eyebrow {
           display: inline-flex;
           align-items: center;
-
           gap: 9px;
           margin-bottom: 20px;
           padding: 9px 15px;
-
           background: var(--about-light);
           border-radius: 30px;
-
           color: var(--about-secondary);
-
           font-size: 12px;
           font-weight: 800;
           letter-spacing: 1px;
@@ -299,23 +290,18 @@ function About() {
 
         .about-page .about-text-side h1 {
           margin: 0 0 20px;
-
           color: var(--about-text);
-
           font-size: clamp(38px, 4vw, 57px);
           font-weight: 850;
           line-height: 1.12;
           letter-spacing: -1.5px;
-
           overflow-wrap: anywhere;
         }
 
         .about-page .about-description {
           margin: 0 0 35px;
-
           color: var(--about-text);
           opacity: 0.8;
-
           font-size: 16px;
           line-height: 1.9;
           white-space: pre-line;
@@ -327,32 +313,25 @@ function About() {
 
         .about-page .about-timeline {
           position: relative;
-
           display: flex;
           flex-direction: column;
-
           gap: 20px;
         }
 
         .about-page .about-timeline::before {
           content: "";
-
           position: absolute;
-
           top: 38px;
           bottom: 38px;
           left: 23px;
-
           border-left: 2px dashed var(--about-primary);
           opacity: 0.5;
         }
 
         .about-page .about-step {
           position: relative;
-
           display: grid;
           grid-template-columns: 48px minmax(0, 1fr);
-
           align-items: center;
           gap: 18px;
         }
@@ -360,21 +339,16 @@ function About() {
         .about-page .about-step-number {
           position: relative;
           z-index: 2;
-
           display: flex;
           align-items: center;
           justify-content: center;
-
           width: 48px;
           height: 48px;
           border-radius: 50%;
-
           background: var(--about-button);
           color: var(--about-button-text);
-
           font-size: 18px;
           font-weight: 800;
-
           box-shadow:
             0 5px 15px rgba(0, 0, 0, 0.12);
         }
@@ -382,15 +356,12 @@ function About() {
         .about-page .about-step-card {
           display: flex;
           align-items: center;
-
           gap: 20px;
           min-height: 130px;
           padding: 23px;
-
           background: var(--about-light);
           border: 1px solid var(--about-border);
           border-radius: 23px;
-
           transition:
             transform 0.25s ease,
             box-shadow 0.25s ease,
@@ -399,9 +370,7 @@ function About() {
 
         .about-page .about-step-card:hover {
           transform: translateY(-4px);
-
           background: var(--about-light);
-
           box-shadow:
             0 12px 30px rgba(0, 0, 0, 0.1);
         }
@@ -409,19 +378,14 @@ function About() {
         .about-page .about-step-icon {
           display: flex;
           flex-shrink: 0;
-
           align-items: center;
           justify-content: center;
-
           width: 60px;
           height: 60px;
           border-radius: 50%;
-
           background: var(--about-background);
           color: var(--about-primary);
-
           font-size: 25px;
-
           border: 3px solid var(--about-border);
         }
 
@@ -431,9 +395,7 @@ function About() {
 
         .about-page .about-step-content h3 {
           margin: 0 0 9px;
-
           color: var(--about-text);
-
           font-size: 19px;
           font-weight: 800;
           overflow-wrap: anywhere;
@@ -441,231 +403,222 @@ function About() {
 
         .about-page .about-step-content p {
           margin: 0;
-
           color: var(--about-text);
           opacity: 0.8;
-
           font-size: 14px;
           line-height: 1.7;
           white-space: pre-line;
-        }
+        }        /* =====================================
+        RESPONSIVE
+     ===================================== */
 
-        /* =====================================
-           RESPONSIVE
-        ===================================== */
+     @media (max-width: 1100px) {
+       .about-page .about-main {
+         padding: 75px 28px;
+       }
 
-        @media (max-width: 1100px) {
-          .about-page .about-main {
-            padding: 75px 28px;
-          }
+       .about-page .about-layout {
+         gap: 40px;
+       }
 
-          .about-page .about-layout {
-            gap: 40px;
-          }
+       .about-page .about-image-box {
+         height: 510px;
+       }
 
-          .about-page .about-image-box {
-            height: 510px;
-          }
+       .about-page .about-step-card {
+         padding: 18px;
+         gap: 14px;
+       }
+     }
 
-          .about-page .about-step-card {
-            padding: 18px;
-            gap: 14px;
-          }
-        }
+     @media (max-width: 850px) {
+       .about-page .about-main {
+         max-width: 690px;
+         padding: 55px 24px 80px;
+       }
 
-        @media (max-width: 850px) {
-          .about-page .about-main {
-            max-width: 690px;
-            padding: 55px 24px 80px;
-          }
+       .about-page .about-layout {
+         grid-template-columns: 1fr;
+         gap: 45px;
+       }
 
-          .about-page .about-layout {
-            grid-template-columns: 1fr;
-            gap: 45px;
-          }
+       .about-page .about-image-side {
+         max-width: 520px;
+         margin: 0 auto;
+       }
 
-          .about-page .about-image-side {
-            max-width: 520px;
-            margin: 0 auto;
-          }
+       .about-page .about-image-box {
+         height: 470px;
+       }
 
-          .about-page .about-image-box {
-            height: 470px;
-          }
+       .about-page .about-text-side h1 {
+         font-size: 40px;
+       }
+     }
 
-          .about-page .about-text-side h1 {
-            font-size: 40px;
-          }
-        }
+     @media (max-width: 520px) {
+       .about-page .about-main {
+         padding: 35px 17px 60px;
+       }
 
-        @media (max-width: 520px) {
-          .about-page .about-main {
-            padding: 35px 17px 60px;
-          }
+       .about-page .about-image-side {
+         padding: 20px 8px;
+       }
 
-          .about-page .about-image-side {
-            padding: 20px 8px;
-          }
+       .about-page .about-image-box {
+         height: 350px;
+         border-radius:
+           75px 25px 85px 30px;
+       }
 
-          .about-page .about-image-box {
-            height: 350px;
+       .about-page .about-floating-card {
+         left: -5px;
+         bottom: 35px;
+         padding: 12px 14px;
+       }
 
-            border-radius:
-              75px 25px 85px 30px;
-          }
+       .about-page .about-floating-card svg {
+         font-size: 20px;
+       }
 
-          .about-page .about-floating-card {
-            left: -5px;
-            bottom: 35px;
-            padding: 12px 14px;
-          }
+       .about-page .about-floating-card p {
+         font-size: 11px;
+       }
 
-          .about-page .about-floating-card svg {
-            font-size: 20px;
-          }
+       .about-page .about-text-side h1 {
+         font-size: 34px;
+       }
 
-          .about-page .about-floating-card p {
-            font-size: 11px;
-          }
+       .about-page .about-description {
+         font-size: 14px;
+       }
 
-          .about-page .about-text-side h1 {
-            font-size: 34px;
-          }
+       .about-page .about-step {
+         grid-template-columns: 38px minmax(0, 1fr);
+         gap: 10px;
+       }
 
-          .about-page .about-description {
-            font-size: 14px;
-          }
+       .about-page .about-step-number {
+         width: 38px;
+         height: 38px;
+         font-size: 15px;
+       }
 
-          .about-page .about-step {
-            grid-template-columns: 38px minmax(0, 1fr);
-            gap: 10px;
-          }
+       .about-page .about-timeline::before {
+         left: 18px;
+       }
 
-          .about-page .about-step-number {
-            width: 38px;
-            height: 38px;
-            font-size: 15px;
-          }
+       .about-page .about-step-card {
+         padding: 15px 12px;
+         min-height: 110px;
+         gap: 12px;
+       }
 
-          .about-page .about-timeline::before {
-            left: 18px;
-          }
+       .about-page .about-step-icon {
+         width: 43px;
+         height: 43px;
+         font-size: 18px;
+       }
 
-          .about-page .about-step-card {
-            padding: 15px 12px;
-            min-height: 110px;
-            gap: 12px;
-          }
+       .about-page .about-step-content h3 {
+         font-size: 15px;
+       }
 
-          .about-page .about-step-icon {
-            width: 43px;
-            height: 43px;
-            font-size: 18px;
-          }
+       .about-page .about-step-content p {
+         font-size: 12px;
+       }
+     }
+   `}</style>
 
-          .about-page .about-step-content h3 {
-            font-size: 15px;
-          }
+   <StoreHeader />
 
-          .about-page .about-step-content p {
-            font-size: 12px;
-          }
-        }
-      `}</style>
-      <StoreHeader />
+   <main className="about-main">
+     <div className="about-layout">
+       {/* =====================================
+           IMAGE SIDE
+       ===================================== */}
 
-      <main className="about-main">
-        <div className="about-layout">
+       <div className="about-image-side">
+         <div className="about-image-bg" />
 
-          {/* =====================================
-              IMAGE SIDE
-          ===================================== */}
+         <FaPaw className="about-paw-one" />
+         <FaPaw className="about-paw-two" />
 
-          <div className="about-image-side">
-            <div className="about-image-bg" />
+         <div className="about-image-box">
+           {aboutImage ? (
+             <img
+               src={aboutImage}
+               alt={aboutTitle || "Clinic"}
+             />
+           ) : (
+             <div className="about-image-placeholder">
+               <FaPaw />
+               <span>Upload image from Settings</span>
+             </div>
+           )}
+         </div>
 
-            <FaPaw className="about-paw-one" />
-            <FaPaw className="about-paw-two" />
+         <div className="about-floating-card">
+           <FaPaw />
 
-            <div className="about-image-box">
-              {aboutImage ? (
-                <img
-                  src={aboutImage}
-                  alt={aboutTitle || "Clinic"}
-                />
-              ) : (
-                <div className="about-image-placeholder">
-                  <FaPaw />
-                  <span>Upload image from Settings</span>
-                </div>
-              )}
-            </div>
+           <p>
+             Healthy Pets
+             <br />
+             Happier Lives
+           </p>
+         </div>
+       </div>
 
-            <div className="about-floating-card">
-              <FaPaw />
+       {/* =====================================
+           TEXT SIDE
+       ===================================== */}
 
-              <p>
-                Healthy Pets
-                <br />
-                Happier Lives
-              </p>
-            </div>
-          </div>
+       <div className="about-text-side">
+         <div className="about-eyebrow">
+           <FaPaw />
+           OUR JOURNEY
+         </div>
 
-          {/* =====================================
-              TEXT SIDE
-          ===================================== */}
+         {aboutTitle && <h1>{aboutTitle}</h1>}
 
-          <div className="about-text-side">
-            <div className="about-eyebrow">
-              <FaPaw />
-              OUR JOURNEY
-            </div>
+         {aboutDescription && (
+           <p className="about-description">
+             {aboutDescription}
+           </p>
+         )}
 
-            {aboutTitle && <h1>{aboutTitle}</h1>}
+         {/* =====================================
+             JOURNEY TIMELINE
+         ===================================== */}
 
-            {aboutDescription && (
-              <p className="about-description">
-                {aboutDescription}
-              </p>
-            )}
+         <div className="about-timeline">
+           {timeline.map((step) => (
+             <div className="about-step" key={step.number}>
+               <div className="about-step-number">
+                 {step.number}
+               </div>
 
-            {/* =====================================
-                JOURNEY TIMELINE
-            ===================================== */}
+               <div className="about-step-card">
+                 <div className="about-step-icon">
+                   {step.icon}
+                 </div>
 
-            <div className="about-timeline">
-              {timeline.map((step) => (
-                <div className="about-step" key={step.number}>
+                 <div className="about-step-content">
+                   {step.title && <h3>{step.title}</h3>}
 
-                  <div className="about-step-number">
-                    {step.number}
-                  </div>
-
-                  <div className="about-step-card">
-                    <div className="about-step-icon">
-                      {step.icon}
-                    </div>
-
-                    <div className="about-step-content">
-                      {step.title && <h3>{step.title}</h3>}
-
-                      {step.description && (
-                        <p>{step.description}</p>
-                      )}
-                    </div>
-                  </div>
-
-                </div>
-              ))}
-            </div>
-          </div>
-
-        </div>
-      </main>
-    </div>
-  );
+                   {step.description && (
+                     <p>{step.description}</p>
+                   )}
+                 </div>
+               </div>
+             </div>
+           ))}
+         </div>
+       </div>
+     </div>
+   </main>
+ </div>
+);
 }
 
 export default About;
-

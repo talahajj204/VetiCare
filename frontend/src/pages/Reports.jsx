@@ -1,5 +1,4 @@
 import { useMemo, useState } from "react";
-
 import Sidebar from "../components/Sidebar";
 
 import {
@@ -8,6 +7,31 @@ import {
   FaSortAmountDown,
   FaPrint,
 } from "react-icons/fa";
+
+const readPrintClinicName = () => {
+  try {
+    const settings = JSON.parse(
+      localStorage.getItem("storeSettings") || "{}"
+    );
+
+    return String(settings?.storeName || "").trim();
+  } catch {
+    return "";
+  }
+};
+
+const escapePrintText = (value) =>
+  String(value ?? "").replace(/[&<>"']/g, (character) => {
+    const entities = {
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': "&quot;",
+      "'": "&#39;",
+    };
+
+    return entities[character];
+  });
 
 function Reports() {
   // =========================================================
@@ -591,8 +615,8 @@ function Reports() {
 
   const setLast7Days = () => {
     const current = new Date();
-
     const previous = new Date(current);
+
     previous.setDate(current.getDate() - 6);
 
     setStartDate(toInputDate(previous));
@@ -657,7 +681,6 @@ function Reports() {
       alert(
         "Please select a valid From and To date."
       );
-
       return;
     }
 
@@ -700,12 +723,10 @@ function Reports() {
     );
 
     const url = URL.createObjectURL(blob);
-
     const link =
       document.createElement("a");
 
     link.href = url;
-
     link.download =
       `clinic-report-${startDate}-to-${endDate}.csv`;
 
@@ -714,9 +735,7 @@ function Reports() {
     document.body.removeChild(link);
 
     URL.revokeObjectURL(url);
-  };
-
-  // =========================================================
+  };  // =========================================================
   // PRINT ONE SUMMARY REPORT
   // =========================================================
 
@@ -726,6 +745,33 @@ function Reports() {
         "Please select a valid From and To date."
       );
       return;
+    }
+
+    const printClinicName = readPrintClinicName();
+
+    let printLogo = "";
+
+    try {
+      const settings = JSON.parse(
+        localStorage.getItem("storeSettings") || "{}"
+      );
+
+      const savedImage = settings?.storeBanner;
+
+      if (typeof savedImage === "string") {
+        const imageValue = savedImage.trim();
+
+        if (
+          /^data:image\/(?:png|jpeg|webp);base64,/i.test(imageValue) ||
+          /^https?:\/\//i.test(imageValue) ||
+          /^blob:/i.test(imageValue) ||
+          /^\/(?!\/)/.test(imageValue)
+        ) {
+          printLogo = imageValue;
+        }
+      }
+    } catch {
+      printLogo = "";
     }
 
     let detailsHtml = "";
@@ -741,7 +787,6 @@ function Reports() {
               <th>Status</th>
             </tr>
           </thead>
-
           <tbody>
             ${filteredAppointments
               .map(
@@ -773,7 +818,6 @@ function Reports() {
               <th>Status</th>
             </tr>
           </thead>
-
           <tbody>
             ${filteredVaccinations
               .map(
@@ -805,7 +849,6 @@ function Reports() {
               <th>Status</th>
             </tr>
           </thead>
-
           <tbody>
             ${filteredInvoices
               .map(
@@ -845,7 +888,6 @@ function Reports() {
               <th>Status</th>
             </tr>
           </thead>
-
           <tbody>
             ${paidInvoices
               .map(
@@ -878,7 +920,6 @@ function Reports() {
       alert(
         "Please allow pop-ups to print the report."
       );
-
       return;
     }
 
@@ -886,13 +927,19 @@ function Reports() {
       ? `$${Number(report.total).toFixed(2)}`
       : report.total;
 
+    const logoHtml = printLogo
+      ? `<img
+          class="print-clinic-logo"
+          src="${escapePrintText(printLogo)}"
+          alt="${escapePrintText(printClinicName)}"
+        />`
+      : "";
+
     printWindow.document.write(`
       <!DOCTYPE html>
-
       <html>
         <head>
           <title>${report.category} Report</title>
-
           <style>
             body {
               font-family: Arial, sans-serif;
@@ -900,9 +947,29 @@ function Reports() {
               color: #263238;
             }
 
+            .print-clinic-header {
+              display: flex;
+              align-items: center;
+              gap: 15px;
+              margin-bottom: 15px;
+            }
+
+            .print-clinic-logo {
+              display: block;
+              width: 70px;
+              height: 70px;
+              flex-shrink: 0;
+              object-fit: contain;
+            }
+
             h1 {
               color: #55b7b2;
               margin-bottom: 5px;
+            }
+
+            .print-clinic-header h1 {
+              margin: 0;
+              overflow-wrap: anywhere;
             }
 
             h2 {
@@ -917,7 +984,6 @@ function Reports() {
             .summary {
               padding: 18px;
               margin-bottom: 25px;
-
               background: #f3fbfa;
               border: 1px solid #d3eae8;
             }
@@ -954,8 +1020,10 @@ function Reports() {
         </head>
 
         <body>
-
-          <h1>Vet Clinic</h1>
+          <div class="print-clinic-header">
+            ${logoHtml}
+            <h1>${escapePrintText(printClinicName)}</h1>
+          </div>
 
           <h2>
             ${report.category} Report
@@ -975,7 +1043,6 @@ function Reports() {
             <br /><br />
 
             Total:
-
             <span class="total">
               ${totalValue}
             </span>
@@ -986,18 +1053,50 @@ function Reports() {
           </div>
 
           ${detailsHtml}
-
         </body>
       </html>
     `);
 
     printWindow.document.close();
-    printWindow.focus();
 
-    setTimeout(() => {
-      printWindow.print();
-      printWindow.close();
-    }, 300);
+    const startPrinting = async () => {
+      const images = Array.from(
+        printWindow.document.images
+      );
+
+      await Promise.all(
+        images.map(
+          (image) =>
+            new Promise((resolve) => {
+              if (image.complete) {
+                resolve();
+                return;
+              }
+
+              image.addEventListener("load", resolve, {
+                once: true,
+              });
+
+              image.addEventListener("error", resolve, {
+                once: true,
+              });
+            })
+        )
+      );
+
+      if (printWindow.closed) return;
+
+      printWindow.focus();
+
+      setTimeout(() => {
+        if (printWindow.closed) return;
+
+        printWindow.print();
+        printWindow.close();
+      }, 300);
+    };
+
+    void startPrinting();
   };
 
   // =========================================================
@@ -1006,23 +1105,18 @@ function Reports() {
 
   return (
     <div className="dashboard-layout">
-
       <Sidebar />
 
       <main className="dashboard-main reports-page">
-
         {/* HEADER */}
 
         <div className="reports-main-header">
-
           <div className="reports-title-area">
-
             <h1>Reports</h1>
 
             <p className="reports-selected-range">
               {selectedRangeText}
             </p>
-
           </div>
 
           <button
@@ -1031,38 +1125,29 @@ function Reports() {
             onClick={handleExport}
           >
             <FaFileExcel />
-
             <span>Export</span>
           </button>
-
         </div>
 
         {/* DATE BOX */}
 
         <div className="reports-date-box">
-
           <div className="reports-date-box-left">
-
             <div className="reports-date-icon-box">
               <FaCalendarAlt />
             </div>
 
             <div className="reports-date-field">
-
               <label>From</label>
 
               <input
                 type="date"
                 value={startDate}
                 onChange={(e) => {
-                  setStartDate(
-                    e.target.value
-                  );
-
+                  setStartDate(e.target.value);
                   setCurrentPage(1);
                 }}
               />
-
             </div>
 
             <span className="reports-date-separator">
@@ -1070,29 +1155,22 @@ function Reports() {
             </span>
 
             <div className="reports-date-field">
-
               <label>To</label>
 
               <input
                 type="date"
                 value={endDate}
                 onChange={(e) => {
-                  setEndDate(
-                    e.target.value
-                  );
-
+                  setEndDate(e.target.value);
                   setCurrentPage(1);
                 }}
               />
-
             </div>
-
           </div>
 
           {/* ONLY THESE 4 BUTTONS GET NEW CSS */}
 
           <div className="reports-quick-buttons">
-
             <button
               type="button"
               className="reports-quick-date-button"
@@ -1124,9 +1202,7 @@ function Reports() {
             >
               This year
             </button>
-
           </div>
-
         </div>
 
         {!validRange && (
@@ -1138,7 +1214,6 @@ function Reports() {
         {/* SUMMARY CARDS */}
 
         <div className="reports-summary-grid">
-
           <div className="reports-summary-card">
             <span className="reports-card-label">
               Appointments
@@ -1194,19 +1269,15 @@ function Reports() {
               Paid invoices
             </span>
           </div>
-
         </div>
 
         {/* CHARTS */}
 
         <div className="reports-charts-grid">
-
           {/* REVENUE */}
 
           <div className="reports-chart-card">
-
             <div className="reports-chart-header">
-
               <div>
                 <h2>Revenue</h2>
                 <p>{selectedRangeText}</p>
@@ -1215,21 +1286,15 @@ function Reports() {
               <strong>
                 ${revenueTotal.toFixed(2)}
               </strong>
-
             </div>
 
             {revenueByDate.length === 0 ? (
-
               <div className="reports-no-data">
                 No data for these dates
               </div>
-
             ) : (
-
               <div className="reports-revenue-chart">
-
                 {revenueByDate.map((item) => {
-
                   const height = Math.max(
                     10,
                     (item.total / maxRevenue) * 100
@@ -1240,152 +1305,96 @@ function Reports() {
                       className="reports-revenue-column"
                       key={item.date}
                     >
-
                       <div className="reports-bar-value">
                         ${item.total.toFixed(0)}
                       </div>
 
                       <div className="reports-bar-track">
-
                         <div
                           className="reports-revenue-bar"
                           style={{
                             height: `${height}%`,
                           }}
                         />
-
                       </div>
 
                       <span>
-                        {formatShortDate(
-                          item.date
-                        )}
+                        {formatShortDate(item.date)}
                       </span>
-
                     </div>
                   );
                 })}
-
               </div>
             )}
-
           </div>
 
           {/* APPOINTMENTS BY STATUS */}
 
           <div className="reports-chart-card">
-
             <div className="reports-chart-header">
-
               <div>
-
-                <h2>
-                  Appointments by Status
-                </h2>
-
-                <p>
-                  {selectedRangeText}
-                </p>
-
+                <h2>Appointments by Status</h2>
+                <p>{selectedRangeText}</p>
               </div>
 
-              <strong>
-                {appointmentTotal}
-              </strong>
-
+              <strong>{appointmentTotal}</strong>
             </div>
 
             {appointmentStatusData.length === 0 ? (
-
               <div className="reports-no-data">
                 No data for these dates
               </div>
-
             ) : (
-
               <div className="reports-status-chart">
+                {appointmentStatusData.map((item) => {
+                  const width =
+                    (item.total / maxStatusTotal) * 100;
 
-                {appointmentStatusData.map(
-                  (item) => {
-
-                    const width =
-                      (item.total /
-                        maxStatusTotal) *
-                      100;
-
-                    return (
-                      <div
-                        className="reports-status-row"
-                        key={item.status}
-                      >
-
-                        <div className="reports-status-top">
-
-                          <span>
-                            {item.status}
-                          </span>
-
-                          <strong>
-                            {item.total}
-                          </strong>
-
-                        </div>
-
-                        <div className="reports-status-track">
-
-                          <div
-                            className="reports-status-bar"
-                            style={{
-                              width: `${width}%`,
-                            }}
-                          />
-
-                        </div>
-
+                  return (
+                    <div
+                      className="reports-status-row"
+                      key={item.status}
+                    >
+                      <div className="reports-status-top">
+                        <span>{item.status}</span>
+                        <strong>{item.total}</strong>
                       </div>
-                    );
-                  }
-                )}
 
+                      <div className="reports-status-track">
+                        <div
+                          className="reports-status-bar"
+                          style={{
+                            width: `${width}%`,
+                          }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             )}
-
           </div>
-
         </div>
 
         {/* SUMMARY TABLE */}
 
         <div className="reports-summary-section">
-
           <div className="reports-summary-header">
-
             <div>
-
               <h2>Summary</h2>
-
-              <p>
-                {selectedRangeText}
-              </p>
-
+              <p>{selectedRangeText}</p>
             </div>
 
             <div className="reports-sort-box">
-
               <FaSortAmountDown />
 
               <select
                 value={sortBy}
                 onChange={(e) => {
-
-                  setSortBy(
-                    e.target.value
-                  );
-
+                  setSortBy(e.target.value);
                   setCurrentPage(1);
                 }}
               >
-
                 <option value="default">
                   Sort By
                 </option>
@@ -1405,107 +1414,73 @@ function Reports() {
                 <option value="total-low">
                   Total: Low to High
                 </option>
-
               </select>
-
             </div>
-
           </div>
 
           <div className="owners-table-container reports-table-container">
-
             <table className="owners-table reports-table">
-
               <thead>
-
                 <tr>
                   <th>Category</th>
                   <th>Total</th>
                   <th>Description</th>
-
                   {/* NEW */}
                   <th>Print</th>
                 </tr>
-
               </thead>
 
               <tbody>
-
                 {everythingIsZero ? (
-
                   <tr>
-
                     <td
                       colSpan="4"
                       className="reports-nothing"
                     >
                       Nothing to show for these dates
                     </td>
-
                   </tr>
-
                 ) : (
+                  paginatedSummaryData.map((report) => (
+                    <tr key={report.id}>
+                      <td>{report.category}</td>
 
-                  paginatedSummaryData.map(
-                    (report) => (
+                      <td>
+                        {report.money
+                          ? `$${report.total.toFixed(2)}`
+                          : report.total}
+                      </td>
 
-                      <tr key={report.id}>
+                      <td>{report.description}</td>
 
-                        <td>
-                          {report.category}
-                        </td>
+                      {/* NEW PRINT - NO NEW TABLE CSS */}
 
-                        <td>
-                          {report.money
-                            ? `$${report.total.toFixed(
-                                2
-                              )}`
-                            : report.total}
-                        </td>
-
-                        <td>
-                          {report.description}
-                        </td>
-
-                        {/* NEW PRINT - NO NEW TABLE CSS */}
-
-                        <td>
-
-                          <button
-                           type="button"
-                           className="reports-print-icon-button"
-                           onClick={() => handlePrintReport(report)}
-                           title="Print Report"
-                           aria-label={`Print ${report.category} report`}
-                          >
-                            <FaPrint /> 
-                          </button>
-
-                        </td>
-
-                      </tr>
-
-                    )
-                  )
-
+                      <td>
+                        <button
+                          type="button"
+                          className="reports-print-icon-button"
+                          onClick={() =>
+                            handlePrintReport(report)
+                          }
+                          title="Print Report"
+                          aria-label={`Print ${report.category} report`}
+                        >
+                          <FaPrint />
+                        </button>
+                      </td>
+                    </tr>
+                  ))
                 )}
-
               </tbody>
-
             </table>
-
           </div>
-
         </div>
 
         {/* PAGINATION */}
 
         {!everythingIsZero && (
-
           <div className="reports-pagination">
-
             <div className="reports-pagination-left">
-
               <span className="reports-rows-label">
                 Rows per page
               </span>
@@ -1513,91 +1488,53 @@ function Reports() {
               <select
                 className="reports-rows-select"
                 value={itemsPerPage}
-                onChange={
-                  handleItemsPerPageChange
-                }
+                onChange={handleItemsPerPageChange}
               >
-
-                <option value={5}>
-                  5
-                </option>
-
-                <option value={10}>
-                  10
-                </option>
-
-                <option value={20}>
-                  20
-                </option>
-
-                <option value={50}>
-                  50
-                </option>
-
+                <option value={5}>5</option>
+                <option value={10}>10</option>
+                <option value={20}>20</option>
+                <option value={50}>50</option>
               </select>
-
             </div>
 
             <div className="reports-pagination-right">
-
               <button
                 type="button"
                 className="reports-page-navigation"
-                onClick={
-                  handlePreviousPage
-                }
-                disabled={
-                  safeCurrentPage === 1
-                }
+                onClick={handlePreviousPage}
+                disabled={safeCurrentPage === 1}
               >
                 Previous
               </button>
 
               <div className="reports-page-numbers">
-
-                {pageNumbers.map(
-                  (page) => (
-
-                    <button
-                      type="button"
-                      key={page}
-                      className={`reports-page-number ${
-                        safeCurrentPage === page
-                          ? "active"
-                          : ""
-                      }`}
-                      onClick={() =>
-                        setCurrentPage(page)
-                      }
-                    >
-                      {page}
-                    </button>
-
-                  )
-                )}
-
+                {pageNumbers.map((page) => (
+                  <button
+                    type="button"
+                    key={page}
+                    className={`reports-page-number ${
+                      safeCurrentPage === page
+                        ? "active"
+                        : ""
+                    }`}
+                    onClick={() => setCurrentPage(page)}
+                  >
+                    {page}
+                  </button>
+                ))}
               </div>
 
               <button
                 type="button"
                 className="reports-page-navigation"
-                onClick={
-                  handleNextPage
-                }
-                disabled={
-                  safeCurrentPage ===
-                  totalPages
-                }
+                onClick={handleNextPage}
+                disabled={safeCurrentPage === totalPages}
               >
                 Next
               </button>
-
             </div>
-
           </div>
-
         )}
-
       </main>
     </div>
   );

@@ -1,100 +1,14 @@
-// import { useState } from "react";
-// import { Link, useNavigate } from "react-router-dom";
-// import loginBg from "../assets/images.png";
-
-// function Login() {
-//   const [email, setEmail] = useState("");
-//   const [password, setPassword] = useState("");
-
-//   // للتنقل بين الصفحات
-//   const navigate = useNavigate();
-
-//   const handleLogin = (e) => {
-//     e.preventDefault();
-
-//     // مؤقتاً Frontend فقط
-//     console.log("Email:", email);
-//     console.log("Password:", password);
-
-//     // بعد الضغط على Login يذهب إلى Dashboard
-//     navigate("/dashboard");
-//   };
-
-//   return (
-//     <div
-//       className="login-page"
-//       style={{ backgroundImage: `url(${loginBg})` }}
-//     >
-//       <div className="login-container">
-
-//         <div className="login-header">
-//           <h1>🐾 Vet Clinic</h1>
-//           <p>Veterinary Clinic Management System</p>
-//         </div>
-
-//         <form onSubmit={handleLogin}>
-
-//           {/* Email */}
-//           <div className="form-group">
-//             <label>Email</label>
-
-//             <input
-//               type="email"
-//               placeholder="Enter your email"
-//               value={email}
-//               onChange={(e) => setEmail(e.target.value)}
-//               required
-//             />
-//           </div>
-
-
-//           {/* Password */}
-//           <div className="form-group">
-//             <label>Password</label>
-
-//             <input
-//               type="password"
-//               placeholder="Enter your password"
-//               value={password}
-//               onChange={(e) => setPassword(e.target.value)}
-//               required
-//             />
-//           </div>
-
-
-//           {/* Remember Me + Forgot Password */}
-//           <div className="login-options">
-
-//             <label className="remember-me">
-//               <input type="checkbox" />
-//               <span>Remember me</span>
-//             </label>
-
-//             <Link to="/forgot-password">
-//               Forgot Password?
-//             </Link>
-
-//           </div>
-
-
-//           {/* Login Button */}
-//           <button type="submit">
-//             Login
-//           </button>
-
-//         </form>
-
-//       </div>
-//     </div>
-//   );
-// }
-
-// export default Login;
-
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { FaPaw, FaCalendarCheck, FaNotesMedical, FaEye, FaEyeSlash } from "react-icons/fa";
+import {
+  FaPaw,
+  FaCalendarCheck,
+  FaNotesMedical,
+  FaEye,
+  FaEyeSlash,
+} from "react-icons/fa";
 import loginBg from "../assets/images.png";
+import clinicLogo from "../assets/clinic-logo.png";
 
 function Login() {
   const [email, setEmail] = useState("");
@@ -107,7 +21,6 @@ function Login() {
     e.preventDefault();
 
     console.log("Email:", email);
-    console.log("Password:", password);
 
     // Backend later
     navigate("/dashboard");
@@ -118,18 +31,58 @@ function Login() {
       className="login-page"
       style={{ backgroundImage: `url(${loginBg})` }}
     >
-     
       <div className="login-background-overlay" />
 
+      <style>{`
+        html body #root .login-page
+        .login-brand > .login-brand-icon {
+          width: 76px !important;
+          min-width: 76px !important;
+          height: 76px !important;
+          flex: 0 0 76px !important;
+
+          display: flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+
+          padding: 0 !important;
+          overflow: hidden !important;
+          background: #ffffff !important;
+          border-radius: 14px !important;
+        }
+
+        html body #root .login-page
+        .login-brand-icon > .login-clinic-logo {
+          display: block !important;
+          width: 100% !important;
+          height: 100% !important;
+          max-width: 100% !important;
+
+          margin: 0 !important;
+          padding: 0 !important;
+          object-fit: contain !important;
+        }
+
+        @media (max-width: 600px) {
+          html body #root .login-page
+          .login-brand > .login-brand-icon {
+            width: 64px !important;
+            min-width: 64px !important;
+            height: 64px !important;
+            flex-basis: 64px !important;
+          }
+        }
+      `}</style>
+
       <div className="login-split-container">
-
-       
-
         <section className="login-info-side">
-
           <div className="login-brand">
             <div className="login-brand-icon">
-              <FaPaw />
+              <img
+                src={clinicLogo}
+                alt="VetiCare logo"
+                className="login-clinic-logo"
+              />
             </div>
 
             <h1>VetiCare </h1>
@@ -145,7 +98,6 @@ function Login() {
           </p>
 
           <div className="login-features">
-
             <div className="login-feature">
               <div className="login-feature-icon">
                 <FaCalendarCheck />
@@ -178,7 +130,6 @@ function Login() {
                 medications, and prescriptions.
               </p>
             </div>
-
           </div>
 
           <div className="login-left-footer">
@@ -186,14 +137,10 @@ function Login() {
               Everything your clinic needs, in one place.
             </strong>
           </div>
-
         </section>
 
-
         <section className="login-form-side">
-
           <div className="login-form-wrapper">
-
             <span className="login-small-title">
               CLINIC ADMINISTRATOR
             </span>
@@ -207,9 +154,7 @@ function Login() {
             </p>
 
             <form onSubmit={handleLogin}>
-
               {/* EMAIL */}
-
               <div className="login-field">
                 <label>Email</label>
 
@@ -222,14 +167,11 @@ function Login() {
                 />
               </div>
 
-
               {/* PASSWORD */}
-
               <div className="login-field">
                 <label>Password</label>
 
                 <div className="login-password-wrapper">
-
                   <input
                     type={showPassword ? "text" : "password"}
                     placeholder="Enter your password"
@@ -258,52 +200,37 @@ function Login() {
                       <FaEye />
                     )}
                   </button>
-
                 </div>
               </div>
 
-
               {/* OPTIONS */}
-
               <div className="login-options">
-
                 <label className="remember-me">
                   <input type="checkbox" />
-
                   <span>Remember me</span>
                 </label>
 
                 <Link to="/forgot-password">
                   Forgot Password?
                 </Link>
-
               </div>
 
-
               {/* LOGIN */}
-
               <button
                 type="submit"
                 className="login-submit-button"
               >
                 Sign in
               </button>
-
             </form>
 
-
             <div className="login-form-footer">
-
               <span>
                 Secure access for authorized clinic staff only.
               </span>
-
             </div>
-
           </div>
-
         </section>
-
       </div>
     </div>
   );

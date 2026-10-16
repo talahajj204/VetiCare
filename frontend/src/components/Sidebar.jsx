@@ -1,6 +1,5 @@
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useEffect, useRef, useState } from "react";
-
 import {
   FaChartLine,
   FaUserCog,
@@ -10,7 +9,6 @@ import {
   FaTags,
   FaClipboardList,
 } from "react-icons/fa";
-
 import {
   FaHouse,
   FaUsers,
@@ -93,11 +91,6 @@ const sidebarStyles = `
     --vet-sidebar-closed-width: 72px;
   }
 
-  /* =========================================
-     DESKTOP LAYOUT
-     Fixed sidebar + independently scrolling page
-  ========================================= */
-
   @media (min-width: 769px) {
     .dashboard-layout {
       display: flex !important;
@@ -108,7 +101,6 @@ const sidebarStyles = `
       min-width: 0 !important;
       min-height: 100vh !important;
       box-sizing: border-box !important;
-
       padding-left: var(--vet-sidebar-open-width) !important;
       transition: padding-left .25s ease;
     }
@@ -123,12 +115,10 @@ const sidebarStyles = `
       left: 0 !important;
       bottom: 0 !important;
       z-index: 1000 !important;
-
       flex: none !important;
       width: var(--vet-sidebar-open-width) !important;
       min-width: var(--vet-sidebar-open-width) !important;
       max-width: var(--vet-sidebar-open-width) !important;
-
       height: 100vh !important;
       height: 100dvh !important;
       align-self: auto !important;
@@ -139,8 +129,6 @@ const sidebarStyles = `
       min-width: var(--vet-sidebar-closed-width) !important;
       max-width: var(--vet-sidebar-closed-width) !important;
     }
-
-    /* Normal pages fill the space beside the sidebar */
 
     .dashboard-layout:not(:has(> .sidebar-pos-page))
       > :is(
@@ -161,8 +149,6 @@ const sidebarStyles = `
       box-sizing: border-box !important;
     }
 
-    /* POS: preserve its own layout and columns */
-
     .dashboard-layout:has(> .sidebar-pos-page)
       > :not(.sidebar) {
       flex: 1 1 0%;
@@ -171,10 +157,6 @@ const sidebarStyles = `
       box-sizing: border-box;
     }
   }
-
-  /* =========================================
-     MOBILE LAYOUT
-  ========================================= */
 
   @media (max-width: 768px) {
     .dashboard-layout,
@@ -202,36 +184,26 @@ const sidebarStyles = `
     }
   }
 
-  /* =========================================
-     SIDEBAR BASE
-  ========================================= */
-
   .sidebar {
     --sidebar-bg: #49aaa6;
     --sidebar-hover: #348b87;
     --sidebar-active: #246d69;
-
     width: 260px;
     min-width: 260px;
     height: 100vh;
     height: 100dvh;
     padding: 14px 12px;
     box-sizing: border-box;
-
     display: flex;
     flex-direction: column;
     justify-content: space-between;
-
     background: var(--sidebar-bg);
     color: #ffffff !important;
-
     overflow-x: hidden;
     overflow-y: auto;
     overscroll-behavior-y: contain;
-
     scrollbar-width: thin;
     scrollbar-color: rgba(255,255,255,.4) transparent;
-
     transition:
       width .25s ease,
       min-width .25s ease,
@@ -256,10 +228,6 @@ const sidebarStyles = `
     flex-shrink: 0;
   }
 
-  /* =========================================
-     LOGO
-  ========================================= */
-
   .sidebar .sidebar-logo {
     width: 100%;
     position: relative;
@@ -275,20 +243,17 @@ const sidebarStyles = `
     width: 100%;
     min-width: 0;
     padding: 8px;
-
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     gap: 10px;
-
     border: 0 !important;
     border-radius: 12px;
     background: transparent;
     color: #ffffff !important;
     cursor: pointer;
     text-align: center;
-
     transition: background-color .2s ease;
   }
 
@@ -318,10 +283,6 @@ const sidebarStyles = `
     overflow-wrap: anywhere;
   }
 
-  /* =========================================
-     NAVIGATION
-  ========================================= */
-
   .sidebar .sidebar-nav {
     display: flex;
     flex-direction: column;
@@ -338,35 +299,26 @@ const sidebarStyles = `
     height: 46px !important;
     margin: 0 !important;
     padding: 0 15px !important;
-
     display: flex !important;
     align-items: center !important;
     justify-content: flex-start !important;
     gap: 18px !important;
-
     border: 0 !important;
     border-radius: 10px !important;
     background: transparent;
     color: #ffffff !important;
     text-decoration: none !important;
-
     font-size: 14px !important;
     font-weight: 500 !important;
     font-family: inherit !important;
     line-height: 20px !important;
     text-align: left !important;
-
     box-shadow: none !important;
     transform: none !important;
     translate: none !important;
     cursor: pointer;
-
     transition: background-color .2s ease !important;
   }
-
-  /* =========================================
-     ICONS
-  ========================================= */
 
   .sidebar .sidebar-nav .sidebar-icon,
   .sidebar .sidebar-logout .sidebar-icon {
@@ -378,20 +330,14 @@ const sidebarStyles = `
     min-height: 19px !important;
     max-height: 19px !important;
     flex: 0 0 19px !important;
-
     margin: 0 !important;
     padding: 0 !important;
     color: #ffffff !important;
-
     position: static !important;
     transform: none !important;
     translate: none !important;
     transition: none !important;
   }
-
-  /* =========================================
-     TEXT
-  ========================================= */
 
   .sidebar .sidebar-nav .sidebar-text,
   .sidebar .sidebar-logout .sidebar-text {
@@ -399,21 +345,15 @@ const sidebarStyles = `
     margin: 0 !important;
     padding: 0 !important;
     color: #ffffff !important;
-
     font-size: 14px !important;
     font-weight: 500 !important;
     line-height: 20px !important;
     white-space: nowrap;
-
     position: static !important;
     transform: none !important;
     translate: none !important;
     transition: none !important;
   }
-
-  /* =========================================
-     HOVER
-  ========================================= */
 
   .sidebar .sidebar-nav a:hover,
   .sidebar .sidebar-nav .inventory-parent-button:hover,
@@ -425,10 +365,6 @@ const sidebarStyles = `
     box-shadow: none !important;
     transform: none !important;
   }
-
-  /* =========================================
-     ACTIVE
-  ========================================= */
 
   .sidebar .sidebar-nav a.active,
   .sidebar .sidebar-nav .inventory-parent-button.active,
@@ -448,10 +384,6 @@ const sidebarStyles = `
   .sidebar .sidebar-nav .financial-parent-button.active:hover {
     background: var(--sidebar-active) !important;
   }
-
-  /* =========================================
-     FOCUS
-  ========================================= */
 
   .sidebar .sidebar-nav a:active,
   .sidebar .sidebar-nav button:active,
@@ -473,10 +405,6 @@ const sidebarStyles = `
     outline: 2px solid #174e4b;
     outline-offset: 2px;
   }
-
-  /* =========================================
-     DROPDOWNS
-  ========================================= */
 
   .sidebar .inventory-sidebar-group,
   .sidebar .financial-sidebar-group {
@@ -511,28 +439,23 @@ const sidebarStyles = `
     height: 40px !important;
     margin: 0 0 0 12px !important;
     padding: 0 12px 0 30px !important;
-
     display: flex !important;
     align-items: center !important;
     justify-content: flex-start !important;
     gap: 13px !important;
-
     background: transparent;
     border: 0 !important;
     border-radius: 9px !important;
     color: #ffffff !important;
-
     font-family: inherit !important;
     font-size: 13px !important;
     font-weight: 500 !important;
     line-height: 20px !important;
     text-align: left !important;
-
     box-shadow: none !important;
     transform: none !important;
     translate: none !important;
     cursor: pointer;
-
     transition: background-color .2s ease !important;
   }
 
@@ -546,7 +469,6 @@ const sidebarStyles = `
     min-height: 15px !important;
     max-height: 15px !important;
     flex: 0 0 15px !important;
-
     margin: 0 !important;
     padding: 0 !important;
     color: #ffffff !important;
@@ -586,10 +508,6 @@ const sidebarStyles = `
     background: var(--sidebar-active) !important;
   }
 
-  /* =========================================
-     LOGOUT
-  ========================================= */
-
   .sidebar .sidebar-logout {
     width: 100% !important;
     min-height: 46px !important;
@@ -597,32 +515,23 @@ const sidebarStyles = `
     margin: 24px 0 0 !important;
     padding: 0 15px !important;
     flex-shrink: 0;
-
     display: flex !important;
     align-items: center !important;
     justify-content: flex-start !important;
     gap: 18px !important;
-
     border: 0 !important;
     border-radius: 10px !important;
     background: transparent;
     color: #ffffff !important;
-
     font-family: inherit !important;
     font-size: 14px !important;
     font-weight: 500 !important;
-
     box-shadow: none !important;
     transform: none !important;
     translate: none !important;
     cursor: pointer;
-
     transition: background-color .2s ease !important;
   }
-
-  /* =========================================
-     COLLAPSED SIDEBAR - DESKTOP
-  ========================================= */
 
   @media (min-width: 769px) {
     .sidebar.sidebar-pos-collapsed {
@@ -668,7 +577,6 @@ const sidebarStyles = `
       height: 46px !important;
       margin: 0 !important;
       padding: 0 !important;
-
       display: flex !important;
       align-items: center !important;
       justify-content: center !important;
@@ -692,22 +600,16 @@ const sidebarStyles = `
     }
   }
 
-  /* =========================================
-     MOBILE
-  ========================================= */
-
   .mobile-menu-button {
     display: none;
     position: fixed;
     top: 16px;
     left: 16px;
     z-index: 1001;
-
     width: 42px !important;
     height: 42px !important;
     align-items: center;
     justify-content: center;
-
     border: none;
     border-radius: 10px;
     background: #348b87;
@@ -738,13 +640,11 @@ const sidebarStyles = `
       left: 0 !important;
       bottom: 0 !important;
       z-index: 1100 !important;
-
       width: min(280px, 85vw) !important;
       min-width: 0 !important;
       max-width: 85vw !important;
       height: 100dvh !important;
       padding: 14px 12px !important;
-
       transform: translateX(-105%);
       transition: transform .25s ease;
     }
@@ -763,12 +663,10 @@ const sidebarStyles = `
       position: absolute;
       top: 8px;
       right: 0;
-
       width: 28px !important;
       height: 28px !important;
       align-items: center;
       justify-content: center;
-
       border: none;
       background: transparent;
       color: #ffffff;
@@ -798,8 +696,7 @@ const sidebarStyles = `
       display: flex !important;
     }
   }
-`;
-export default function Sidebar({ clinicName, clinicLogo }) {
+`;export default function Sidebar({ clinicName, clinicLogo }) {
   const navigate = useNavigate();
   const location = useLocation();
   const sidebarRef = useRef(null);
@@ -815,9 +712,10 @@ export default function Sidebar({ clinicName, clinicLogo }) {
     logo: localStorage.getItem("clinicLogo") || "",
   }));
 
-  // POS must always display the collapsed sidebar.
+  const [posExpanded, setPosExpanded] = useState(false);
+
   const isPOSPage = location.pathname === "/pos";
-  const isCollapsed = collapsed || isPOSPage;
+  const isCollapsed = isPOSPage ? !posExpanded : collapsed;
 
   const isInventoryPage =
     location.pathname.startsWith("/inventory");
@@ -859,6 +757,7 @@ export default function Sidebar({ clinicName, clinicLogo }) {
     };
 
     window.addEventListener("storage", updateBranding);
+
     window.addEventListener(
       "clinic-branding-updated",
       updateBranding
@@ -866,6 +765,7 @@ export default function Sidebar({ clinicName, clinicLogo }) {
 
     return () => {
       window.removeEventListener("storage", updateBranding);
+
       window.removeEventListener(
         "clinic-branding-updated",
         updateBranding
@@ -899,6 +799,7 @@ export default function Sidebar({ clinicName, clinicLogo }) {
 
   const changeCollapse = (value) => {
     setCollapsed(value);
+
     localStorage.setItem(
       COLLAPSE_KEY,
       String(value)
@@ -906,7 +807,16 @@ export default function Sidebar({ clinicName, clinicLogo }) {
   };
 
   const toggleSidebar = () => {
-    if (isPOSPage) return;
+    if (window.innerWidth <= 768) {
+      setMobileOpen((current) => !current);
+      return;
+    }
+
+    if (isPOSPage) {
+      setPosExpanded((current) => !current);
+      return;
+    }
+
     changeCollapse(!collapsed);
   };
 
@@ -1012,6 +922,7 @@ export default function Sidebar({ clinicName, clinicLogo }) {
         }
       >
         <Icon className="sidebar-icon" />
+
         <span className="sidebar-text">
           {label}
         </span>
@@ -1023,7 +934,6 @@ export default function Sidebar({ clinicName, clinicLogo }) {
     <>
       <style>{sidebarStyles}</style>
 
-      {/* MOBILE OPEN BUTTON */}
       <button
         type="button"
         className="mobile-menu-button"
@@ -1033,7 +943,6 @@ export default function Sidebar({ clinicName, clinicLogo }) {
         <FaBars />
       </button>
 
-      {/* MOBILE OVERLAY */}
       {mobileOpen && (
         <div
           className="sidebar-overlay"
@@ -1041,7 +950,6 @@ export default function Sidebar({ clinicName, clinicLogo }) {
         />
       )}
 
-      {/* SIDEBAR */}
       <aside
         ref={sidebarRef}
         onScroll={saveScroll}
@@ -1053,18 +961,13 @@ export default function Sidebar({ clinicName, clinicLogo }) {
         ].join(" ")}
       >
         <div className="sidebar-content">
-          {/* CLINIC LOGO */}
           <div className="sidebar-logo">
             <button
               type="button"
               className="sidebar-brand"
               onClick={toggleSidebar}
               onWheel={handleLogoWheel}
-              title={
-                isPOSPage
-                  ? "Sidebar collapsed on POS"
-                  : "Collapse / expand sidebar"
-              }
+              title="Collapse / expand sidebar"
               aria-label="Collapse or expand sidebar"
             >
               {displayLogo ? (
@@ -1092,11 +995,9 @@ export default function Sidebar({ clinicName, clinicLogo }) {
             </button>
           </div>
 
-          {/* MAIN NAVIGATION */}
           <nav className="sidebar-nav">
             {navigationLinks.map(renderLink)}
 
-            {/* INVENTORY DROPDOWN */}
             <div className="inventory-sidebar-group">
               <button
                 type="button"
@@ -1163,10 +1064,8 @@ export default function Sidebar({ clinicName, clinicLogo }) {
               )}
             </div>
 
-            {/* SALES LINKS */}
             {salesLinks.map(renderLink)}
 
-            {/* FINANCIAL DROPDOWN */}
             <div className="financial-sidebar-group">
               <button
                 type="button"
@@ -1231,12 +1130,10 @@ export default function Sidebar({ clinicName, clinicLogo }) {
               )}
             </div>
 
-            {/* OTHER LINKS */}
             {otherLinks.map(renderLink)}
           </nav>
         </div>
 
-        {/* LOGOUT */}
         <button
           type="button"
           className="sidebar-logout"
@@ -1244,6 +1141,7 @@ export default function Sidebar({ clinicName, clinicLogo }) {
           title={isCollapsed ? "Logout" : undefined}
         >
           <FaRightFromBracket className="sidebar-icon" />
+
           <span className="sidebar-text">
             Logout
           </span>
