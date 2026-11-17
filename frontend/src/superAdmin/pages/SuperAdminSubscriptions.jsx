@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
+import { subscriptionsRequest } from "../api/subscriptionsApi";
+import { useEffect, useMemo, useRef, useState } from "react";
 import SuperAdminSidebar from "../components/SuperAdminSidebar";
 
 import {
@@ -15,103 +16,6 @@ import {
   FaTriangleExclamation,
   FaPlus,
 } from "react-icons/fa6";
-
-const STORAGE_KEY = "sa_demo_subscriptions";
-
-const DEFAULT_SUBSCRIPTIONS = [
-  {
-    id: 1001,
-    clinic: "Happy Paws Veterinary Clinic",
-    admin: "Dr. Sara Ahmed",
-    email: "contact@happypaws.com",
-    planName: "Premium",
-    billing: "Monthly",
-    amount: 69,
-    discount: 0,
-    startDate: "2026-10-01",
-    endDate: "2026-11-01",
-    payments: [
-      {
-        id: "PAY-1001-1",
-        amount: 69,
-        date: "2026-10-01",
-        method: "Cash",
-        notes: "",
-      },
-    ],
-    notes: "",
-  },
-  {
-    id: 1002,
-    clinic: "Pet Care Clinic",
-    admin: "Dr. Omar Khaled",
-    email: "info@petcare.com",
-    planName: "Professional",
-    billing: "Yearly",
-    amount: 390,
-    discount: 10,
-    startDate: "2026-09-12",
-    endDate: "2027-09-12",
-    payments: [],
-    notes: "",
-  },
-  {
-    id: 1003,
-    clinic: "Animal Wellness Center",
-    admin: "Dr. Maya Hassan",
-    email: "hello@animalwellness.com",
-    planName: "Basic",
-    billing: "Monthly",
-    amount: 19,
-    discount: 0,
-    startDate: "2026-10-05",
-    endDate: "2026-11-05",
-    payments: [],
-    notes: "",
-  },
-  {
-    id: 1004,
-    clinic: "Healthy Tails Clinic",
-    admin: "Dr. Karim Mansour",
-    email: "support@healthytails.com",
-    planName: "Premium",
-    billing: "Yearly",
-    amount: 690,
-    discount: 20,
-    startDate: "2026-08-20",
-    endDate: "2027-08-20",
-    payments: [
-      {
-        id: "PAY-1004-1",
-        amount: 552,
-        date: "2026-08-20",
-        method: "Bank Transfer",
-        notes: "",
-      },
-    ],
-    notes: "",
-  },
-  {
-    id: 1005,
-    clinic: "Pawfect Vet",
-    admin: "Dr. Lina Nasser",
-    email: "contact@pawfectvet.com",
-    planName: "Professional",
-    billing: "Monthly",
-    amount: 39,
-    discount: 0,
-    startDate: "2026-10-08",
-    endDate: "2026-11-08",
-    payments: [],
-    notes: "",
-  },
-];
-
-const PLAN_PRICES = {
-  Basic: { Monthly: 19, Yearly: 190 },
-  Professional: { Monthly: 39, Yearly: 390 },
-  Premium: { Monthly: 69, Yearly: 690 },
-};
 
 const round = (value) =>
   Math.round((Number(value) + Number.EPSILON) * 100) / 100;
@@ -192,79 +96,18 @@ function calculatePayment(item) {
   };
 }
 
-/*
-  Existing demo records using fixed discounts are converted
-  to their equivalent percentage when loaded.
-*/
 
-function normalizeSubscription(item) {
-  const base = { ...item };
-  const amount = Math.max(0, Number(base.amount) || 0);
-
-  let discount = Math.max(0, Number(base.discount) || 0);
-
-  if (base.discountType === "fixed") {
-    discount = amount > 0 ? (discount / amount) * 100 : 0;
-  }
-
-  discount = Math.min(100, discount);
-
-  const normalized = {
-    ...base,
-    amount,
-    discount,
-    discountType: "percent",
-    notes: base.notes || "",
-  };
-
-  if (!Array.isArray(normalized.payments)) {
-    const legacyTotal = calculatePayment({
-      ...normalized,
-      payments: [],
-    }).total;
-
-    normalized.payments =
-      base.status === "Paid"
-        ? [
-            {
-              id: `PAY-${base.id}-LEGACY`,
-              amount: legacyTotal,
-              date: base.paidAt || base.startDate || today(),
-              method: base.paymentMethod || "Cash",
-              notes: base.notes || "",
-            },
-          ]
-        : [];
-  }
-
-  return normalized;
-}
-
-function loadSubscriptions() {
-  try {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    const data = saved ? JSON.parse(saved) : DEFAULT_SUBSCRIPTIONS;
-
-    return Array.isArray(data)
-      ? data.map(normalizeSubscription)
-      : DEFAULT_SUBSCRIPTIONS.map(normalizeSubscription);
-  } catch {
-    return DEFAULT_SUBSCRIPTIONS.map(normalizeSubscription);
-  }
-}
-
-function createEmptySubscription() {
+function createEmptySubscription(plan) {
   const startDate = today();
 
   return {
     clinic: "",
     admin: "",
     email: "",
-    planName: "Basic",
+    planName: plan?.name || "",
     billing: "Monthly",
-    amount: PLAN_PRICES.Basic.Monthly,
+    amount: plan?.monthlyPrice ?? 0,
     discount: 0,
-    discountType: "percent",
     startDate,
     endDate: calculateEndDate(startDate, "Monthly"),
     payments: [],
@@ -1271,9 +1114,37 @@ const styles = `
     margin: 15mm;
   }
 }
+
+/* Add Subscription beside the page title */
+#root .ss-page .ss-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  width: 100%;
+  margin-bottom: 9px;
+}
+
+#root .ss-page .ss-title-row h1 {
+  margin: 0;
+}
+
+#root .ss-page .ss-title-row .ss-header-add {
+  flex: 0 0 auto !important;
+  width: auto !important;
+  margin: 0 !important;
+  white-space: nowrap;
+}
+
+@media (max-width: 600px) {
+  #root .ss-page .ss-title-row {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+}
 `;
 export default function SuperAdminSubscriptions() {
-  const [subscriptions, setSubscriptions] = useState(loadSubscriptions);
+  const [subscriptions, setSubscriptions] = useState([]);
 
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
@@ -1281,7 +1152,7 @@ export default function SuperAdminSubscriptions() {
 
   // ADD SUBSCRIPTION
   const [showAdd, setShowAdd] = useState(false);
-  const [addDraft, setAddDraft] = useState(createEmptySubscription);
+  const [addDraft, setAddDraft] = useState(() => createEmptySubscription());
   const [addError, setAddError] = useState("");
 
   // PAYMENT
@@ -1301,9 +1172,69 @@ export default function SuperAdminSubscriptions() {
   const [invoiceId, setInvoiceId] = useState(null);
   const [deleteId, setDeleteId] = useState(null);
 
+
+  const [plans, setPlans] = useState([]);
+  const [clinics, setClinics] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState(false);
+  const [pageError, setPageError] = useState("");
+  const [deleteError, setDeleteError] = useState("");
+
+  const mutationLock = useRef(false);
+  const paymentRequest = useRef(null);
+
+  const loadData = async (signal) => {
+    setLoading(true);
+    setPageError("");
+
+    try {
+      const [records, availablePlans, availableClinics] =
+        await Promise.all([
+          subscriptionsRequest("", { signal }),
+          subscriptionsRequest(
+            "", { signal }, "/api/super-admin/plans"
+          ),
+          subscriptionsRequest(
+            "", { signal }, "/api/super-admin/users"
+          ),
+        ]);
+
+      if (
+        ![records, availablePlans, availableClinics]
+          .every(Array.isArray)
+      ) {
+        throw new Error("Invalid data returned by server.");
+      }
+
+      setSubscriptions(records);
+      setPlans(availablePlans);
+      setClinics(availableClinics);
+    } catch (error) {
+      if (error.name !== "AbortError") {
+        setPageError(error.message);
+      }
+    } finally {
+      if (!signal?.aborted) setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(subscriptions));
-  }, [subscriptions]);
+    const controller = new AbortController();
+
+    loadData(controller.signal);
+
+    return () => controller.abort();
+  }, []);
+
+  const replaceSubscription = (saved) => {
+    setSubscriptions((previous) =>
+      previous.some((item) => item.id === saved.id)
+        ? previous.map((item) =>
+            item.id === saved.id ? saved : item
+          )
+        : [saved, ...previous]
+    );
+  };
 
   const filtered = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -1421,12 +1352,22 @@ export default function SuperAdminSubscriptions() {
   // ADD SUBSCRIPTION
 
   const openAdd = () => {
-    setAddDraft(createEmptySubscription());
+    if (mutationLock.current || loading) return;
+
+    const plan = plans.find((item) => item.status === "Active");
+
+    if (!plan) {
+      setPageError("Create an active plan first.");
+      return;
+    }
+
+    setAddDraft(createEmptySubscription(plan));
     setAddError("");
     setShowAdd(true);
   };
 
   const closeAdd = () => {
+    if (mutationLock.current) return;
     setShowAdd(false);
     setAddError("");
   };
@@ -1438,9 +1379,29 @@ export default function SuperAdminSubscriptions() {
         [field]: value,
       };
 
+      if (field === "clinic") {
+        const clinic = clinics.find(
+          (item) =>
+            item.clinicName.toLowerCase() ===
+            value.trim().toLowerCase()
+        );
+
+        if (clinic) {
+          updated.clinic = clinic.clinicName;
+          updated.admin = clinic.adminName || "";
+          updated.email = clinic.email || clinic.adminEmail || "";
+        }
+      }
+
       if (field === "planName" || field === "billing") {
+        const plan = plans.find(
+          (item) => item.name === updated.planName
+        );
+
         updated.amount =
-          PLAN_PRICES[updated.planName]?.[updated.billing] ?? 0;
+          (updated.billing === "Yearly"
+            ? plan?.yearlyPrice
+            : plan?.monthlyPrice) ?? 0;
       }
 
       if (field === "startDate" || field === "billing") {
@@ -1456,8 +1417,11 @@ export default function SuperAdminSubscriptions() {
     setAddError("");
   };
 
-  const saveAdd = (event) => {
+
+  const saveAdd = async (event) => {
     event.preventDefault();
+
+    if (mutationLock.current) return;
 
     const error = validateSubscription(addDraft);
 
@@ -1466,46 +1430,44 @@ export default function SuperAdminSubscriptions() {
       return;
     }
 
-    const newId =
-      Math.max(
-        1000,
-        ...subscriptions.map((item) => Number(item.id) || 0)
-      ) + 1;
+    mutationLock.current = true;
+    setBusy(true);
+    setAddError("");
 
-    const newSubscription = {
-      ...addDraft,
-      id: newId,
-      clinic: addDraft.clinic.trim(),
-      admin: addDraft.admin.trim(),
-      email: addDraft.email.trim(),
-      amount: round(addDraft.amount),
-      discount: round(addDraft.discount),
-      discountType: "percent",
-      payments: [],
-      notes: addDraft.notes.trim(),
-    };
+    try {
+      const saved = await subscriptionsRequest("", {
+        method: "POST",
+        body: JSON.stringify(addDraft),
+      });
 
-    setSubscriptions((previous) => [
-      ...previous,
-      newSubscription,
-    ]);
+      replaceSubscription(saved);
 
-    setSearch("");
-    setStatusFilter("All");
-    setPlanFilter("All");
+      setSearch("");
+      setStatusFilter("All");
+      setPlanFilter("All");
 
-    closeAdd();
+      mutationLock.current = false;
+      closeAdd();
+    } catch (error) {
+      setAddError(error.message);
+    } finally {
+      mutationLock.current = false;
+      setBusy(false);
+    }
   };
 
   // PAYMENT
 
   const closePayment = () => {
+    if (mutationLock.current) return;
     setPaymentId(null);
     setPaymentAmount("");
     setPaymentError("");
   };
 
   const openPayment = (item) => {
+    if (mutationLock.current) return;
+    paymentRequest.current = null;
     const totals = calculatePayment(item);
 
     setPaymentId(item.id);
@@ -1518,7 +1480,11 @@ export default function SuperAdminSubscriptions() {
     setPaymentError("");
   };
 
-  const savePayment = (event) => {
+  const savePayment = async (event) => {
+    if (mutationLock.current) {
+      event.preventDefault();
+      return;
+    }
     event.preventDefault();
 
     if (!paymentItem) return;
@@ -1555,40 +1521,65 @@ export default function SuperAdminSubscriptions() {
       return;
     }
 
-    const newPayment = {
-      id: `PAY-${paymentItem.id}-${Date.now()}`,
+
+    const payload = {
       amount: round(amount),
       date: paymentDate,
       method: paymentMethod,
       notes: paymentNotes.trim(),
     };
 
-    const completedId = paymentId;
+    const fingerprint = JSON.stringify({
+      id: paymentId,
+      ...payload,
+    });
 
-    setSubscriptions((previous) =>
-      previous.map((item) =>
-        item.id === completedId
-          ? {
-              ...item,
-              payments: [...(item.payments || []), newPayment],
-            }
-          : item
-      )
-    );
+    if (paymentRequest.current?.fingerprint !== fingerprint) {
+      paymentRequest.current = {
+        fingerprint,
+        requestId: crypto.randomUUID(),
+      };
+    }
 
-    closePayment();
-    setInvoiceId(completedId);
+    payload.requestId = paymentRequest.current.requestId;
+
+    mutationLock.current = true;
+    setBusy(true);
+    setPaymentError("");
+
+    try {
+      const saved = await subscriptionsRequest(
+        `/${paymentId}/payments`,
+        {
+          method: "POST",
+          body: JSON.stringify(payload),
+        }
+      );
+
+      replaceSubscription(saved);
+
+      mutationLock.current = false;
+      closePayment();
+      setInvoiceId(saved.id);
+    } catch (error) {
+      setPaymentError(error.message);
+    } finally {
+      mutationLock.current = false;
+      setBusy(false);
+    }
   };
 
   // EDIT
 
   const closeEdit = () => {
+    if (mutationLock.current) return;
     setEditId(null);
     setEditDraft(null);
     setEditError("");
   };
 
   const openEdit = (item) => {
+    if (mutationLock.current) return;
     setEditId(item.id);
     setEditDraft({
       ...item,
@@ -1606,10 +1597,11 @@ export default function SuperAdminSubscriptions() {
     setEditError("");
   };
 
-  const saveEdit = (event) => {
+
+  const saveEdit = async (event) => {
     event.preventDefault();
 
-    if (!editDraft || !editItem) return;
+    if (!editDraft || mutationLock.current) return;
 
     const error = validateSubscription(editDraft);
 
@@ -1618,50 +1610,54 @@ export default function SuperAdminSubscriptions() {
       return;
     }
 
-    const updated = {
-      ...editDraft,
-      clinic: editDraft.clinic.trim(),
-      admin: editDraft.admin.trim(),
-      email: editDraft.email.trim(),
-      planName: editDraft.planName.trim(),
-      amount: round(editDraft.amount),
-      discount: round(editDraft.discount),
-      discountType: "percent",
-      notes: editDraft.notes || "",
-    };
+    mutationLock.current = true;
+    setBusy(true);
+    setEditError("");
 
-    const totals = calculatePayment(updated);
-
-    if (totals.paid > totals.total) {
-      setEditError(
-        `Cannot save: previous payments total ${money(
-          totals.paid
-        )}, but the new final amount is ${money(
-          totals.total
-        )}. Adjust the amount or discount.`
+    try {
+      replaceSubscription(
+        await subscriptionsRequest(`/${editId}`, {
+          method: "PUT",
+          body: JSON.stringify(editDraft),
+        })
       );
-      return;
+
+      mutationLock.current = false;
+      closeEdit();
+    } catch (error) {
+      setEditError(error.message);
+    } finally {
+      mutationLock.current = false;
+      setBusy(false);
     }
-
-    setSubscriptions((previous) =>
-      previous.map((item) =>
-        item.id === editId ? updated : item
-      )
-    );
-
-    closeEdit();
   };
 
   // DELETE
 
-  const confirmDelete = () => {
-    if (!deleteItem) return;
 
-    setSubscriptions((previous) =>
-      previous.filter((item) => item.id !== deleteId)
-    );
+  const confirmDelete = async () => {
+    if (!deleteItem || mutationLock.current) return;
 
-    setDeleteId(null);
+    mutationLock.current = true;
+    setBusy(true);
+    setDeleteError("");
+
+    try {
+      await subscriptionsRequest(`/${deleteId}`, {
+        method: "DELETE",
+      });
+
+      setSubscriptions((previous) =>
+        previous.filter((item) => item.id !== deleteId)
+      );
+
+      setDeleteId(null);
+    } catch (error) {
+      setDeleteError(error.message);
+    } finally {
+      mutationLock.current = false;
+      setBusy(false);
+    }
   };
 
   // REUSABLE PAYMENT SUMMARY
@@ -1709,7 +1705,17 @@ export default function SuperAdminSubscriptions() {
         <main className="ss-main">
           <header className="ss-header">
             <p className="ss-eyebrow">SUBSCRIPTION MANAGEMENT</p>
-            <h1>Subscription Records</h1>
+            <div className="ss-title-row">
+  <h1>Subscription Records</h1>
+  <button disabled={busy || loading}
+                type="button"
+                className="ss-btn ss-add-btn"
+                onClick={openAdd}
+              >
+                <FaPlus />
+                Add Subscription
+              </button>
+</div>
 
             <p className="ss-subtitle">
               Manage clinic subscriptions, percentage discounts,
@@ -1757,14 +1763,7 @@ export default function SuperAdminSubscriptions() {
                 <p className="ss-count">{filtered.length} records</p>
               </div>
 
-              <button
-                type="button"
-                className="ss-btn ss-add-btn"
-                onClick={openAdd}
-              >
-                <FaPlus />
-                Add Subscription
-              </button>
+              
             </div>
 
             <div className="ss-toolbar">
@@ -1813,7 +1812,25 @@ export default function SuperAdminSubscriptions() {
               </select>
             </div>
 
-            {filtered.length === 0 ? (
+            {pageError && (
+              <div role="alert" className="ss-error">
+                {pageError}
+                <button
+                  type="button"
+                  className="ss-btn secondary"
+                  disabled={busy || loading}
+                  onClick={() => loadData()}
+                >
+                  Retry
+                </button>
+              </div>
+            )}
+
+            {loading ? (
+              <div className="ss-empty">
+                Loading subscriptions...
+              </div>
+            ) : filtered.length === 0 ? (
               <div className="ss-empty">No subscriptions found.</div>
             ) : (
               <div className="ss-table-wrap">
@@ -1892,7 +1909,7 @@ export default function SuperAdminSubscriptions() {
 
                           <td>
                             <div className="ss-actions">
-                              <button
+                              <button disabled={busy || loading}
                                 type="button"
                                 className="ss-icon-btn pay"
                                 onClick={() => openPayment(item)}
@@ -1902,7 +1919,7 @@ export default function SuperAdminSubscriptions() {
                                 <FaCreditCard />
                               </button>
 
-                              <button
+                              <button disabled={busy || loading}
                                 type="button"
                                 className="ss-icon-btn invoice"
                                 onClick={() => setInvoiceId(item.id)}
@@ -1912,7 +1929,7 @@ export default function SuperAdminSubscriptions() {
                                 <FaReceipt />
                               </button>
 
-                              <button
+                              <button disabled={busy || loading}
                                 type="button"
                                 className="ss-icon-btn edit"
                                 onClick={() => openEdit(item)}
@@ -1922,10 +1939,10 @@ export default function SuperAdminSubscriptions() {
                                 <FaPenToSquare />
                               </button>
 
-                              <button
+                              <button disabled={busy || loading}
                                 type="button"
                                 className="ss-icon-btn delete"
-                                onClick={() => setDeleteId(item.id)}
+                                onClick={() => { setDeleteError(""); setDeleteId(item.id); }}
                                 title="Delete Subscription"
                                 aria-label={`Delete ${item.clinic}`}
                               >
@@ -1959,7 +1976,7 @@ export default function SuperAdminSubscriptions() {
             <div className="ss-modal-head">
               <h2>Add Subscription</h2>
 
-              <button
+              <button disabled={busy || loading}
                 type="button"
                 className="ss-close"
                 onClick={closeAdd}
@@ -1970,12 +1987,23 @@ export default function SuperAdminSubscriptions() {
             </div>
 
             <form onSubmit={saveAdd}>
+<fieldset disabled={busy} style={{ border: 0, margin: 0, padding: 0, minWidth: 0 }}>
+
+              <datalist id="ss-clinic-options">
+                {clinics.map((clinic) => (
+                  <option
+                    key={clinic.id}
+                    value={clinic.clinicName}
+                  />
+                ))}
+              </datalist>
               <div className="ss-form-grid">
                 <div className="ss-field full">
                   <label>Clinic Name *</label>
 
                   <input
                     required
+                    list="ss-clinic-options"
                     value={addDraft.clinic}
                     onChange={(event) =>
                       updateAdd("clinic", event.target.value)
@@ -2020,9 +2048,13 @@ export default function SuperAdminSubscriptions() {
                       updateAdd("planName", event.target.value)
                     }
                   >
-                    <option value="Basic">Basic</option>
-                    <option value="Professional">Professional</option>
-                    <option value="Premium">Premium</option>
+                    {plans
+                      .filter((plan) => plan.status === "Active")
+                      .map((plan) => (
+                        <option key={plan.id} value={plan.name}>
+                          {plan.name}
+                        </option>
+                      ))}
                   </select>
                 </div>
 
@@ -2136,7 +2168,7 @@ export default function SuperAdminSubscriptions() {
               )}
 
               <div className="ss-modal-actions">
-                <button
+                <button disabled={busy || loading}
                   type="button"
                   className="ss-btn secondary"
                   onClick={closeAdd}
@@ -2144,12 +2176,14 @@ export default function SuperAdminSubscriptions() {
                   Cancel
                 </button>
 
-                <button type="submit" className="ss-btn">
+                <button disabled={busy || loading} type="submit" className="ss-btn">
                   <FaPlus />
                   Save Subscription
                 </button>
               </div>
-            </form>
+            
+</fieldset>
+</form>
           </div>
         </div>
       )}
@@ -2167,7 +2201,7 @@ export default function SuperAdminSubscriptions() {
             <div className="ss-modal-head">
               <h2>Process Payment</h2>
 
-              <button
+              <button disabled={busy || loading}
                 type="button"
                 className="ss-close"
                 onClick={closePayment}
@@ -2187,6 +2221,8 @@ export default function SuperAdminSubscriptions() {
             </div>
 
             <form onSubmit={savePayment}>
+<fieldset disabled={busy} style={{ border: 0, margin: 0, padding: 0, minWidth: 0 }}>
+
               <div className="ss-form-grid">
                 <div className="ss-field">
                   <label>Original Amount</label>
@@ -2337,7 +2373,7 @@ export default function SuperAdminSubscriptions() {
               )}
 
               <div className="ss-modal-actions">
-                <button
+                <button disabled={busy || loading}
                   type="button"
                   className="ss-btn secondary"
                   onClick={closePayment}
@@ -2354,7 +2390,9 @@ export default function SuperAdminSubscriptions() {
                   Record Payment
                 </button>
               </div>
-            </form>
+            
+</fieldset>
+</form>
           </div>
         </div>
       )}
@@ -2372,7 +2410,7 @@ export default function SuperAdminSubscriptions() {
             <div className="ss-modal-head">
               <h2>Edit Subscription</h2>
 
-              <button
+              <button disabled={busy || loading}
                 type="button"
                 className="ss-close"
                 onClick={closeEdit}
@@ -2382,16 +2420,11 @@ export default function SuperAdminSubscriptions() {
               </button>
             </div>
 
-            <div className="ss-clinic-box">
-              <strong>INV-{editItem.id}</strong>
-
-              <span>
-                Update subscription details and percentage discount.
-                Previous payments are preserved.
-              </span>
-            </div>
+            
 
             <form onSubmit={saveEdit}>
+<fieldset disabled={busy} style={{ border: 0, margin: 0, padding: 0, minWidth: 0 }}>
+
               <div className="ss-form-grid">
                 <div className="ss-field full">
                   <label>Clinic Name *</label>
@@ -2433,13 +2466,24 @@ export default function SuperAdminSubscriptions() {
                 <div className="ss-field">
                   <label>Plan Name *</label>
 
-                  <input
+                  <select
                     required
                     value={editDraft.planName}
                     onChange={(event) =>
                       updateEdit("planName", event.target.value)
                     }
-                  />
+                  >
+                    {plans
+                      .filter((plan) =>
+                        plan.status === "Active" ||
+                        plan.name === editDraft.planName
+                      )
+                      .map((plan) => (
+                        <option key={plan.id} value={plan.name}>
+                          {plan.name}
+                        </option>
+                      ))}
+                  </select>
                 </div>
 
                 <div className="ss-field">
@@ -2544,7 +2588,7 @@ export default function SuperAdminSubscriptions() {
               )}
 
               <div className="ss-modal-actions">
-                <button
+                <button disabled={busy || loading}
                   type="button"
                   className="ss-btn secondary"
                   onClick={closeEdit}
@@ -2552,12 +2596,14 @@ export default function SuperAdminSubscriptions() {
                   Cancel
                 </button>
 
-                <button type="submit" className="ss-btn">
+                <button disabled={busy || loading} type="submit" className="ss-btn">
                   <FaCheck />
                   Save Changes
                 </button>
               </div>
-            </form>
+            
+</fieldset>
+</form>
           </div>
         </div>
       )}
@@ -2579,7 +2625,7 @@ export default function SuperAdminSubscriptions() {
             <div className="ss-modal-head">
               <h2>Delete Subscription?</h2>
 
-              <button
+              <button disabled={busy || loading}
                 type="button"
                 className="ss-close"
                 onClick={() => setDeleteId(null)}
@@ -2589,16 +2635,22 @@ export default function SuperAdminSubscriptions() {
               </button>
             </div>
 
+            {deleteError && (
+              <div role="alert" className="ss-error">
+                {deleteError}
+              </div>
+            )}
+
             <p className="ss-delete-message">
               Are you sure you want to delete subscription{" "}
               <strong>INV-{deleteItem.id}</strong> for{" "}
               <strong>{deleteItem.clinic}</strong>?
               <br />
-              This will also remove its demo payment history.
+              This will also permanently remove its recorded payment history.
             </p>
 
             <div className="ss-modal-actions">
-              <button
+              <button disabled={busy || loading}
                 type="button"
                 className="ss-btn secondary"
                 onClick={() => setDeleteId(null)}
@@ -2606,7 +2658,7 @@ export default function SuperAdminSubscriptions() {
                 Cancel
               </button>
 
-              <button
+              <button disabled={busy || loading}
                 type="button"
                 className="ss-btn danger"
                 onClick={confirmDelete}
@@ -2632,7 +2684,7 @@ export default function SuperAdminSubscriptions() {
             <div className="ss-modal-head ss-no-print">
               <h2>Invoice Preview</h2>
 
-              <button
+              <button disabled={busy || loading}
                 type="button"
                 className="ss-close"
                 onClick={() => setInvoiceId(null)}
@@ -2827,7 +2879,7 @@ export default function SuperAdminSubscriptions() {
             </div>
 
             <div className="ss-modal-actions ss-no-print">
-              <button
+              <button disabled={busy || loading}
                 type="button"
                 className="ss-btn secondary"
                 onClick={() => setInvoiceId(null)}
@@ -2835,7 +2887,7 @@ export default function SuperAdminSubscriptions() {
                 Close
               </button>
 
-              <button
+              <button disabled={busy || loading}
                 type="button"
                 className="ss-btn"
                 onClick={() => window.print()}

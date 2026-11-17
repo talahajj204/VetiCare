@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/backend/">
+    <Project Path="backend/VetClinic.Application/VetClinic.Application.csproj" />
+    <Project Path="backend/VetClinic.Core/VetClinic.Core.csproj" />
+    <Project Path="backend/VetClinic.Infrastructure/VetClinic.Infrastructure.csproj" />
+    <Project Path="backend/VetClinic.Web/VetClinic.Web.csproj" />
+  </Folder>
+</Solution>

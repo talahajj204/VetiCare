@@ -1,5 +1,5 @@
-
-import { useLocation, useNavigate, useParams } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import {
   FaArrowLeft,
   FaPaw,
@@ -12,92 +12,76 @@ import {
 } from "react-icons/fa";
 
 import Sidebar from "../components/Sidebar";
+import { getOwner } from "../api/ownersApi";
 
 function OwnerProfile() {
   const navigate = useNavigate();
-  const location = useLocation();
   const { ownerId } = useParams();
 
-  const passedOwner = location.state?.owner;
+  const [result, setResult] = useState({
+    ownerId: "",
+    owner: null,
+    loading: true,
+    error: "",
+  });
 
-  const fallbackOwners = {
-    1: {
-      id: 1,
-      firstName: "Tala",
-      lastName: "El Hajj",
-      email: "talaelhajj4@gmail.com",
-      phone: "03 123 456",
-      address: "Beirut",
-      emergencyContact: "70 111 222",
-      notes: "Prefers morning appointments.",
-      status: "active",
-      pets: [
-        {
-          id: 1,
-          name: "Bella",
-          species: "Dog",
-          breed: "Golden Retriever",
-          age: "4 years",
-        },
-      ],
-      history: [
-        {
-          id: 1,
-          date: "25/09/2026",
-          description: "Bella - Medical record added",
-        },
-        {
-          id: 2,
-          date: "20/09/2026",
-          description: "Bella - Routine appointment",
-        },
-      ],
-    },
+  useEffect(() => {
+    const controller = new AbortController();
 
-    2: {
-      id: 2,
-      firstName: "Fatima",
-      lastName: "Abbas",
-      email: "fatima@gmail.com",
-      phone: "70 456 789",
-      address: "Dahye",
-      emergencyContact: "71 222 333",
-      notes: "",
-      status: "active",
-      pets: [
-        {
-          id: 2,
-          name: "Luna",
-          species: "Cat",
-          breed: "Persian",
-          age: "3 years",
-        },
-      ],
-      history: [
-        {
-          id: 1,
-          date: "20/09/2026",
-          description: "Luna - Routine checkup",
-        },
-      ],
-    },
+    setResult({
+      ownerId,
+      owner: null,
+      loading: true,
+      error: "",
+    });
 
-    3: {
-      id: 3,
-      firstName: "Karen",
-      lastName: "N",
-      email: "karen@email.com",
-      phone: "71 555 222",
-      address: "Tripoli",
-      emergencyContact: "03 444 555",
-      notes: "",
-      status: "inactive",
-      pets: [],
-      history: [],
-    },
-  };
+    const loadOwner = async () => {
+      try {
+        const owner = await getOwner(ownerId, {
+          signal: controller.signal,
+        });
 
-  const owner = passedOwner || fallbackOwners[ownerId];
+        if (!controller.signal.aborted) {
+          setResult({
+            ownerId,
+            owner,
+            loading: false,
+            error: "",
+          });
+        }
+      } catch (error) {
+        if (!controller.signal.aborted) {
+          setResult({
+            ownerId,
+            owner: null,
+            loading: false,
+            error:
+              error.status === 404
+                ? ""
+                : error.message,
+          });
+        }
+      }
+    };
+
+    loadOwner();
+
+    return () => controller.abort();
+  }, [ownerId]);
+
+  if (result.ownerId !== ownerId || result.loading) {
+    return (
+      <div className="dashboard-layout">
+        <Sidebar />
+
+        <main className="dashboard-main">
+          <p role="status">Loading owner...</p>
+        </main>
+      </div>
+    );
+  }
+
+  const owner = result.owner;
 
   if (!owner) {
     return (
@@ -105,8 +89,16 @@ function OwnerProfile() {
         <Sidebar />
 
         <main className="dashboard-main">
-          <h1>Owner Not Found</h1>
-          <p>The requested owner could not be found.</p>
+          <h1>
+            {result.error
+              ? "Unable to Load Owner"
+              : "Owner Not Found"}
+          </h1>
+
+          <p role={result.error ? "alert" : undefined}>
+            {result.error ||
+              "The requested owner could not be found."}
+          </p>
 
           <button
             type="button"
@@ -324,7 +316,6 @@ function OwnerProfile() {
         {/* FIRST ROW: OWNER INFORMATION + PETS */}
 
         <div className="owner-profile-two-columns">
-
           {/* LEFT CARD: OWNER INFORMATION */}
 
           <div
@@ -513,8 +504,6 @@ function OwnerProfile() {
             )}
           </div>
         </div>
-
-        {/* PART 2 CONTINUES DIRECTLY BELOW */}
 
         {/* NOTES - FULL WIDTH */}
 

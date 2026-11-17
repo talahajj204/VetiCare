@@ -1,0 +1,18 @@
+
+
+# Generated files and local backups
+node_modules/
+bin/
+obj/
+dist/
+.DS_Store
+*.bak
+clinic-backup-*/
+plans-backup-*/
+.env
+.env.*
+!.env.example
+!.env.sample
+secrets.json
+*.pfx
+*.pem

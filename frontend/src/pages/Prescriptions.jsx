@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
 
@@ -14,8 +14,6 @@ import {
 
 import * as XLSX from "xlsx";
 import { jsPDF } from "jspdf";
-
-const MEDICAL_RECORDS_STORAGE_KEY = "vetClinicMedicalRecords";
 
 const readPrintClinicName = () => {
   try {
@@ -51,7 +49,6 @@ const loadPrintLogo = (source) =>
     }
 
     const image = new Image();
-
     image.crossOrigin = "anonymous";
 
     image.onload = () => {
@@ -90,8 +87,7 @@ const loadPrintLogo = (source) =>
           width,
           height,
         });
-      } catch (error) {
-        console.error("Could not prepare print logo:", error);
+      } catch {
         resolve(null);
       }
     };
@@ -100,182 +96,235 @@ const loadPrintLogo = (source) =>
     image.src = source;
   });
 
-const readMedicalRecords = () => {
-  try {
-    const saved = localStorage.getItem(
-      MEDICAL_RECORDS_STORAGE_KEY
-    );
+const emptyPrescription = () => ({
+  petId: "",
+  pet: "",
+  ownerId: "",
+  owner: "",
+  clinic: "",
+  veterinarian: "",
+  date: "",
+  medication: "",
+  dosage: "",
+  instructions: "",
+});
 
-    if (saved !== null) {
-      const parsed = JSON.parse(saved);
-      return Array.isArray(parsed) ? parsed : [];
+const normalizePrescription = (item) => ({
+  ...item,
+  petId: String(item.petId || ""),
+  ownerId: String(item.ownerId || ""),
+  pet: item.pet || "",
+  owner: item.owner || "",
+  clinic: item.clinic || "",
+  veterinarian: item.veterinarian || "",
+  date: item.date || "",
+  medication: item.medication || "",
+  dosage: item.dosage || "",
+  instructions: item.instructions || "",
+});
+
+async function prescriptionRequest(path, options = {}) {
+  const response = await fetch(path, {
+    ...options,
+    credentials: "include",
+    cache: "no-store",
+    headers: {
+      ...(options.body
+        ? { "Content-Type": "application/json" }
+        : {}),
+      ...options.headers,
+    },
+  });
+
+  if (!response.ok) {
+    let message = "Unable to complete the request.";
+
+    if (response.status === 401) {
+      message = "Your session has expired. Please sign in again.";
+    } else if (response.status === 403) {
+      message = "You do not have permission to access this data.";
+    } else if (response.status === 404) {
+      message = "The requested record could not be found.";
+    } else {
+      try {
+        const problem = await response.json();
+        const errors = Object.values(problem.errors || {})
+          .flat()
+          .filter((value) => typeof value === "string");
+
+        message = errors.length
+          ? errors.join("\n")
+          : problem.detail || problem.title || message;
+      } catch {
+        // Keep the default message.
+      }
     }
 
-    return [
-      {
-        id: 1,
-        pet: "Bella",
-        owner: "Tala El Hajj",
-        treatment: "Medication",
-      },
-      {
-        id: 2,
-        pet: "Luna",
-        owner: "Maya Khalil",
-        treatment: "No treatment required",
-      },
-    ];
-  } catch {
-    return [];
+    throw new Error(message);
   }
-};
 
-const normalizePetName = (value) =>
-  String(value || "").trim().toLowerCase();
+  if (response.status === 204) return null;
+
+  return response.json();
+}
+function PrescriptionNameSearch({
+  value,
+  selectedId,
+  options,
+  placeholder,
+  onType,
+  onSelect,
+  disabled,
+}) {
+  const [open, setOpen] = useState(false);
+  const wrapperRef = useRef(null);
+  const inputRef = useRef(null);
+
+  const query = String(value || "").trim().toLowerCase();
+
+  const matches = options.filter((option) =>
+    option.label.toLowerCase().includes(query)
+  );
+
+  useEffect(() => {
+    inputRef.current?.setCustomValidity(
+      value && !selectedId
+        ? "Please select a name from the suggestions."
+        : ""
+    );
+  }, [value, selectedId]);
+
+  useEffect(() => {
+    const closeOutside = (event) => {
+      if (!wrapperRef.current?.contains(event.target)) {
+        setOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", closeOutside);
+
+    return () =>
+      document.removeEventListener("mousedown", closeOutside);
+  }, []);
+
+  return (
+    <div
+      ref={wrapperRef}
+      style={{
+        position: "relative",
+        width: "100%",
+        minWidth: 0,
+      }}
+    >
+      <input
+        ref={inputRef}
+        type="text"
+        value={value || ""}
+        placeholder={placeholder}
+        disabled={disabled}
+        autoComplete="off"
+        required
+        aria-label={placeholder}
+        aria-expanded={open}
+        onFocus={() => setOpen(true)}
+        onChange={(event) => {
+          event.target.setCustomValidity("");
+          onType(event.target.value);
+          setOpen(true);
+        }}
+        onBlur={() => setOpen(false)}
+        onKeyDown={(event) => {
+          if (event.key === "Escape") setOpen(false);
+        }}
+        style={{
+          width: "100%",
+          boxSizing: "border-box",
+        }}
+      />
+
+      {open && !disabled && (
+        <div
+          style={{
+            position: "absolute",
+            top: "calc(100% + 4px)",
+            left: 0,
+            right: 0,
+            zIndex: 100,
+            maxHeight: "190px",
+            overflowY: "auto",
+            overscrollBehavior: "contain",
+            background: "#ffffff",
+            border: "1px solid #d5e5e3",
+            borderRadius: "8px",
+            boxShadow: "0 8px 20px rgba(0,0,0,0.1)",
+          }}
+        >
+          {matches.length ? (
+            matches.map((option) => (
+              <div
+                key={option.id}
+                onMouseDown={(event) => {
+                  event.preventDefault();
+                  inputRef.current?.setCustomValidity("");
+                  onSelect(option.id);
+                  setOpen(false);
+                }}
+                style={{
+                  padding: "10px 12px",
+                  fontSize: "13px",
+                  color: "#354d4b",
+                  cursor: "pointer",
+                  overflowWrap: "anywhere",
+                  background:
+                    String(option.id) === String(selectedId)
+                      ? "#e8f7f5"
+                      : "#ffffff",
+                }}
+              >
+                {option.label}
+              </div>
+            ))
+          ) : (
+            <div
+              style={{
+                padding: "10px 12px",
+                fontSize: "13px",
+                color: "#778985",
+              }}
+            >
+              No matching names found.
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
 
 function Prescriptions() {
   const location = useLocation();
   const navigate = useNavigate();
 
-  // CLINIC INFORMATION
-
-  const CLINIC_NAME = "PawCare Veterinary Clinic";
   const CLINIC_SUBTITLE = "Veterinary Medical Center";
 
-  // DATA
+  const [prescriptions, setPrescriptions] = useState([]);
+  const [medicalRecords, setMedicalRecords] = useState([]);
+  const [pets, setPets] = useState([]);
 
-  const [prescriptions, setPrescriptions] = useState([
-    {
-      id: 1,
-      clinic: "PawCare Veterinary Clinic",
-      veterinarian: "Dr. Sarah Haddad",
-      owner: "Tala El Hajj",
-      pet: "Bella",
-      date: "2026-09-29",
-      medication: "Amoxicillin",
-      dosage: "250 mg",
-      instructions:
-        "Give 250 mg orally twice daily after food for 7 days.",
-    },
-    {
-      id: 2,
-      clinic: "PawCare Veterinary Clinic",
-      veterinarian: "Dr. Karim Mansour",
-      owner: "Fatima Abbas",
-      pet: "Luna",
-      date: "2026-09-25",
-      medication: "Meloxicam",
-      dosage: "1.5 mg",
-      instructions:
-        "Give 1.5 mg orally once daily with food for 5 days.",
-    },
-  ]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
+  const [reloadKey, setReloadKey] = useState(0);
 
-  const [medicalRecords, setMedicalRecords] = useState(
-    readMedicalRecords
-  );
-
-  useEffect(() => {
-    const refreshMedicalRecords = () => {
-      setMedicalRecords(readMedicalRecords());
-    };
-
-    window.addEventListener(
-      "vetClinicMedicalRecordsUpdated",
-      refreshMedicalRecords
-    );
-
-    window.addEventListener(
-      "storage",
-      refreshMedicalRecords
-    );
-
-    window.addEventListener(
-      "focus",
-      refreshMedicalRecords
-    );
-
-    return () => {
-      window.removeEventListener(
-        "vetClinicMedicalRecordsUpdated",
-        refreshMedicalRecords
-      );
-
-      window.removeEventListener(
-        "storage",
-        refreshMedicalRecords
-      );
-
-      window.removeEventListener(
-        "focus",
-        refreshMedicalRecords
-      );
-    };
-  }, []);
-
-  const petOptions = useMemo(() => {
-    return [
-      ...new Set(
-        medicalRecords
-          .map((record) => String(record.pet || "").trim())
-          .filter(Boolean)
-      ),
-    ];
-  }, [medicalRecords]);
-
-  const getTreatmentOptions = (pet) => {
-    const petName = normalizePetName(pet);
-
-    if (!petName) return [];
-
-    return [
-      ...new Set(
-        medicalRecords
-          .filter(
-            (record) =>
-              normalizePetName(record.pet) === petName
-          )
-          .map((record) =>
-            String(record.treatment || "").trim()
-          )
-          .filter(Boolean)
-      ),
-    ];
-  };
-
-  const openMedicalRecords = (prescription) => {
-    navigate("/medical-records", {
-      state: {
-        prescriptionPet: prescription.pet || "",
-      },
-    });
-  };
-
-  // EMPTY PRESCRIPTION
-
-  const getEmptyPrescription = () => ({
-    clinic: CLINIC_NAME,
-    veterinarian: "",
-    owner: "",
-    pet: "",
-    date: "",
-    medication: "",
-    dosage: "",
-    instructions: "",
-  });
-
-  // SEARCH + DATE FILTERS
+  const [isSaving, setIsSaving] = useState(false);
+  const savingRef = useRef(false);
+  const receivedNavigation = useRef(null);
 
   const [search, setSearch] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
 
-  // PAGINATION
-
   const [rowsPerPage, setRowsPerPage] = useState(5);
   const [currentPage, setCurrentPage] = useState(1);
-
-  // MODALS
 
   const [showAddModal, setShowAddModal] = useState(false);
   const [showViewModal, setShowViewModal] = useState(false);
@@ -288,42 +337,189 @@ function Prescriptions() {
   const [prescriptionToDelete, setPrescriptionToDelete] =
     useState(null);
 
-  const [newPrescription, setNewPrescription] = useState(
-    getEmptyPrescription()
-  );
+  const [newPrescription, setNewPrescription] =
+    useState(emptyPrescription);
 
-  // RECEIVE MEDICATION FROM MEDICATIONS PAGE
+  const CLINIC_NAME =
+    readPrintClinicName() ||
+    prescriptions.find((item) => item.clinic)?.clinic ||
+    "";
 
   useEffect(() => {
+    const controller = new AbortController();
+    let active = true;
+
+    async function load() {
+      setIsLoading(true);
+      setLoadError("");
+
+      try {
+        const [savedPrescriptions, savedPets, savedMedicalRecords] =
+          await Promise.all([
+            prescriptionRequest("/api/prescriptions", {
+              signal: controller.signal,
+            }),
+            prescriptionRequest("/api/pets", {
+              signal: controller.signal,
+            }),
+            prescriptionRequest("/api/medical-records", {
+              signal: controller.signal,
+            }),
+          ]);
+
+        if (
+          !Array.isArray(savedPrescriptions) ||
+          !Array.isArray(savedPets) ||
+          !Array.isArray(savedMedicalRecords)
+        ) {
+          throw new Error("The server returned invalid records.");
+        }
+
+        if (!active) return;
+
+        setPrescriptions(
+          savedPrescriptions.map(normalizePrescription)
+        );
+
+        setPets(
+          [...savedPets].sort((a, b) =>
+            String(a.name || "").localeCompare(
+              String(b.name || "")
+            )
+          )
+        );
+
+        setMedicalRecords(savedMedicalRecords);
+      } catch (error) {
+        if (!active || error.name === "AbortError") return;
+
+        setLoadError(
+          error.message || "Unable to load prescriptions."
+        );
+      } finally {
+        if (active) setIsLoading(false);
+      }
+    }
+
+    load();
+
+    return () => {
+      active = false;
+      controller.abort();
+    };
+  }, [reloadKey]);
+
+  useEffect(() => {
+    const refreshMedicalRecords = () => {
+      if (!savingRef.current) {
+        setReloadKey((previous) => previous + 1);
+      }
+    };
+
+    window.addEventListener(
+      "vetClinicMedicalRecordsUpdated",
+      refreshMedicalRecords
+    );
+
+    return () => {
+      window.removeEventListener(
+        "vetClinicMedicalRecordsUpdated",
+        refreshMedicalRecords
+      );
+    };
+  }, []);
+
+  const petOptions = pets;
+
+  const getTreatmentOptions = (petId) => {
+    if (!petId) return [];
+
+    return [
+      ...new Set(
+        medicalRecords
+          .filter(
+            (record) =>
+              String(record.petId) === String(petId)
+          )
+          .map((record) =>
+            String(record.treatment || "").trim()
+          )
+          .filter(Boolean)
+      ),
+    ];
+  };
+
+  const getEmptyPrescription = () => ({
+    ...emptyPrescription(),
+    clinic: CLINIC_NAME,
+  });
+
+  const openMedicalRecords = (prescription) => {
+    if (savingRef.current) return;
+
+    navigate("/medical-records", {
+      state: {
+        prescriptionPet: prescription.pet || "",
+        petId: prescription.petId
+          ? Number(prescription.petId)
+          : undefined,
+      },
+    });
+  };
+
+  useEffect(() => {
+    if (
+      isLoading ||
+      loadError ||
+      !location.state?.openAddPrescription ||
+      receivedNavigation.current === location.key
+    ) {
+      return;
+    }
+
+    receivedNavigation.current = location.key;
+
     const state = location.state;
-
-    if (!state?.openAddPrescription) return;
-
     const medicationData = state.medicationData || {};
+    const requestedPetId = state.petId || medicationData.petId;
+
+    const requestedPetName =
+      state.pet ||
+      state.petName ||
+      medicationData.pet ||
+      "";
+
+    const matchedPet = requestedPetId
+      ? pets.find(
+          (pet) => String(pet.id) === String(requestedPetId)
+        )
+      : pets.find(
+          (pet) =>
+            String(pet.name || "").trim().toLowerCase() ===
+            String(requestedPetName).trim().toLowerCase()
+        );
+
+    const today = new Date();
+    const localDate = [
+      today.getFullYear(),
+      String(today.getMonth() + 1).padStart(2, "0"),
+      String(today.getDate()).padStart(2, "0"),
+    ].join("-");
 
     setNewPrescription({
+      ...emptyPrescription(),
       clinic: CLINIC_NAME,
-      veterinarian: "",
-      owner:
-        state.owner ||
-        state.ownerName ||
-        medicationData.owner ||
-        "",
-      pet:
-        state.pet ||
-        state.petName ||
-        medicationData.pet ||
-        "",
-      date: new Date().toISOString().split("T")[0],
+      petId: matchedPet ? String(matchedPet.id) : "",
+      pet: matchedPet?.name || "",
+      ownerId: String(matchedPet?.ownerId || ""),
+      owner: matchedPet?.owner || "",
+      date: localDate,
       medication:
         state.medication ||
         state.medicationName ||
         medicationData.medication ||
         "",
-      dosage:
-        state.dosage ||
-        medicationData.dosage ||
-        "",
+      dosage: state.dosage || medicationData.dosage || "",
       instructions:
         state.instructions ||
         medicationData.instructions ||
@@ -331,9 +527,27 @@ function Prescriptions() {
     });
 
     setShowAddModal(true);
-  }, [location.state]);
 
-  // FILTERED PRESCRIPTIONS
+    navigate(
+      {
+        pathname: location.pathname,
+        search: location.search,
+        hash: location.hash,
+      },
+      { replace: true, state: null }
+    );
+  }, [
+    isLoading,
+    loadError,
+    location.key,
+    location.state,
+    location.pathname,
+    location.search,
+    location.hash,
+    pets,
+    CLINIC_NAME,
+    navigate,
+  ]);
 
   const filteredPrescriptions = useMemo(() => {
     const searchText = search.trim().toLowerCase();
@@ -353,9 +567,7 @@ function Prescriptions() {
       const matchesSearch =
         !searchText ||
         searchableValues.some((value) =>
-          String(value || "")
-            .toLowerCase()
-            .includes(searchText)
+          String(value || "").toLowerCase().includes(searchText)
         );
 
       const matchesFrom =
@@ -368,12 +580,12 @@ function Prescriptions() {
     });
   }, [prescriptions, search, dateFrom, dateTo]);
 
-  // PAGINATION
-
   const totalPages = Math.max(
     1,
     Math.ceil(filteredPrescriptions.length / rowsPerPage)
   );
+
+  const safeCurrentPage = Math.min(currentPage, totalPages);
 
   useEffect(() => {
     setCurrentPage(1);
@@ -385,14 +597,12 @@ function Prescriptions() {
     }
   }, [currentPage, totalPages]);
 
-  const startIndex = (currentPage - 1) * rowsPerPage;
+  const startIndex = (safeCurrentPage - 1) * rowsPerPage;
 
   const paginatedPrescriptions = filteredPrescriptions.slice(
     startIndex,
     startIndex + rowsPerPage
   );
-
-  // CLEAR FILTERS
 
   const clearFilters = () => {
     setSearch("");
@@ -406,118 +616,323 @@ function Prescriptions() {
     dateFrom !== "" ||
     dateTo !== "";
 
-  // DATE FORMAT
-
   const formatDate = (date) => {
     if (!date) return "—";
 
-    const parts = date.split("-");
+    const parts = String(date).split("-");
 
-    if (parts.length !== 3) return date;
+    if (parts.length !== 3) return String(date);
 
     const [year, month, day] = parts;
-
     return `${day}/${month}/${year}`;
   };
 
-  // ADD
+  const beginSave = () => {
+    if (savingRef.current) return false;
+
+    savingRef.current = true;
+    setIsSaving(true);
+    return true;
+  };
+
+  const endSave = () => {
+    savingRef.current = false;
+    setIsSaving(false);
+  };
+
+  const notifyUpdated = () => {
+    window.dispatchEvent(
+      new Event("vetClinicPrescriptionsUpdated")
+    );
+  };
+  const changePrescriptionField = (previous, name, value) => {
+    if (name === "ownerSearch") {
+      return {
+        ...previous,
+        owner: value,
+        ownerId: "",
+        pet: "",
+        petId: "",
+        medication: "",
+      };
+    }
+
+    if (name === "petSearch") {
+      return {
+        ...previous,
+        pet: value,
+        petId: "",
+        medication: "",
+      };
+    }
+
+    if (name === "ownerId") {
+      const ownerPets = pets.filter(
+        (pet) => String(pet.ownerId) === String(value)
+      );
+
+      const currentPet = ownerPets.find(
+        (pet) => String(pet.id) === String(previous.petId)
+      );
+
+      const selectedPet =
+        currentPet ||
+        (ownerPets.length === 1 ? ownerPets[0] : null);
+
+      const samePet =
+        selectedPet &&
+        String(selectedPet.id) === String(previous.petId);
+
+      return {
+        ...previous,
+        ownerId: String(value),
+        owner: ownerPets[0]?.owner || "",
+        petId: selectedPet ? String(selectedPet.id) : "",
+        pet: selectedPet?.name || "",
+        medication: samePet ? previous.medication : "",
+      };
+    }
+
+    if (name === "petId") {
+      const pet = pets.find(
+        (item) => String(item.id) === String(value)
+      );
+
+      return {
+        ...previous,
+        petId: pet ? String(pet.id) : "",
+        pet: pet?.name || "",
+        ownerId: String(pet?.ownerId || ""),
+        owner: pet?.owner || "",
+        medication:
+          pet && String(pet.id) === String(previous.petId)
+            ? previous.medication
+            : "",
+      };
+    }
+
+    return { ...previous, [name]: value };
+  };
 
   const handleNewPrescriptionChange = (e) => {
     const { name, value } = e.target;
 
-    setNewPrescription((previous) => ({
-      ...previous,
-      [name]: value,
-      ...(name === "pet" ? { medication: "" } : {}),
-    }));
-  };
-
-  const handleAddPrescription = (e) => {
-    e.preventDefault();
-
-    const prescription = {
-      id: Date.now(),
-      ...newPrescription,
-    };
-
-    setPrescriptions((previous) => [
-      ...previous,
-      prescription,
-    ]);
-
-    setNewPrescription(getEmptyPrescription());
-    setShowAddModal(false);
-  };
-
-  // VIEW
-
-  const handleViewPrescription = (prescription) => {
-    setSelectedPrescription(prescription);
-    setShowViewModal(true);
-  };
-
-  // EDIT
-
-  const handleOpenEdit = (prescription) => {
-    setSelectedPrescription({
-      ...prescription,
-    });
-
-    setShowEditModal(true);
+    setNewPrescription((previous) =>
+      changePrescriptionField(previous, name, value)
+    );
   };
 
   const handleEditChange = (e) => {
     const { name, value } = e.target;
 
-    setSelectedPrescription((previous) => ({
-      ...previous,
-      [name]: value,
-      ...(name === "pet" ? { medication: "" } : {}),
-    }));
+    setSelectedPrescription((previous) =>
+      previous
+        ? changePrescriptionField(previous, name, value)
+        : previous
+    );
   };
 
-  const handleUpdatePrescription = (e) => {
+  const validatePrescription = (data) => {
+    if (
+      !data.petId ||
+      !pets.some(
+        (pet) => String(pet.id) === String(data.petId)
+      )
+    ) {
+      throw new Error("Please select a valid pet.");
+    }
+
+    if (!data.date) {
+      throw new Error("Please select a prescription date.");
+    }
+
+    for (const [field, label] of [
+      ["veterinarian", "Veterinarian"],
+      ["medication", "Medication"],
+      ["dosage", "Dosage"],
+    ]) {
+      const value = String(data[field] || "").trim();
+
+      if (!value) {
+        throw new Error(`${label} is required.`);
+      }
+
+      if (value.length > 200) {
+        throw new Error(
+          `${label} cannot exceed 200 characters.`
+        );
+      }
+    }
+
+    if (String(data.instructions || "").length > 4000) {
+      throw new Error(
+        "Instructions cannot exceed 4000 characters."
+      );
+    }
+  };
+
+  const buildPayload = (data) => ({
+    petId: Number(data.petId),
+    date: data.date || null,
+    veterinarian: data.veterinarian.trim(),
+    medication: data.medication.trim(),
+    dosage: data.dosage.trim(),
+    instructions: String(data.instructions || "").trim(),
+  });
+
+  const handleOpenAdd = () => {
+    if (isLoading || loadError || savingRef.current) return;
+
+    setNewPrescription(getEmptyPrescription());
+    setShowAddModal(true);
+  };
+
+  const handleCloseAdd = () => {
+    if (savingRef.current) return;
+
+    setShowAddModal(false);
+    setNewPrescription(getEmptyPrescription());
+  };
+
+  const handleAddPrescription = async (e) => {
     e.preventDefault();
 
-    setPrescriptions((previous) =>
-      previous.map((prescription) =>
-        prescription.id === selectedPrescription.id
-          ? selectedPrescription
-          : prescription
-      )
-    );
+    if (!beginSave()) return;
+
+    try {
+      validatePrescription(newPrescription);
+
+      const saved = await prescriptionRequest(
+        "/api/prescriptions",
+        {
+          method: "POST",
+          body: JSON.stringify(buildPayload(newPrescription)),
+        }
+      );
+
+      setPrescriptions((previous) => [
+        normalizePrescription(saved),
+        ...previous,
+      ]);
+
+      setNewPrescription(getEmptyPrescription());
+      setShowAddModal(false);
+      setCurrentPage(1);
+      notifyUpdated();
+    } catch (error) {
+      alert(error.message || "Unable to save prescription.");
+    } finally {
+      endSave();
+    }
+  };
+
+  const handleViewPrescription = (prescription) => {
+    if (savingRef.current) return;
+
+    setSelectedPrescription(prescription);
+    setShowViewModal(true);
+  };
+
+  const handleCloseView = () => {
+    if (savingRef.current) return;
+
+    setShowViewModal(false);
+    setSelectedPrescription(null);
+  };
+
+  const handleOpenEdit = (prescription) => {
+    if (savingRef.current) return;
+
+    setSelectedPrescription({ ...prescription });
+    setShowViewModal(false);
+    setShowEditModal(true);
+  };
+
+  const handleCloseEdit = () => {
+    if (savingRef.current) return;
 
     setShowEditModal(false);
     setSelectedPrescription(null);
   };
 
-  // DELETE
+  const handleUpdatePrescription = async (e) => {
+    e.preventDefault();
+
+    if (!selectedPrescription || !beginSave()) return;
+
+    try {
+      validatePrescription(selectedPrescription);
+
+      const saved = await prescriptionRequest(
+        `/api/prescriptions/${selectedPrescription.id}`,
+        {
+          method: "PUT",
+          body: JSON.stringify(buildPayload(selectedPrescription)),
+        }
+      );
+
+      setPrescriptions((previous) =>
+        previous.map((prescription) =>
+          prescription.id === saved.id
+            ? normalizePrescription(saved)
+            : prescription
+        )
+      );
+
+      setShowEditModal(false);
+      setSelectedPrescription(null);
+      notifyUpdated();
+    } catch (error) {
+      alert(error.message || "Unable to update prescription.");
+    } finally {
+      endSave();
+    }
+  };
 
   const handleOpenDelete = (prescription) => {
+    if (savingRef.current) return;
+
     setPrescriptionToDelete(prescription);
     setShowDeleteModal(true);
   };
 
   const handleCancelDelete = () => {
-    setShowDeleteModal(false);
-    setPrescriptionToDelete(null);
-  };
-
-  const handleConfirmDelete = () => {
-    if (!prescriptionToDelete) return;
-
-    setPrescriptions((previous) =>
-      previous.filter(
-        (prescription) =>
-          prescription.id !== prescriptionToDelete.id
-      )
-    );
+    if (savingRef.current) return;
 
     setShowDeleteModal(false);
     setPrescriptionToDelete(null);
   };
 
-  // EXPORT EXCEL
+  const handleConfirmDelete = async () => {
+    if (!prescriptionToDelete || !beginSave()) return;
+
+    try {
+      const id = prescriptionToDelete.id;
+
+      await prescriptionRequest(`/api/prescriptions/${id}`, {
+        method: "DELETE",
+      });
+
+      setPrescriptions((previous) =>
+        previous.filter((prescription) => prescription.id !== id)
+      );
+
+      setShowDeleteModal(false);
+      setPrescriptionToDelete(null);
+
+      if (selectedPrescription?.id === id) {
+        setShowViewModal(false);
+        setShowEditModal(false);
+        setSelectedPrescription(null);
+      }
+
+      notifyUpdated();
+    } catch (error) {
+      alert(error.message || "Unable to delete prescription.");
+    } finally {
+      endSave();
+    }
+  };
 
   const exportToExcel = () => {
     const exportData = filteredPrescriptions.map(
@@ -533,8 +948,7 @@ function Prescriptions() {
       })
     );
 
-    const worksheet =
-      XLSX.utils.json_to_sheet(exportData);
+    const worksheet = XLSX.utils.json_to_sheet(exportData);
 
     worksheet["!cols"] = [
       { wch: 28 },
@@ -560,15 +974,10 @@ function Prescriptions() {
       "vet-clinic-prescriptions.xlsx"
     );
   };
-
-  // PRINT PDF
-
   const handlePrintPrescription = async (prescription) => {
-    const printClinicName = readPrintClinicName();
+    const printClinicName =
+      readPrintClinicName() || prescription.clinic || "";
     const logoSource = readPrintClinicLogo();
-
-    // Open during the click so loading the image does not
-    // cause the browser to block the print window.
     const printWindow = window.open("", "_blank");
 
     try {
@@ -583,8 +992,6 @@ function Prescriptions() {
       const pageWidth = doc.internal.pageSize.getWidth();
       const margin = 20;
       const contentWidth = pageWidth - margin * 2;
-
-      // HEADER / LOGO
 
       if (logo) {
         const boxX = 18;
@@ -624,8 +1031,6 @@ function Prescriptions() {
       doc.setLineWidth(0.7);
       doc.line(margin, 38, pageWidth - margin, 38);
 
-      // TITLE
-
       doc.setTextColor(40, 65, 65);
       doc.setFont("helvetica", "bold");
       doc.setFontSize(20);
@@ -646,19 +1051,11 @@ function Prescriptions() {
         { align: "center" }
       );
 
-      // VETERINARIAN
-
       let y = 75;
 
       doc.setFillColor(242, 248, 248);
       doc.roundedRect(
-        margin,
-        y,
-        contentWidth,
-        25,
-        3,
-        3,
-        "F"
+        margin, y, contentWidth, 25, 3, 3, "F"
       );
 
       doc.setFont("helvetica", "bold");
@@ -673,8 +1070,6 @@ function Prescriptions() {
         margin + 6,
         y + 17
       );
-
-      // OWNER / PET / DATE
 
       y += 38;
 
@@ -696,20 +1091,12 @@ function Prescriptions() {
         y + 8
       );
 
-      // MEDICATION BOX
-
       y += 28;
 
       doc.setDrawColor(215, 228, 228);
       doc.setLineWidth(0.4);
       doc.roundedRect(
-        margin,
-        y,
-        contentWidth,
-        50,
-        3,
-        3,
-        "S"
+        margin, y, contentWidth, 50, 3, 3, "S"
       );
 
       doc.setFont("helvetica", "bold");
@@ -738,8 +1125,6 @@ function Prescriptions() {
         y + 41
       );
 
-      // INSTRUCTIONS
-
       y += 65;
 
       doc.setFont("helvetica", "bold");
@@ -752,17 +1137,13 @@ function Prescriptions() {
       doc.setTextColor(45, 60, 60);
 
       const instructionLines = doc.splitTextToSize(
-        prescription.instructions ||
-          "No additional instructions.",
+        prescription.instructions || "No additional instructions.",
         contentWidth
       );
 
       doc.text(instructionLines, margin, y + 10);
 
       const instructionsHeight = instructionLines.length * 6;
-
-      // SIGNATURE
-
       const signatureY = Math.max(
         y + instructionsHeight + 35,
         230
@@ -770,12 +1151,7 @@ function Prescriptions() {
 
       doc.setDrawColor(160, 175, 175);
       doc.setLineWidth(0.3);
-      doc.line(
-        margin,
-        signatureY,
-        margin + 65,
-        signatureY
-      );
+      doc.line(margin, signatureY, margin + 65, signatureY);
 
       doc.setFont("helvetica", "normal");
       doc.setFontSize(8);
@@ -794,8 +1170,6 @@ function Prescriptions() {
         margin,
         signatureY - 5
       );
-
-      // FOOTER
 
       const pageHeight = doc.internal.pageSize.getHeight();
 
@@ -824,14 +1198,11 @@ function Prescriptions() {
         { align: "center" }
       );
 
-      // OPEN PDF + PRINT
-
       const safePetName = String(prescription.pet || "pet")
         .replace(/[^a-z0-9]/gi, "-")
         .toLowerCase();
 
       const safeDate = prescription.date || "prescription";
-
       const fileName =
         `prescription-${safePetName}-${safeDate}.pdf`;
 
@@ -841,7 +1212,6 @@ function Prescriptions() {
       if (printWindow && !printWindow.closed) {
         printWindow.onload = () => {
           if (printWindow.closed) return;
-
           printWindow.focus();
           printWindow.print();
         };
@@ -851,9 +1221,7 @@ function Prescriptions() {
         doc.save(fileName);
       }
 
-      setTimeout(() => {
-        URL.revokeObjectURL(pdfUrl);
-      }, 60000);
+      setTimeout(() => URL.revokeObjectURL(pdfUrl), 60000);
     } catch (error) {
       console.error("Could not print prescription:", error);
 
@@ -863,12 +1231,12 @@ function Prescriptions() {
 
       alert("Could not prepare the prescription for printing.");
     }
-  };  // FORM FIELDS
+  };
 
   const renderPrescriptionFields = (data, onChange) => {
-    const treatments = getTreatmentOptions(data.pet);
+    const treatments = getTreatmentOptions(data.petId);
     const selectedMedication = String(data.medication || "");
-    const petSelected = Boolean(normalizePetName(data.pet));
+    const petSelected = Boolean(data.petId);
 
     const preserveCurrentMedication =
       selectedMedication &&
@@ -876,92 +1244,108 @@ function Prescriptions() {
 
     return (
       <>
-        <div className="form-row">
-          <div className="form-field">
-            <label>Clinic</label>
-
-            <input
-              type="text"
-              name="clinic"
-              placeholder="Enter clinic name"
-              value={data.clinic || ""}
-              onChange={onChange}
-              required
-            />
-          </div>
-
-          <div className="form-field">
-            <label>Veterinarian</label>
-
-            <input
-              type="text"
-              name="veterinarian"
-              placeholder="Example: Dr. Sarah Haddad"
-              value={data.veterinarian || ""}
-              onChange={onChange}
-              required
-            />
-          </div>
-        </div>
-
-        <div className="form-row">
+               <div className="form-row">
           <div className="form-field">
             <label>Owner</label>
 
-            <input
-              type="text"
-              name="owner"
-              placeholder="Enter owner name"
-              value={data.owner || ""}
-              onChange={onChange}
-              required
+            <PrescriptionNameSearch
+              value={data.owner}
+              selectedId={data.ownerId}
+              options={Array.from(
+                new Map(
+                  petOptions
+                    .filter((pet) => pet.ownerId && pet.owner)
+                    .map((pet) => [
+                      String(pet.ownerId),
+                      {
+                        id: String(pet.ownerId),
+                        label: pet.owner,
+                      },
+                    ])
+                ).values()
+              ).sort((a, b) => a.label.localeCompare(b.label))}
+              placeholder="Type owner name..."
+              onType={(value) =>
+                onChange({
+                  target: {
+                    name: "ownerSearch",
+                    value,
+                  },
+                })
+              }
+              onSelect={(value) =>
+                onChange({
+                  target: {
+                    name: "ownerId",
+                    value,
+                  },
+                })
+              }
+              disabled={isSaving}
             />
           </div>
 
           <div className="form-field">
             <label>Pet</label>
 
-            <input
-              className="prescription-pet-name-input"
-              type="text"
-              name="pet"
-              list="prescription-pet-options"
-              placeholder="Enter pet name"
-              value={data.pet || ""}
-              onChange={onChange}
-              required
+            <PrescriptionNameSearch
+              value={data.pet}
+              selectedId={data.petId}
+              options={petOptions
+                .filter(
+                  (pet) =>
+                    !data.ownerId ||
+                    String(pet.ownerId) === String(data.ownerId)
+                )
+                .map((pet) => ({
+                  id: String(pet.id),
+                  label: pet.name || "",
+                }))}
+              placeholder="Type pet name..."
+              onType={(value) =>
+                onChange({
+                  target: {
+                    name: "petSearch",
+                    value,
+                  },
+                })
+              }
+              onSelect={(value) =>
+                onChange({
+                  target: {
+                    name: "petId",
+                    value,
+                  },
+                })
+              }
+              disabled={isSaving}
             />
-
-            <datalist id="prescription-pet-options">
-              {petOptions.map((pet) => (
-                <option key={pet} value={pet} />
-              ))}
-            </datalist>
           </div>
         </div>
+
+       
 
         <div className="form-row">
           <div className="form-field">
             <label>Date</label>
-
             <input
               type="date"
               name="date"
               value={data.date || ""}
               onChange={onChange}
               required
+              disabled={isSaving}
             />
           </div>
 
           <div className="form-field">
             <label>Medication</label>
-
             <select
               className="prescription-treatment-select"
               name="medication"
               value={selectedMedication}
               onChange={onChange}
-              disabled={!petSelected}
+              disabled={!petSelected || isSaving}
               required
             >
               <option value="">
@@ -989,34 +1373,34 @@ function Prescriptions() {
 
         <div className="form-field">
           <label>Dosage</label>
-
           <input
             type="text"
             name="dosage"
             placeholder="Example: 250 mg twice daily"
             value={data.dosage || ""}
             onChange={onChange}
+            maxLength={200}
             required
+            disabled={isSaving}
           />
         </div>
 
         <div className="form-field">
           <label>Instructions</label>
-
           <textarea
             name="instructions"
             placeholder="Enter prescription instructions"
             value={data.instructions || ""}
             onChange={onChange}
-            rows="4"
+            rows={4}
+            maxLength={4000}
             required
+            disabled={isSaving}
           />
         </div>
       </>
     );
   };
-
-  // PAGINATION STYLE
 
   const paginationButtonStyle = {
     width: "34px",
@@ -1058,8 +1442,6 @@ function Prescriptions() {
     cursor: "not-allowed",
     opacity: 1,
   };
-
-  // RETURN
 
   return (
     <div className="dashboard-layout">
@@ -1240,19 +1622,27 @@ function Prescriptions() {
           }
         `}</style>
 
-        {/* HEADER */}
-
         <div className="page-header">
           <div>
             <h1>Prescriptions</h1>
-
-            <p>
-              Manage and print veterinary prescriptions
-            </p>
+            <p>Manage and print veterinary prescriptions</p>
           </div>
         </div>
 
-        {/* SEARCH + DATE FILTERS */}
+        {loadError && (
+          <div role="alert" style={{ marginBottom: 16 }}>
+            <p style={{ color: "#c0392b" }}>{loadError}</p>
+            <button
+              type="button"
+              onClick={() =>
+                setReloadKey((previous) => previous + 1)
+              }
+              disabled={isLoading || isSaving}
+            >
+              Retry
+            </button>
+          </div>
+        )}
 
         <div className="prescriptions-filter-row">
           <div className="prescriptions-search-box">
@@ -1280,7 +1670,6 @@ function Prescriptions() {
 
           <div className="prescriptions-date-filter">
             <span>From</span>
-
             <input
               type="date"
               value={dateFrom}
@@ -1290,7 +1679,6 @@ function Prescriptions() {
 
           <div className="prescriptions-date-filter">
             <span>To</span>
-
             <input
               type="date"
               value={dateTo}
@@ -1300,13 +1688,12 @@ function Prescriptions() {
           </div>
         </div>
 
-        {/* EXPORT + ADD */}
-
         <div className="prescriptions-toolbar-buttons">
           <button
             type="button"
             className="prescriptions-export-button"
             onClick={exportToExcel}
+            disabled={isLoading || Boolean(loadError)}
           >
             <FaFileExcel />
             <span>Export</span>
@@ -1315,16 +1702,12 @@ function Prescriptions() {
           <button
             type="button"
             className="prescriptions-add-button"
-            onClick={() => {
-              setNewPrescription(getEmptyPrescription());
-              setShowAddModal(true);
-            }}
+            onClick={handleOpenAdd}
+            disabled={isLoading || Boolean(loadError) || isSaving}
           >
             + Add Prescription
           </button>
         </div>
-
-        {/* TABLE */}
 
         <div className="owners-table-container prescriptions-table-container">
           <div className="prescriptions-table-scroll">
@@ -1344,17 +1727,27 @@ function Prescriptions() {
               </thead>
 
               <tbody>
-                {paginatedPrescriptions.length > 0 ? (
+                {isLoading ? (
+                  <tr>
+                    <td colSpan={9} className="no-results">
+                      Loading prescriptions...
+                    </td>
+                  </tr>
+                ) : loadError ? (
+                  <tr>
+                    <td colSpan={9} className="no-results">
+                      Unable to load prescriptions.
+                    </td>
+                  </tr>
+                ) : paginatedPrescriptions.length > 0 ? (
                   paginatedPrescriptions.map((prescription) => (
                     <tr key={prescription.id}>
                       <td>{prescription.clinic}</td>
-
                       <td>
                         <strong>
                           {prescription.veterinarian}
                         </strong>
                       </td>
-
                       <td>{prescription.owner}</td>
                       <td>{prescription.pet}</td>
                       <td>{formatDate(prescription.date)}</td>
@@ -1362,7 +1755,7 @@ function Prescriptions() {
                       <td>{prescription.dosage}</td>
 
                       <td className="prescription-instructions-cell">
-                        {prescription.instructions}
+                        {prescription.instructions || "—"}
                       </td>
 
                       <td className="prescription-actions-cell">
@@ -1375,6 +1768,7 @@ function Prescriptions() {
                             }
                             title="View"
                             aria-label="View prescription"
+                            disabled={isSaving}
                           >
                             <FaEye />
                           </button>
@@ -1387,6 +1781,7 @@ function Prescriptions() {
                             }
                             title="Edit"
                             aria-label="Edit prescription"
+                            disabled={isSaving}
                           >
                             <FaPen />
                           </button>
@@ -1399,6 +1794,7 @@ function Prescriptions() {
                             }
                             title="Delete"
                             aria-label="Delete prescription"
+                            disabled={isSaving}
                           >
                             <FaTrash />
                           </button>
@@ -1410,6 +1806,8 @@ function Prescriptions() {
                               handlePrintPrescription(prescription)
                             }
                             title="Print PDF"
+                            aria-label="Print prescription PDF"
+                            disabled={isSaving}
                           >
                             <FaPrint />
                             <span></span>
@@ -1420,7 +1818,7 @@ function Prescriptions() {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan="9" className="no-results">
+                    <td colSpan={9} className="no-results">
                       No prescriptions found
                     </td>
                   </tr>
@@ -1429,8 +1827,6 @@ function Prescriptions() {
             </table>
           </div>
         </div>
-
-        {/* PAGINATION */}
 
         <div className="prescriptions-pagination">
           <div className="prescriptions-rows-per-page">
@@ -1460,13 +1856,13 @@ function Prescriptions() {
           >
             <button
               type="button"
-              disabled={currentPage === 1}
+              disabled={safeCurrentPage === 1}
               onClick={() =>
-                setCurrentPage((page) => Math.max(page - 1, 1))
+                setCurrentPage(Math.max(safeCurrentPage - 1, 1))
               }
               aria-label="Previous page"
               style={
-                currentPage === 1
+                safeCurrentPage === 1
                   ? paginationDisabledStyle
                   : paginationButtonStyle
               }
@@ -1477,37 +1873,35 @@ function Prescriptions() {
             {Array.from(
               { length: totalPages },
               (_, index) => index + 1
-            ).map((page) => {
-              const isActive = currentPage === page;
-
-              return (
-                <button
-                  type="button"
-                  key={page}
-                  onClick={() => setCurrentPage(page)}
-                  aria-current={isActive ? "page" : undefined}
-                  style={
-                    isActive
-                      ? paginationActiveStyle
-                      : paginationButtonStyle
-                  }
-                >
-                  {page}
-                </button>
-              );
-            })}
+            ).map((page) => (
+              <button
+                type="button"
+                key={page}
+                onClick={() => setCurrentPage(page)}
+                aria-current={
+                  safeCurrentPage === page ? "page" : undefined
+                }
+                style={
+                  safeCurrentPage === page
+                    ? paginationActiveStyle
+                    : paginationButtonStyle
+                }
+              >
+                {page}
+              </button>
+            ))}
 
             <button
               type="button"
-              disabled={currentPage === totalPages}
+              disabled={safeCurrentPage === totalPages}
               onClick={() =>
-                setCurrentPage((page) =>
-                  Math.min(page + 1, totalPages)
+                setCurrentPage(
+                  Math.min(safeCurrentPage + 1, totalPages)
                 )
               }
               aria-label="Next page"
               style={
-                currentPage === totalPages
+                safeCurrentPage === totalPages
                   ? paginationDisabledStyle
                   : paginationButtonStyle
               }
@@ -1518,14 +1912,12 @@ function Prescriptions() {
         </div>
       </main>
 
-      {/* ADD PRESCRIPTION */}
-
       {showAddModal && (
         <div
           className="modal-overlay"
           onMouseDown={(e) => {
             if (e.target === e.currentTarget) {
-              setShowAddModal(false);
+              handleCloseAdd();
             }
           }}
         >
@@ -1539,13 +1931,18 @@ function Prescriptions() {
               <button
                 type="button"
                 className="modal-close"
-                onClick={() => setShowAddModal(false)}
+                onClick={handleCloseAdd}
+                disabled={isSaving}
+                aria-label="Close"
               >
                 ×
               </button>
             </div>
 
-            <form onSubmit={handleAddPrescription}>
+            <form
+              onSubmit={handleAddPrescription}
+              aria-busy={isSaving}
+            >
               {renderPrescriptionFields(
                 newPrescription,
                 handleNewPrescriptionChange
@@ -1555,7 +1952,8 @@ function Prescriptions() {
                 <button
                   type="button"
                   className="modal-cancel-button"
-                  onClick={() => setShowAddModal(false)}
+                  onClick={handleCloseAdd}
+                  disabled={isSaving}
                 >
                   Cancel
                 </button>
@@ -1566,12 +1964,17 @@ function Prescriptions() {
                   onClick={() =>
                     openMedicalRecords(newPrescription)
                   }
+                  disabled={isSaving}
                 >
                   Medical Records
                 </button>
 
-                <button type="submit" className="save-button">
-                  Add Prescription
+                <button
+                  type="submit"
+                  className="save-button"
+                  disabled={isSaving}
+                >
+                  {isSaving ? "Saving..." : "Add Prescription"}
                 </button>
               </div>
             </form>
@@ -1579,15 +1982,12 @@ function Prescriptions() {
         </div>
       )}
 
-      {/* VIEW PRESCRIPTION */}
-
       {showViewModal && selectedPrescription && (
         <div
           className="modal-overlay"
           onMouseDown={(e) => {
             if (e.target === e.currentTarget) {
-              setShowViewModal(false);
-              setSelectedPrescription(null);
+              handleCloseView();
             }
           }}
         >
@@ -1601,10 +2001,9 @@ function Prescriptions() {
               <button
                 type="button"
                 className="modal-close"
-                onClick={() => {
-                  setShowViewModal(false);
-                  setSelectedPrescription(null);
-                }}
+                onClick={handleCloseView}
+                disabled={isSaving}
+                aria-label="Close"
               >
                 ×
               </button>
@@ -1641,9 +2040,7 @@ function Prescriptions() {
 
             <div className="detail-row">
               <span>Medication</span>
-              <strong>
-                {selectedPrescription.medication}
-              </strong>
+              <strong>{selectedPrescription.medication}</strong>
             </div>
 
             <div className="detail-row">
@@ -1654,7 +2051,7 @@ function Prescriptions() {
             <div className="detail-row prescription-detail-instructions">
               <span>Instructions</span>
               <strong>
-                {selectedPrescription.instructions}
+                {selectedPrescription.instructions || "—"}
               </strong>
             </div>
 
@@ -1662,10 +2059,8 @@ function Prescriptions() {
               <button
                 type="button"
                 className="modal-cancel-button"
-                onClick={() => {
-                  setShowViewModal(false);
-                  setSelectedPrescription(null);
-                }}
+                onClick={handleCloseView}
+                disabled={isSaving}
               >
                 Close
               </button>
@@ -1673,10 +2068,10 @@ function Prescriptions() {
               <button
                 type="button"
                 className="edit-button prescriptions-modal-edit"
-                onClick={() => {
-                  setShowViewModal(false);
-                  setShowEditModal(true);
-                }}
+                onClick={() =>
+                  handleOpenEdit(selectedPrescription)
+                }
+                disabled={isSaving}
               >
                 <FaPen />
                 <span>Edit Prescription</span>
@@ -1688,6 +2083,7 @@ function Prescriptions() {
                 onClick={() =>
                   handlePrintPrescription(selectedPrescription)
                 }
+                disabled={isSaving}
               >
                 <FaPrint />
                 <span>Print PDF</span>
@@ -1697,15 +2093,12 @@ function Prescriptions() {
         </div>
       )}
 
-      {/* EDIT PRESCRIPTION */}
-
       {showEditModal && selectedPrescription && (
         <div
           className="modal-overlay"
           onMouseDown={(e) => {
             if (e.target === e.currentTarget) {
-              setShowEditModal(false);
-              setSelectedPrescription(null);
+              handleCloseEdit();
             }
           }}
         >
@@ -1719,16 +2112,18 @@ function Prescriptions() {
               <button
                 type="button"
                 className="modal-close"
-                onClick={() => {
-                  setShowEditModal(false);
-                  setSelectedPrescription(null);
-                }}
+                onClick={handleCloseEdit}
+                disabled={isSaving}
+                aria-label="Close"
               >
                 ×
               </button>
             </div>
 
-            <form onSubmit={handleUpdatePrescription}>
+            <form
+              onSubmit={handleUpdatePrescription}
+              aria-busy={isSaving}
+            >
               {renderPrescriptionFields(
                 selectedPrescription,
                 handleEditChange
@@ -1738,10 +2133,8 @@ function Prescriptions() {
                 <button
                   type="button"
                   className="modal-cancel-button"
-                  onClick={() => {
-                    setShowEditModal(false);
-                    setSelectedPrescription(null);
-                  }}
+                  onClick={handleCloseEdit}
+                  disabled={isSaving}
                 >
                   Cancel
                 </button>
@@ -1752,20 +2145,23 @@ function Prescriptions() {
                   onClick={() =>
                     openMedicalRecords(selectedPrescription)
                   }
+                  disabled={isSaving}
                 >
                   Medical Records
                 </button>
 
-                <button type="submit" className="save-button">
-                  Save Changes
+                <button
+                  type="submit"
+                  className="save-button"
+                  disabled={isSaving}
+                >
+                  {isSaving ? "Saving..." : "Save Changes"}
                 </button>
               </div>
             </form>
           </div>
         </div>
       )}
-
-      {/* DELETE PRESCRIPTION */}
 
       {showDeleteModal && prescriptionToDelete && (
         <div
@@ -1784,9 +2180,8 @@ function Prescriptions() {
             <h3>Delete Prescription</h3>
 
             <p>
-              Are you sure you want to delete
-              the prescription for{" "}
-              <strong>{prescriptionToDelete.pet}</strong>?
+              Are you sure you want to delete the prescription
+              for <strong>{prescriptionToDelete.pet}</strong>?
             </p>
 
             <div className="medications-delete-actions">
@@ -1794,6 +2189,7 @@ function Prescriptions() {
                 type="button"
                 className="medications-delete-cancel"
                 onClick={handleCancelDelete}
+                disabled={isSaving}
               >
                 Cancel
               </button>
@@ -1802,8 +2198,9 @@ function Prescriptions() {
                 type="button"
                 className="medications-delete-confirm"
                 onClick={handleConfirmDelete}
+                disabled={isSaving}
               >
-                Delete
+                {isSaving ? "Deleting..." : "Delete"}
               </button>
             </div>
           </div>

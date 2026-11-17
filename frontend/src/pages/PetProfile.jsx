@@ -1,5 +1,5 @@
-
-import { useLocation, useNavigate, useParams } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import {
   FaArrowLeft,
   FaPaw,
@@ -24,66 +24,510 @@ import {
 } from "react-icons/fa";
 
 import Sidebar from "../components/Sidebar";
+import { getPet } from "../api/petsApi";
 
-import {
-  getPetRecords,
-  getPetBillingSummary,
-  getNextAppointment,
-  getNextVaccinationDue,
-  getPetTimeline,
-} from "../data/petRecords";
+async function fetchPetRecords(path, petId, signal, label) {
+  let response;
+
+  try {
+    response = await fetch(
+      `${path}?petId=${encodeURIComponent(petId)}`,
+      {
+        credentials: "include",
+        cache: "no-store",
+        signal,
+      }
+    );
+  } catch (error) {
+    if (error.name === "AbortError") throw error;
+
+    throw new Error(
+      `Unable to connect to the server to load ${label}.`
+    );
+  }
+
+  if (!response.ok) {
+    let message = `Unable to load ${label}.`;
+
+    if (response.status === 401) {
+      message = "Your session has expired. Please sign in again.";
+    } else if (response.status === 403) {
+      message = `You do not have permission to view these ${label}.`;
+    } else {
+      try {
+        const problem = await response.json();
+
+        const errors = Object.values(problem.errors || {})
+          .flat()
+          .filter((value) => typeof value === "string");
+
+        if (errors.length) {
+          message = errors.join("\n");
+        } else if (typeof problem.detail === "string") {
+          message = problem.detail;
+        }
+      } catch {
+        // Keep the default error message.
+      }
+    }
+
+    throw new Error(message);
+  }
+
+  const records = await response.json();
+
+  if (!Array.isArray(records)) {
+    throw new Error(`The server returned invalid ${label}.`);
+  }
+
+  return records.filter(
+    (record) => String(record.petId) === String(petId)
+  );
+}
+
+async function fetchPetMedicalRecords(petId, signal) {
+  const records = await fetchPetRecords(
+    "/api/medical-records",
+    petId,
+    signal,
+    "medical records"
+  );
+
+  return records
+    .map((record) => ({
+      ...record,
+      reason: record.reasonForVisit || "",
+      date: record.date || "",
+      veterinarian: record.veterinarian || "",
+      diagnosis: record.diagnosis || "",
+      treatment: record.treatment || "",
+      notes: record.notes || "",
+    }))
+    .sort(
+      (a, b) =>
+        b.date.localeCompare(a.date) ||
+        Number(b.id) - Number(a.id)
+    );
+}
+
+async function fetchPetAppointments(petId, signal) {
+  const records = await fetchPetRecords(
+    "/api/appointments",
+    petId,
+    signal,
+    "appointments"
+  );
+
+  return records
+    .map((appointment) => ({
+      ...appointment,
+      type: appointment.type || "",
+      date: appointment.date || "",
+      time: appointment.time
+        ? appointment.time.slice(0, 5)
+        : "",
+      veterinarian: appointment.veterinarian || "",
+      reason: appointment.reason || "",
+      status: appointment.status || "",
+    }))
+    .sort(
+      (a, b) =>
+        b.date.localeCompare(a.date) ||
+        b.time.localeCompare(a.time) ||
+        Number(b.id) - Number(a.id)
+    );
+}
+
+async function fetchPetVaccinations(petId, signal) {
+  const records = await fetchPetRecords(
+    "/api/vaccinations",
+    petId,
+    signal,
+    "vaccinations"
+  );
+
+  return records
+    .map((vaccination) => ({
+      ...vaccination,
+      vaccine: vaccination.vaccine || "",
+      dateGiven: vaccination.dateGiven || "",
+      nextDueDate: vaccination.nextDueDate || "",
+      status: vaccination.status || "",
+      notes: vaccination.notes || "",
+    }))
+    .sort(
+      (a, b) =>
+        b.dateGiven.localeCompare(a.dateGiven) ||
+        Number(b.id) - Number(a.id)
+    );
+}
+
+async function fetchPetReminders(petId, signal) {
+  const records = await fetchPetRecords(
+    "/api/reminders",
+    petId,
+    signal,
+    "reminders"
+  );
+
+  return records
+    .map((reminder) => ({
+      ...reminder,
+      type: reminder.type || "",
+      dueDate: reminder.dueDate || "",
+      message: reminder.message || "",
+      status: reminder.status || "",
+      date: reminder.dueDate || "",
+      title: reminder.message || reminder.type || "Reminder",
+    }))
+    .sort(
+      (a, b) =>
+        b.dueDate.localeCompare(a.dueDate) ||
+        Number(b.id) - Number(a.id)
+    );
+}
+
+async function fetchPetMedications(petId, signal) {
+  const records = await fetchPetRecords(
+    "/api/medications",
+    petId,
+    signal,
+    "medications"
+  );
+
+  return records
+    .map((medication) => ({
+      ...medication,
+      name: medication.medication || medication.name || "",
+      dosage: medication.dosage || "",
+      frequency: medication.frequency || "",
+      route: medication.route || "",
+      startDate: medication.startDate || "",
+      endDate: medication.endDate || "",
+      instructions: medication.instructions || "",
+      status: medication.status || "",
+    }))
+    .sort(
+      (a, b) =>
+        b.startDate.localeCompare(a.startDate) ||
+        Number(b.id) - Number(a.id)
+    );
+}
+
+function usePetRecords(petId, fetchRecords, eventName) {
+  const [result, setResult] = useState({
+    petId: null,
+    records: [],
+    loading: true,
+    error: "",
+  });
+
+  useEffect(() => {
+    let controller;
+    let disposed = false;
+    let requestNumber = 0;
+
+    async function load() {
+      controller?.abort();
+      controller = new AbortController();
+
+      const currentRequest = ++requestNumber;
+
+      setResult({
+        petId,
+        records: [],
+        loading: true,
+        error: "",
+      });
+
+      try {
+        const records = await fetchRecords(
+          petId,
+          controller.signal
+        );
+
+        if (disposed || currentRequest !== requestNumber) return;
+
+        setResult({
+          petId,
+          records,
+          loading: false,
+          error: "",
+        });
+      } catch (error) {
+        if (
+          disposed ||
+          currentRequest !== requestNumber ||
+          error.name === "AbortError"
+        ) {
+          return;
+        }
+
+        setResult({
+          petId,
+          records: [],
+          loading: false,
+          error: error.message || "Unable to load records.",
+        });
+      }
+    }
+
+    load();
+    window.addEventListener(eventName, load);
+
+    return () => {
+      disposed = true;
+      controller?.abort();
+      window.removeEventListener(eventName, load);
+    };
+  }, [petId, fetchRecords, eventName]);
+
+  return {
+    records: result.petId === petId ? result.records : [],
+    loading: result.petId !== petId || result.loading,
+    error: result.petId === petId ? result.error : "",
+  };
+}
 
 function PetProfile() {
   const navigate = useNavigate();
-  const location = useLocation();
   const { petId } = useParams();
 
-  const passedPet = location.state?.pet;
+  const [result, setResult] = useState({
+    petId: null,
+    pet: null,
+    loading: true,
+    error: "",
+  });
 
-  const fallbackPets = {
-    1: {
-      id: 1,
-      name: "Bella",
-      owner: "Tala El Hajj",
-      species: "Dog",
-      breed: "Golden Retriever",
-      age: "4 years",
-      sex: "Female",
-      dateOfBirth: "2022-04-15",
-      color: "Golden",
-      weight: "28 kg",
-      microchipNumber: "985141000123456",
-      bloodType: "DEA 1.1 Positive",
-      allergies: "Chicken",
-      chronicConditions: "None",
-      notes: "Friendly pet. Prefers calm handling.",
-      profilePhoto: "",
-    },
-    2: {
-      id: 2,
-      name: "Luna",
-      owner: "Fatima Abbas",
-      species: "Bird",
-      breed: "Love Birds",
-      age: "2 years",
-      sex: "Female",
-      dateOfBirth: "2024-03-10",
-      color: "Green / Yellow",
-      weight: "55 g",
-      microchipNumber: "Not available",
-      bloodType: "Not recorded",
-      allergies: "None known",
-      chronicConditions: "None",
-      notes: "Routine checkups only.",
-      profilePhoto: "",
-    },
-  };
+  const {
+    records: medicalRecords,
+    loading: medicalRecordsLoading,
+    error: medicalRecordsError,
+  } = usePetRecords(
+    petId,
+    fetchPetMedicalRecords,
+    "vetClinicMedicalRecordsUpdated"
+  );
 
-  const fallbackPet = fallbackPets[petId];
+  const {
+    records: appointments,
+    loading: appointmentsLoading,
+    error: appointmentsError,
+  } = usePetRecords(
+    petId,
+    fetchPetAppointments,
+    "vetClinicAppointmentsUpdated"
+  );
 
-  const pet = passedPet
-    ? { ...(fallbackPet || {}), ...passedPet }
-    : fallbackPet;
+  const {
+    records: vaccinations,
+    loading: vaccinationsLoading,
+    error: vaccinationsError,
+  } = usePetRecords(
+    petId,
+    fetchPetVaccinations,
+    "vetClinicVaccinationsUpdated"
+  );
+
+  const {
+    records: reminders,
+    loading: remindersLoading,
+    error: remindersError,
+  } = usePetRecords(
+    petId,
+    fetchPetReminders,
+    "vetClinicRemindersUpdated"
+  );
+
+  const {
+    records: medications,
+    loading: medicationsLoading,
+    error: medicationsError,
+  } = usePetRecords(
+    petId,
+    fetchPetMedications,
+    "vetClinicMedicationsUpdated"
+  );
+
+  useEffect(() => {
+    const controller = new AbortController();
+    let disposed = false;
+
+    async function loadPet() {
+      setResult({
+        petId,
+        pet: null,
+        loading: true,
+        error: "",
+      });
+
+      try {
+        const savedPet = await getPet(petId, {
+          signal: controller.signal,
+        });
+
+        if (disposed) return;
+
+        setResult({
+          petId,
+          pet: savedPet,
+          loading: false,
+          error: "",
+        });
+      } catch (error) {
+        if (disposed || error.name === "AbortError") return;
+
+        setResult({
+          petId,
+          pet: null,
+          loading: false,
+          error:
+            error.status === 404
+              ? ""
+              : error.message || "Unable to load the pet profile.",
+        });
+      }
+    }
+
+    loadPet();
+
+    return () => {
+      disposed = true;
+      controller.abort();
+    };
+  }, [petId]);
+
+  const loading = result.petId !== petId || result.loading;
+  const pet = result.petId === petId ? result.pet : null;
+  const error = result.petId === petId ? result.error : "";
+
+  const prescriptions = [];
+  const billing = [];
+
+  const nextAppointment = appointments
+    .filter((appointment) => {
+      const status = appointment.status.trim().toLowerCase();
+
+      if (["cancelled", "canceled", "completed"].includes(status)) {
+        return false;
+      }
+
+      if (!appointment.date || !appointment.time) return false;
+
+      const scheduledAt = new Date(
+        `${appointment.date}T${appointment.time}`
+      ).getTime();
+
+      return (
+        Number.isFinite(scheduledAt) &&
+        scheduledAt >= Date.now()
+      );
+    })
+    .sort(
+      (a, b) =>
+        a.date.localeCompare(b.date) ||
+        a.time.localeCompare(b.time) ||
+        Number(a.id) - Number(b.id)
+    )[0] || null;
+
+  const latestVaccinationsByName = new Map();
+
+  for (const vaccination of vaccinations) {
+    const key = vaccination.vaccine.trim().toLowerCase();
+
+    if (!latestVaccinationsByName.has(key)) {
+      latestVaccinationsByName.set(key, vaccination);
+    }
+  }
+
+  const nextVaccination = [
+    ...latestVaccinationsByName.values(),
+  ]
+    .filter((vaccination) => vaccination.nextDueDate)
+    .sort(
+      (a, b) =>
+        a.nextDueDate.localeCompare(b.nextDueDate) ||
+        Number(a.id) - Number(b.id)
+    )[0] || null;
+
+  const today = new Date();
+
+  const todayDateString = [
+    today.getFullYear(),
+    String(today.getMonth() + 1).padStart(2, "0"),
+    String(today.getDate()).padStart(2, "0"),
+  ].join("-");
+
+  const vaccineDueLabel = nextVaccination
+    ? nextVaccination.nextDueDate < todayDateString
+      ? "Overdue"
+      : nextVaccination.nextDueDate === todayDateString
+        ? "Due today"
+        : ""
+    : "";
+
+  const timeline = [
+    ...medicalRecords.map((record) => ({
+      ...record,
+      timelineType: "medical",
+      timelineDate: record.date,
+      timelineTitle: record.reason || "Medical Record",
+    })),
+    ...appointments.map((appointment) => ({
+      ...appointment,
+      timelineType: "appointment",
+      timelineDate: appointment.date,
+      timelineTitle: appointment.type || "Appointment",
+    })),
+    ...vaccinations.map((vaccination) => ({
+      ...vaccination,
+      timelineType: "vaccination",
+      timelineDate: vaccination.dateGiven,
+      timelineTitle: vaccination.vaccine || "Vaccination",
+    })),
+    ...reminders.map((reminder) => ({
+      ...reminder,
+      timelineType: "reminder",
+      timelineDate: reminder.dueDate,
+      timelineTitle: reminder.type || "Reminder",
+    })),
+    ...medications.map((medication) => ({
+      ...medication,
+      timelineType: "medication",
+      timelineDate: medication.startDate,
+      timelineTitle: medication.name || "Medication",
+    })),
+  ].sort((a, b) => {
+    const dateA = new Date(
+      `${a.timelineDate}T${a.time || "00:00"}`
+    ).getTime();
+
+    const dateB = new Date(
+      `${b.timelineDate}T${b.time || "00:00"}`
+    ).getTime();
+
+    return (
+      (Number.isFinite(dateB) ? dateB : 0) -
+        (Number.isFinite(dateA) ? dateA : 0) ||
+      Number(b.id) - Number(a.id)
+    );
+  });
+
+  const timelineLoading =
+    medicalRecordsLoading ||
+    appointmentsLoading ||
+    vaccinationsLoading ||
+    remindersLoading ||
+    medicationsLoading;
+
+  const timelineErrors = [
+    medicalRecordsError,
+    appointmentsError,
+    vaccinationsError,
+    remindersError,
+    medicationsError,
+  ].filter(Boolean);
 
   const formatDate = (date) => {
     if (!date) return "—";
@@ -316,7 +760,7 @@ function PetProfile() {
     }
 
     if (item.timelineType === "reminder") {
-      return item.title || item.type || "Reminder";
+      return item.message || item.title || item.type || "Reminder";
     }
 
     if (item.timelineType === "billing") {
@@ -328,14 +772,29 @@ function PetProfile() {
     return "";
   };
 
+  if (loading) {
+    return (
+      <div className="dashboard-layout">
+        <Sidebar />
+
+        <main className="dashboard-main">
+          <p>Loading pet profile...</p>
+        </main>
+      </div>
+    );
+  }
+
   if (!pet) {
     return (
       <div className="dashboard-layout">
         <Sidebar />
 
         <main className="dashboard-main">
-          <h1>Pet Not Found</h1>
-          <p>The requested pet could not be found.</p>
+          <h1>{error ? "Unable to Load Pet" : "Pet Not Found"}</h1>
+
+          <p role={error ? "alert" : undefined}>
+            {error || "The requested pet could not be found."}
+          </p>
 
           <button
             type="button"
@@ -347,28 +806,12 @@ function PetProfile() {
       </div>
     );
   }
-
-  const records = getPetRecords(pet.name);
-  const billingSummary = getPetBillingSummary(pet.name);
-  const nextAppointment = getNextAppointment(pet.name);
-  const nextVaccination = getNextVaccinationDue(pet.name);
-  const timeline = getPetTimeline(pet.name);
-
-  const appointments = records.appointments || [];
-  const medicalRecords = records.medicalRecords || [];
-  const vaccinations = records.vaccinations || [];
-  const medications = records.medications || [];
-  const prescriptions = records.prescriptions || [];
-  const reminders = records.reminders || [];
-  const billing = records.billing || [];
-
   return (
     <div className="dashboard-layout">
       <Sidebar />
 
       <main className="dashboard-main pets-page pet-profile-main">
         <style>{`
-          /* Give the profile its full available content width */
           .pet-profile-main {
             flex: 1 1 0 !important;
             min-width: 0 !important;
@@ -377,7 +820,6 @@ function PetProfile() {
             box-sizing: border-box !important;
           }
 
-          /* Do not let existing page-header CSS center the button */
           .pet-profile-main .pet-profile-top-row {
             display: flex !important;
             align-items: center !important;
@@ -407,7 +849,7 @@ function PetProfile() {
           }
         `}</style>
 
-        {/* HEADER - BACK BUTTON AT FAR RIGHT */}
+        {/* HEADER */}
 
         <div
           className="pet-profile-top-row"
@@ -423,9 +865,7 @@ function PetProfile() {
         >
           <div className="pets-title-area">
             <h1>{pet.name}</h1>
-            <p>
-              Complete patient profile and medical history
-            </p>
+            <p>Complete patient profile and medical history</p>
           </div>
 
           <button
@@ -554,35 +994,58 @@ function PetProfile() {
             {
               title: "Next Appointment",
               icon: <FaCalendarCheck />,
-              value: nextAppointment
-                ? formatDate(nextAppointment.date)
-                : "No appointment",
-              detail: nextAppointment
-                ? formatTime(nextAppointment.time)
-                : null,
+              value: appointmentsLoading
+                ? "Loading..."
+                : appointmentsError
+                  ? "—"
+                  : nextAppointment
+                    ? formatDate(nextAppointment.date)
+                    : "—",
+              detail: appointmentsLoading
+                ? ""
+                : appointmentsError
+                  ? appointmentsError
+                  : nextAppointment
+                    ? `${formatTime(nextAppointment.time)}${
+                        nextAppointment.veterinarian
+                          ? ` • ${nextAppointment.veterinarian}`
+                          : ""
+                      }`
+                    : "No upcoming appointment",
             },
             {
               title: "Next Vaccine Due",
               icon: <FaSyringe />,
-              value: nextVaccination
-                ? formatDate(nextVaccination.nextDueDate)
-                : "No vaccine due",
-              detail: nextVaccination?.vaccine,
+              value: vaccinationsLoading
+                ? "Loading..."
+                : vaccinationsError
+                  ? "—"
+                  : nextVaccination
+                    ? formatDate(nextVaccination.nextDueDate)
+                    : "—",
+              detail: vaccinationsLoading
+                ? ""
+                : vaccinationsError
+                  ? vaccinationsError
+                  : nextVaccination
+                    ? `${nextVaccination.vaccine}${
+                        vaccineDueLabel
+                          ? ` • ${vaccineDueLabel}`
+                          : ""
+                      }`
+                    : "No vaccine due date recorded",
             },
             {
               title: "Total Billing",
               icon: <FaFileInvoiceDollar />,
-              value: formatMoney(billingSummary.total),
-              detail: `Paid ${formatMoney(billingSummary.paid)}`,
+              value: "—",
+              detail: "Not connected yet",
             },
             {
               title: "Outstanding Balance",
               icon: <FaMoneyBillWave />,
-              value: formatMoney(billingSummary.balance),
-              detail:
-                billingSummary.balance > 0
-                  ? "Payment remaining"
-                  : "Fully paid",
+              value: "—",
+              detail: "Not connected yet",
               balance: true,
             },
           ].map((card) => (
@@ -660,7 +1123,15 @@ function PetProfile() {
               ],
               ["Age", pet.age],
               ["Color", pet.color, <FaPalette />],
-              ["Weight", pet.weight, <FaWeightHanging />],
+              [
+                "Weight",
+                pet.weight !== "" &&
+                pet.weight !== null &&
+                pet.weight !== undefined
+                  ? `${pet.weight} kg`
+                  : "",
+                <FaWeightHanging />,
+              ],
               [
                 "Microchip Number",
                 pet.microchipNumber,
@@ -744,8 +1215,6 @@ function PetProfile() {
           </div>
         </div>
 
-        {/* PART 2 CONTINUES HERE */}
-
         {/* APPOINTMENTS */}
 
         <div style={cardStyle}>
@@ -754,7 +1223,13 @@ function PetProfile() {
             Appointments
           </h2>
 
-          {appointments.length > 0 ? (
+          {appointmentsLoading ? (
+            <div style={emptyStyle}>Loading appointments...</div>
+          ) : appointmentsError ? (
+            <div style={emptyStyle} role="alert">
+              {appointmentsError}
+            </div>
+          ) : appointments.length > 0 ? (
             <div style={tableWrapperStyle}>
               <table style={tableStyle}>
                 <thead>
@@ -802,7 +1277,7 @@ function PetProfile() {
             </div>
           ) : (
             <div style={emptyStyle}>
-              No appointments recorded for {pet.name}.
+              No appointments available for this pet.
             </div>
           )}
         </div>
@@ -815,7 +1290,13 @@ function PetProfile() {
             Medical Records
           </h2>
 
-          {medicalRecords.length > 0 ? (
+          {medicalRecordsLoading ? (
+            <div style={emptyStyle}>Loading medical records...</div>
+          ) : medicalRecordsError ? (
+            <div style={emptyStyle} role="alert">
+              {medicalRecordsError}
+            </div>
+          ) : medicalRecords.length > 0 ? (
             <div style={{ display: "grid", gap: "14px" }}>
               {medicalRecords.map((record) => (
                 <div
@@ -916,7 +1397,7 @@ function PetProfile() {
             </div>
           ) : (
             <div style={emptyStyle}>
-              No medical records available.
+              No medical records available for this pet.
             </div>
           )}
         </div>
@@ -929,7 +1410,13 @@ function PetProfile() {
             Vaccinations
           </h2>
 
-          {vaccinations.length > 0 ? (
+          {vaccinationsLoading ? (
+            <div style={emptyStyle}>Loading vaccinations...</div>
+          ) : vaccinationsError ? (
+            <div style={emptyStyle} role="alert">
+              {vaccinationsError}
+            </div>
+          ) : vaccinations.length > 0 ? (
             <div style={tableWrapperStyle}>
               <table style={tableStyle}>
                 <thead>
@@ -952,9 +1439,7 @@ function PetProfile() {
                   {vaccinations.map((vaccination) => (
                     <tr key={vaccination.id}>
                       <td style={tdStyle}>
-                        <strong>
-                          {vaccination.vaccine || "—"}
-                        </strong>
+                        <strong>{vaccination.vaccine || "—"}</strong>
                       </td>
                       <td style={tdStyle}>
                         {formatDate(vaccination.dateGiven)}
@@ -975,7 +1460,7 @@ function PetProfile() {
             </div>
           ) : (
             <div style={emptyStyle}>
-              No vaccination records available.
+              No vaccinations available for this pet.
             </div>
           )}
         </div>
@@ -988,7 +1473,13 @@ function PetProfile() {
             Medications
           </h2>
 
-          {medications.length > 0 ? (
+          {medicationsLoading ? (
+            <div style={emptyStyle}>Loading medications...</div>
+          ) : medicationsError ? (
+            <div style={emptyStyle} role="alert">
+              {medicationsError}
+            </div>
+          ) : medications.length > 0 ? (
             <div style={tableWrapperStyle}>
               <table style={tableStyle}>
                 <thead>
@@ -1013,9 +1504,7 @@ function PetProfile() {
                   {medications.map((medication) => (
                     <tr key={medication.id}>
                       <td style={tdStyle}>
-                        <strong>
-                          {medication.name || "—"}
-                        </strong>
+                        <strong>{medication.name || "—"}</strong>
                       </td>
                       <td style={tdStyle}>
                         {medication.dosage || "—"}
@@ -1042,7 +1531,7 @@ function PetProfile() {
             </div>
           ) : (
             <div style={emptyStyle}>
-              No medications recorded.
+              No medications available for this pet.
             </div>
           )}
         </div>
@@ -1051,9 +1540,7 @@ function PetProfile() {
 
         <div style={cardStyle}>
           <h2 style={sectionTitleStyle}>
-            <FaPrescriptionBottleAlt
-              style={{ color: "#319c97" }}
-            />
+            <FaPrescriptionBottleAlt style={{ color: "#319c97" }} />
             Prescriptions
           </h2>
 
@@ -1086,8 +1573,7 @@ function PetProfile() {
                           fontSize: "16px",
                         }}
                       >
-                        {prescription.medication ||
-                          "Prescription"}
+                        {prescription.medication || "Prescription"}
                       </h3>
 
                       <div
@@ -1145,7 +1631,7 @@ function PetProfile() {
             </div>
           ) : (
             <div style={emptyStyle}>
-              No prescriptions recorded.
+              Prescription records are not connected yet.
             </div>
           )}
         </div>
@@ -1158,7 +1644,13 @@ function PetProfile() {
             Reminders
           </h2>
 
-          {reminders.length > 0 ? (
+          {remindersLoading ? (
+            <div style={emptyStyle}>Loading reminders...</div>
+          ) : remindersError ? (
+            <div style={emptyStyle} role="alert">
+              {remindersError}
+            </div>
+          ) : reminders.length > 0 ? (
             <div style={{ display: "grid", gap: "12px" }}>
               {reminders.map((reminder) => (
                 <div
@@ -1205,9 +1697,7 @@ function PetProfile() {
                           marginBottom: "4px",
                         }}
                       >
-                        {reminder.title ||
-                          reminder.type ||
-                          "Reminder"}
+                        {reminder.title || reminder.type || "Reminder"}
                       </strong>
 
                       <span
@@ -1227,7 +1717,7 @@ function PetProfile() {
             </div>
           ) : (
             <div style={emptyStyle}>
-              No reminders available.
+              No reminders available for this pet.
             </div>
           )}
         </div>
@@ -1236,9 +1726,7 @@ function PetProfile() {
 
         <div style={cardStyle}>
           <h2 style={sectionTitleStyle}>
-            <FaFileInvoiceDollar
-              style={{ color: "#319c97" }}
-            />
+            <FaFileInvoiceDollar style={{ color: "#319c97" }} />
             Billing & Invoices
           </h2>
 
@@ -1273,8 +1761,7 @@ function PetProfile() {
                           marginBottom: "4px",
                         }}
                       >
-                        {invoice.invoiceNumber ||
-                          `Invoice #${invoice.id}`}
+                        {invoice.invoiceNumber || `Invoice #${invoice.id}`}
                       </strong>
 
                       <span
@@ -1307,10 +1794,7 @@ function PetProfile() {
                               "Unit Price",
                               "Total",
                             ].map((heading) => (
-                              <th
-                                key={heading}
-                                style={thStyle}
-                              >
+                              <th key={heading} style={thStyle}>
                                 {heading}
                               </th>
                             ))}
@@ -1320,15 +1804,11 @@ function PetProfile() {
                         <tbody>
                           {invoice.items.map((item, index) => (
                             <tr key={index}>
-                              <td style={tdStyle}>
-                                {item.type || "—"}
-                              </td>
+                              <td style={tdStyle}>{item.type || "—"}</td>
                               <td style={tdStyle}>
                                 {item.description || "—"}
                               </td>
-                              <td style={tdStyle}>
-                                {item.quantity || 1}
-                              </td>
+                              <td style={tdStyle}>{item.quantity || 1}</td>
                               <td style={tdStyle}>
                                 {formatMoney(item.unitPrice)}
                               </td>
@@ -1381,9 +1861,7 @@ function PetProfile() {
                                 : "1px solid #e4eeee",
                           }}
                         >
-                          <span style={labelStyle}>
-                            {label}
-                          </span>
+                          <span style={labelStyle}>{label}</span>
 
                           <strong style={{ color }}>
                             {formatMoney(value)}
@@ -1397,7 +1875,7 @@ function PetProfile() {
             </div>
           ) : (
             <div style={emptyStyle}>
-              No invoices available for {pet.name}.
+              Billing records are not connected yet.
             </div>
           )}
         </div>
@@ -1429,9 +1907,7 @@ function PetProfile() {
 
         <div style={cardStyle}>
           <h2 style={sectionTitleStyle}>
-            <FaCalendarCheck
-              style={{ color: "#319c97" }}
-            />
+            <FaCalendarCheck style={{ color: "#319c97" }} />
             Complete Pet Timeline
           </h2>
 
@@ -1445,6 +1921,20 @@ function PetProfile() {
             Appointments, medical records, vaccinations,
             medications, prescriptions, reminders and billing.
           </p>
+
+          {timelineLoading && (
+            <div style={emptyStyle}>Loading pet activity...</div>
+          )}
+
+          {timelineErrors.map((message, index) => (
+            <div
+              key={`${index}-${message}`}
+              style={emptyStyle}
+              role="alert"
+            >
+              {message}
+            </div>
+          ))}
 
           {timeline.length > 0 ? (
             <div
@@ -1461,9 +1951,7 @@ function PetProfile() {
                     gap: "16px",
                     position: "relative",
                     paddingBottom:
-                      index === timeline.length - 1
-                        ? 0
-                        : "22px",
+                      index === timeline.length - 1 ? 0 : "22px",
                   }}
                 >
                   {index !== timeline.length - 1 && (
@@ -1569,9 +2057,14 @@ function PetProfile() {
               ))}
             </div>
           ) : (
-            <div style={emptyStyle}>
-              No timeline activity available for this pet.
-            </div>
+            !timelineLoading &&
+            timelineErrors.length === 0 && (
+              <div style={emptyStyle}>
+                No appointment, medical record, vaccination,
+                medication or reminder activity available for this pet.
+                Other timeline modules are not connected yet.
+              </div>
+            )
           )}
         </div>
       </main>
@@ -1580,4 +2073,3 @@ function PetProfile() {
 }
 
 export default PetProfile;
-

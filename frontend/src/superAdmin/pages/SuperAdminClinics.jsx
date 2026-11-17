@@ -14,7 +14,7 @@ const API_BASE_URL = (
   import.meta.env.VITE_API_BASE_URL || ""
 ).replace(/\/$/, "");
 
-const CLINICS_URL = `${API_BASE_URL}/api/super-admin/clinics`;
+const CLINICS_URL = `${API_BASE_URL}/api/clinics`;
 
 const styles = `
   .sa-clinics-page,
@@ -443,7 +443,12 @@ export default function SuperAdminClinics() {
         }
 
         if (!controller.signal.aborted) {
-          setClinics(records);
+          setClinics(
+            records.map((clinic) => ({
+              ...clinic,
+              status: clinic.isActive ? "Active" : "Inactive",
+            }))
+          );
         }
       } catch (err) {
         if (err.name === "AbortError") return;

@@ -1,5 +1,7 @@
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
+import { useOutletContext } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
+import { getDashboard } from "../api/dashboardApi";
 
 import {
   FaCalendarCheck,
@@ -23,158 +25,215 @@ import {
   Line,
 } from "recharts";
 
+const formatDateForInput = (date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+};
+
+const getMonthStart = (date) =>
+  new Date(date.getFullYear(), date.getMonth(), 1);
+
+const getMonthEnd = (date) =>
+  new Date(date.getFullYear(), date.getMonth() + 1, 0);
+
+const petColors = [
+  "#4db6ac",
+  "#81c784",
+  "#64b5f6",
+  "#ffb74d",
+];
+
 function AdminDashboard() {
-  // =========================================================
-  // DATE HELPERS
-  // =========================================================
+  const context = useOutletContext();
 
-  const formatDateForInput = (date) => {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, "0");
-    const day = String(date.getDate()).padStart(2, "0");
+  const scopeKey = `${context?.user?.id ?? ""}:${
+    context?.user?.clinicId ?? ""
+  }`;
 
-    return `${year}-${month}-${day}`;
-  };
+  const [fromDate, setFromDate] = useState(() =>
+    formatDateForInput(getMonthStart(new Date()))
+  );
 
-  const getMonthStart = (date) => {
-    return new Date(date.getFullYear(), date.getMonth(), 1);
-  };
+  const [toDate, setToDate] = useState(() =>
+    formatDateForInput(getMonthEnd(new Date()))
+  );
 
-  const getMonthEnd = (date) => {
-    return new Date(date.getFullYear(), date.getMonth() + 1, 0);
-  };
+  const [activeRange, setActiveRange] =
+    useState("this-month");
 
-  const today = new Date();
+  const [dashboardState, setDashboardState] =
+    useState(null);
 
-  const defaultFrom = formatDateForInput(getMonthStart(today));
-  const defaultTo = formatDateForInput(getMonthEnd(today));
+  const [requestState, setRequestState] =
+    useState(null);
 
-  // =========================================================
-  // DATE FILTER
-  // =========================================================
+  const requestKey = JSON.stringify([
+    scopeKey,
+    fromDate,
+    toDate,
+  ]);
 
-  const [fromDate, setFromDate] = useState(defaultFrom);
-  const [toDate, setToDate] = useState(defaultTo);
-  const [activeRange, setActiveRange] = useState("this-month");
+  const dashboard =
+    dashboardState?.key === requestKey
+      ? dashboardState.data
+      : null;
 
-  // =========================================================
-  // SAMPLE DATA
-  // Backend later
-  // =========================================================
+  const loadError =
+    requestState?.key === requestKey
+      ? requestState.error
+      : "";
 
-  const appointmentData = [
-    {
-      date: "2026-05-10",
-      month: "May",
-      appointments: 18,
-    },
-    {
-      date: "2026-06-10",
-      month: "Jun",
-      appointments: 25,
-    },
-    {
-      date: "2026-07-10",
-      month: "Jul",
-      appointments: 21,
-    },
-    {
-      date: "2026-08-10",
-      month: "Aug",
-      appointments: 32,
-    },
-    {
-      date: "2026-09-10",
-      month: "Sep",
-      appointments: 28,
-    },
-    {
-      date: "2026-10-10",
-      month: "Oct",
-      appointments: 35,
-    },
-  ];
+  const isLoading =
+    requestState?.key !== requestKey ||
+    requestState.loading;
 
-  const petData = [
-    { name: "Dogs", value: 45 },
-    { name: "Cats", value: 30 },
-    { name: "Birds", value: 15 },
-    { name: "Other", value: 10 },
-  ];
+  useEffect(() => {
+    let disposed = false;
+    let controller;
 
-  const revenueData = [
-    {
-      date: "2026-05-10",
-      month: "May",
-      revenue: 1200,
-    },
-    {
-      date: "2026-06-10",
-      month: "Jun",
-      revenue: 1800,
-    },
-    {
-      date: "2026-07-10",
-      month: "Jul",
-      revenue: 1500,
-    },
-    {
-      date: "2026-08-10",
-      month: "Aug",
-      revenue: 2200,
-    },
-    {
-      date: "2026-09-10",
-      month: "Sep",
-      revenue: 1950,
-    },
-    {
-      date: "2026-10-10",
-      month: "Oct",
-      revenue: 2600,
-    },
-  ];
+    const loadDashboard = async () => {
+      controller?.abort();
 
-  const petColors = [
-    "#4db6ac",
-    "#81c784",
-    "#64b5f6",
-    "#ffb74d",
-  ];
+      if (
+        !fromDate ||
+        !toDate ||
+        fromDate > toDate
+      ) {
+        setDashboardState(null);
 
-  // =========================================================
-  // FILTER FUNCTIONS
-  // =========================================================
+        setRequestState({
+          key: requestKey,
+          loading: false,
+          error:
+            !fromDate || !toDate
+              ? "Choose a From date and a To date."
+              : "From date cannot be after To date.",
+        });
 
-  const isDateInRange = (date) => {
-    if (!date) return false;
+        return;
+      }
 
-    if (fromDate && date < fromDate) {
-      return false;
+      const currentController = new AbortController();
+      controller = currentController;
+
+      setRequestState({
+        key: requestKey,
+        loading: true,
+        error: "",
+      });
+
+      try {
+        const data = await getDashboard(
+          {
+            today: formatDateForInput(new Date()),
+            startDate: fromDate,
+            endDate: toDate,
+          },
+          {
+            signal: currentController.signal,
+          }
+        );
+
+        if (
+          disposed ||
+          currentController.signal.aborted
+        ) {
+          return;
+        }
+
+        setDashboardState({
+          key: requestKey,
+          data,
+        });
+
+        setRequestState({
+          key: requestKey,
+          loading: false,
+          error: "",
+        });
+      } catch (error) {
+        if (
+          disposed ||
+          currentController.signal.aborted
+        ) {
+          return;
+        }
+
+        setDashboardState(null);
+
+        setRequestState({
+          key: requestKey,
+          loading: false,
+          error:
+            error.message ||
+            "Unable to load the dashboard.",
+        });
+      }
+    };
+
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") {
+        loadDashboard();
+      }
+    };
+
+    loadDashboard();
+
+    window.addEventListener("focus", loadDashboard);
+    window.addEventListener(
+      "dashboardUpdated",
+      loadDashboard
+    );
+
+    document.addEventListener(
+      "visibilitychange",
+      handleVisibility
+    );
+
+    return () => {
+      disposed = true;
+      controller?.abort();
+
+      window.removeEventListener(
+        "focus",
+        loadDashboard
+      );
+
+      window.removeEventListener(
+        "dashboardUpdated",
+        loadDashboard
+      );
+
+      document.removeEventListener(
+        "visibilitychange",
+        handleVisibility
+      );
+    };
+  }, [fromDate, toDate, requestKey]);
+
+  const appointmentData =
+    dashboard?.appointments ?? [];
+
+  const revenueData = dashboard?.revenue ?? [];
+
+  const petData = dashboard?.petDistribution ?? [];
+
+  const getStatValue = (property) => {
+    if (dashboard) {
+      return dashboard[property];
     }
 
-    if (toDate && date > toDate) {
-      return false;
-    }
-
-    return true;
+    return isLoading ? "..." : "—";
   };
 
-  const filteredAppointmentData = useMemo(() => {
-    return appointmentData.filter((item) =>
-      isDateInRange(item.date)
-    );
-  }, [fromDate, toDate]);
-
-  const filteredRevenueData = useMemo(() => {
-    return revenueData.filter((item) =>
-      isDateInRange(item.date)
-    );
-  }, [fromDate, toDate]);
-
-  // =========================================================
-  // QUICK DATE FILTERS
-  // =========================================================
+  const emptyMessage =
+    loadError ||
+    (isLoading
+      ? "Loading dashboard..."
+      : "No data for these dates");
 
   const handleThisMonth = () => {
     const now = new Date();
@@ -213,20 +272,17 @@ function AdminDashboard() {
   const handleThisYear = () => {
     const now = new Date();
 
-    const firstDay = new Date(
-      now.getFullYear(),
-      0,
-      1
+    setFromDate(
+      formatDateForInput(
+        new Date(now.getFullYear(), 0, 1)
+      )
     );
 
-    const lastDay = new Date(
-      now.getFullYear(),
-      11,
-      31
+    setToDate(
+      formatDateForInput(
+        new Date(now.getFullYear(), 11, 31)
+      )
     );
-
-    setFromDate(formatDateForInput(firstDay));
-    setToDate(formatDateForInput(lastDay));
 
     setActiveRange("this-year");
   };
@@ -246,10 +302,6 @@ function AdminDashboard() {
       <Sidebar />
 
       <main className="dashboard-main">
-        {/* =====================================================
-            HEADER
-        ===================================================== */}
-
         <div className="page-header">
           <div>
             <h1>Dashboard</h1>
@@ -257,13 +309,7 @@ function AdminDashboard() {
           </div>
         </div>
 
-        {/* =====================================================
-            STATISTICS
-        ===================================================== */}
-
         <div className="dashboard-content">
-          {/* TODAY'S APPOINTMENTS */}
-
           <div className="stat-card">
             <div className="stat-card-top">
               <div className="stat-icon appointments-icon">
@@ -273,10 +319,8 @@ function AdminDashboard() {
               <h3>Today's Appointments</h3>
             </div>
 
-            <p>8</p>
+            <p>{getStatValue("todayAppointments")}</p>
           </div>
-
-          {/* ACTIVE PETS */}
 
           <div className="stat-card">
             <div className="stat-card-top">
@@ -287,10 +331,8 @@ function AdminDashboard() {
               <h3>Active Pets</h3>
             </div>
 
-            <p>75</p>
+            <p>{getStatValue("activePets")}</p>
           </div>
-
-          {/* PET OWNERS */}
 
           <div className="stat-card">
             <div className="stat-card-top">
@@ -301,10 +343,8 @@ function AdminDashboard() {
               <h3>Pet Owners</h3>
             </div>
 
-            <p>48</p>
+            <p>{getStatValue("petOwners")}</p>
           </div>
-
-          {/* OUTSTANDING INVOICES */}
 
           <div className="stat-card">
             <div className="stat-card-top">
@@ -315,13 +355,9 @@ function AdminDashboard() {
               <h3>Outstanding Invoices</h3>
             </div>
 
-            <p>6</p>
+            <p>{getStatValue("outstandingInvoices")}</p>
           </div>
         </div>
-
-        {/* =====================================================
-            DATE FILTER
-        ===================================================== */}
 
         <div className="dashboard-date-filter">
           <div className="dashboard-date-fields">
@@ -393,30 +429,24 @@ function AdminDashboard() {
           </div>
         </div>
 
-        {/* =====================================================
-            CHARTS
-        ===================================================== */}
-
         <div className="dashboard-charts">
-          {/* APPOINTMENTS */}
-
           <div className="chart-card chart-card-large">
             <div className="chart-header">
               <div>
                 <h3>Appointments Overview</h3>
-                <p>Clinic appointments for selected dates</p>
+                <p>
+                  Clinic appointments for selected dates
+                </p>
               </div>
             </div>
 
             <div className="chart-wrapper">
-              {filteredAppointmentData.length > 0 ? (
+              {appointmentData.length > 0 ? (
                 <ResponsiveContainer
                   width="100%"
                   height="100%"
                 >
-                  <BarChart
-                    data={filteredAppointmentData}
-                  >
+                  <BarChart data={appointmentData}>
                     <CartesianGrid
                       strokeDasharray="3 3"
                       vertical={false}
@@ -434,6 +464,7 @@ function AdminDashboard() {
                     />
 
                     <YAxis
+                      allowDecimals={false}
                       axisLine={false}
                       tickLine={false}
                       tick={{
@@ -453,13 +484,11 @@ function AdminDashboard() {
                 </ResponsiveContainer>
               ) : (
                 <div className="dashboard-no-data">
-                  No data for these dates
+                  {emptyMessage}
                 </div>
               )}
             </div>
           </div>
-
-          {/* PET DISTRIBUTION */}
 
           <div className="chart-card">
             <div className="chart-header">
@@ -470,36 +499,47 @@ function AdminDashboard() {
             </div>
 
             <div className="chart-wrapper pie-wrapper">
-              <ResponsiveContainer
-                width="100%"
-                height="100%"
-              >
-                <PieChart>
-                  <Pie
-                    data={petData}
-                    dataKey="value"
-                    nameKey="name"
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={55}
-                    outerRadius={85}
-                    paddingAngle={4}
-                  >
-                    {petData.map((entry, index) => (
-                      <Cell
-                        key={entry.name}
-                        fill={
-                          petColors[
-                            index % petColors.length
-                          ]
-                        }
-                      />
-                    ))}
-                  </Pie>
+              {petData.length > 0 ? (
+                <ResponsiveContainer
+                  width="100%"
+                  height="100%"
+                >
+                  <PieChart>
+                    <Pie
+                      data={petData}
+                      dataKey="value"
+                      nameKey="name"
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={55}
+                      outerRadius={85}
+                      paddingAngle={4}
+                    >
+                      {petData.map((entry, index) => (
+                        <Cell
+                          key={entry.name}
+                          fill={
+                            petColors[
+                              index % petColors.length
+                            ]
+                          }
+                        />
+                      ))}
+                    </Pie>
 
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
+                    <Tooltip
+                      formatter={(value) => `${value}%`}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="dashboard-no-data">
+                  {loadError ||
+                    (isLoading
+                      ? "Loading dashboard..."
+                      : "No registered pets")}
+                </div>
+              )}
             </div>
 
             <div className="pet-chart-legend">
@@ -512,7 +552,9 @@ function AdminDashboard() {
                     className="pet-legend-color"
                     style={{
                       backgroundColor:
-                        petColors[index],
+                        petColors[
+                          index % petColors.length
+                        ],
                     }}
                   />
 
@@ -524,25 +566,23 @@ function AdminDashboard() {
             </div>
           </div>
 
-          {/* REVENUE */}
-
           <div className="chart-card chart-card-full">
             <div className="chart-header">
               <div>
                 <h3>Revenue Overview</h3>
-                <p>Clinic revenue for selected dates</p>
+                <p>
+                  Clinic revenue for selected dates
+                </p>
               </div>
             </div>
 
             <div className="chart-wrapper">
-              {filteredRevenueData.length > 0 ? (
+              {revenueData.length > 0 ? (
                 <ResponsiveContainer
                   width="100%"
                   height="100%"
                 >
-                  <LineChart
-                    data={filteredRevenueData}
-                  >
+                  <LineChart data={revenueData}>
                     <CartesianGrid
                       strokeDasharray="3 3"
                       vertical={false}
@@ -568,7 +608,12 @@ function AdminDashboard() {
                       }}
                     />
 
-                    <Tooltip />
+                    <Tooltip
+                      formatter={(value) => [
+                        `$${Number(value).toFixed(2)}`,
+                        "Revenue",
+                      ]}
+                    />
 
                     <Line
                       type="monotone"
@@ -579,15 +624,13 @@ function AdminDashboard() {
                         r: 4,
                         fill: "#55b7b2",
                       }}
-                      activeDot={{
-                        r: 6,
-                      }}
+                      activeDot={{ r: 6 }}
                     />
                   </LineChart>
                 </ResponsiveContainer>
               ) : (
                 <div className="dashboard-no-data">
-                  No data for these dates
+                  {emptyMessage}
                 </div>
               )}
             </div>

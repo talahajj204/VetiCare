@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
+import { useOutletContext } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
+import { getAuditLogs } from "../api/auditLogApi";
 
 import {
   FaSearch,
@@ -7,110 +9,97 @@ import {
 } from "react-icons/fa";
 
 function AuditLog() {
-  // =====================================================
-  // AUDIT LOG DATA
-  // =====================================================
+  const context = useOutletContext();
 
-  const [auditLogs] = useState([
-    {
-      id: 1,
-      user: "Dr. Sarah Johnson",
-      date: "2026-10-02",
-      time: "09:42 AM",
-      action: "Updated",
-      record: "Medical Record - Max",
-    },
-    {
-      id: 2,
-      user: "Maya Haddad",
-      date: "2026-10-02",
-      time: "09:18 AM",
-      action: "Created",
-      record: "Appointment - Luna",
-    },
-    {
-      id: 3,
-      user: "Admin User",
-      date: "2026-10-02",
-      time: "08:55 AM",
-      action: "Updated",
-      record: "User - Maya Haddad",
-    },
-    {
-      id: 4,
-      user: "Dr. Sarah Johnson",
-      date: "2026-10-01",
-      time: "04:30 PM",
-      action: "Created",
-      record: "Prescription - Max",
-    },
-    {
-      id: 5,
-      user: "Maya Haddad",
-      date: "2026-10-01",
-      time: "03:45 PM",
-      action: "Created",
-      record: "Invoice - INV-003",
-    },
-    {
-      id: 6,
-      user: "Dr. Karim Nassar",
-      date: "2026-10-01",
-      time: "02:20 PM",
-      action: "Updated",
-      record: "Vaccination - Bella",
-    },
-    {
-      id: 7,
-      user: "Admin User",
-      date: "2026-10-01",
-      time: "11:10 AM",
-      action: "Deactivated",
-      record: "User - Dr. Karim Nassar",
-    },
-    {
-      id: 8,
-      user: "Maya Haddad",
-      date: "2026-09-30",
-      time: "05:15 PM",
-      action: "Updated",
-      record: "Owner - Tala El Hajj",
-    },
-    {
-      id: 9,
-      user: "Dr. Sarah Johnson",
-      date: "2026-09-30",
-      time: "01:35 PM",
-      action: "Created",
-      record: "Medication - Luna",
-    },
-    {
-      id: 10,
-      user: "Admin User",
-      date: "2026-09-29",
-      time: "10:05 AM",
-      action: "Created",
-      record: "User - Maya Haddad",
-    },
-  ]);
+  const scopeKey =
+    `${context?.user?.id ?? ""}:${context?.user?.clinicId ?? ""}`;
 
-  // =====================================================
-  // SEARCH + FILTER
-  // =====================================================
+  const [auditData, setAuditData] = useState(null);
+  const [loadError, setLoadError] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
+
+  const auditLogs =
+    auditData?.scopeKey === scopeKey
+      ? auditData.records
+      : [];
 
   const [search, setSearch] = useState("");
   const [actionFilter, setActionFilter] = useState("All");
 
-  // =====================================================
-  // PAGINATION
-  // =====================================================
-
   const [rowsPerPage, setRowsPerPage] = useState(5);
   const [currentPage, setCurrentPage] = useState(1);
 
-  // =====================================================
-  // FORMAT DATE
-  // =====================================================
+  useEffect(() => {
+    let disposed = false;
+    let controller;
+
+    setAuditData(null);
+    setLoadError("");
+    setCurrentPage(1);
+
+    const load = async () => {
+      controller?.abort();
+      controller = new AbortController();
+
+      const signal = controller.signal;
+
+      setIsLoading(true);
+
+      try {
+        const records = await getAuditLogs({ signal });
+
+        if (disposed || signal.aborted) return;
+
+        setAuditData({
+          scopeKey,
+          records,
+        });
+
+        setLoadError("");
+      } catch (error) {
+        if (!disposed && !signal.aborted) {
+          setAuditData(null);
+          setLoadError(
+            error.message ||
+              "Unable to load audit log records."
+          );
+        }
+      } finally {
+        if (!disposed && !signal.aborted) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    const visible = () => {
+      if (document.visibilityState === "visible") {
+        void load();
+      }
+    };
+
+    void load();
+
+    window.addEventListener("focus", load);
+    window.addEventListener("auditLogUpdated", load);
+
+    document.addEventListener(
+      "visibilitychange",
+      visible
+    );
+
+    return () => {
+      disposed = true;
+      controller?.abort();
+
+      window.removeEventListener("focus", load);
+      window.removeEventListener("auditLogUpdated", load);
+
+      document.removeEventListener(
+        "visibilitychange",
+        visible
+      );
+    };
+  }, [scopeKey]);
 
   const formatDate = (date) => {
     if (!date) return "-";
@@ -119,10 +108,6 @@ function AuditLog() {
 
     return `${day}/${month}/${year}`;
   };
-
-  // =====================================================
-  // FILTERED LOGS
-  // =====================================================
 
   const filteredLogs = useMemo(() => {
     const searchText = search.trim().toLowerCase();
@@ -137,15 +122,12 @@ function AuditLog() {
         log.record.toLowerCase().includes(searchText);
 
       const matchesAction =
-        actionFilter === "All" || log.action === actionFilter;
+        actionFilter === "All" ||
+        log.action === actionFilter;
 
       return matchesSearch && matchesAction;
     });
   }, [auditLogs, search, actionFilter]);
-
-  // =====================================================
-  // PAGINATION
-  // =====================================================
 
   const totalPages = Math.max(
     1,
@@ -169,10 +151,6 @@ function AuditLog() {
     startIndex + rowsPerPage
   );
 
-  // =====================================================
-  // CLEAR FILTERS
-  // =====================================================
-
   const clearFilters = () => {
     setSearch("");
     setActionFilter("All");
@@ -181,10 +159,6 @@ function AuditLog() {
 
   const hasActiveFilters =
     search.trim() !== "" || actionFilter !== "All";
-
-  // =====================================================
-  // ACTION CLASS
-  // =====================================================
 
   const getActionClass = (action) => {
     if (action === "Created") {
@@ -201,10 +175,6 @@ function AuditLog() {
 
     return "audit-action default";
   };
-
-  // =====================================================
-  // PAGINATION STYLES
-  // =====================================================
 
   const paginationButtonStyle = {
     width: "30px",
@@ -232,10 +202,6 @@ function AuditLog() {
     color: "#ffffff",
     fontSize: "13px",
   };
-
-  // =====================================================
-  // RETURN
-  // =====================================================
 
   return (
     <div className="dashboard-layout">
@@ -507,17 +473,12 @@ function AuditLog() {
           }
         `}</style>
 
-        {/* HEADER */}
-
         <div className="audit-page-header">
           <div className="audit-title">
             <h1>Audit Log</h1>
-
             <p>View system activity and record changes</p>
           </div>
         </div>
-
-        {/* SEARCH + FILTER */}
 
         <div className="audit-filter-row">
           <div className="audit-search-box">
@@ -527,7 +488,9 @@ function AuditLog() {
               type="text"
               placeholder="Search audit log..."
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(event) =>
+                setSearch(event.target.value)
+              }
             />
 
             {hasActiveFilters && (
@@ -546,7 +509,9 @@ function AuditLog() {
           <select
             className="audit-filter-select"
             value={actionFilter}
-            onChange={(e) => setActionFilter(e.target.value)}
+            onChange={(event) =>
+              setActionFilter(event.target.value)
+            }
           >
             <option value="All">All Actions</option>
             <option value="Created">Created</option>
@@ -554,8 +519,6 @@ function AuditLog() {
             <option value="Deactivated">Deactivated</option>
           </select>
         </div>
-
-        {/* TABLE */}
 
         <div className="owners-table-container audit-table-container">
           <div className="audit-table-scroll">
@@ -590,7 +553,9 @@ function AuditLog() {
                       </td>
 
                       <td>
-                        <span className={getActionClass(log.action)}>
+                        <span
+                          className={getActionClass(log.action)}
+                        >
                           {log.action}
                         </span>
                       </td>
@@ -604,8 +569,14 @@ function AuditLog() {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan="4" className="audit-empty">
-                      No audit log records found
+                    <td
+                      colSpan="4"
+                      className="audit-empty"
+                    >
+                      {loadError ||
+                        (isLoading
+                          ? "Loading audit log..."
+                          : "No audit log records found")}
                     </td>
                   </tr>
                 )}
@@ -614,16 +585,14 @@ function AuditLog() {
           </div>
         </div>
 
-        {/* PAGINATION */}
-
         <div className="audit-pagination">
           <div className="audit-rows">
             <span>Rows per page:</span>
 
             <select
               value={rowsPerPage}
-              onChange={(e) =>
-                setRowsPerPage(Number(e.target.value))
+              onChange={(event) =>
+                setRowsPerPage(Number(event.target.value))
               }
             >
               <option value={5}>5</option>

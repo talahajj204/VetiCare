@@ -1,4 +1,6 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useOutletContext } from "react-router-dom";
+import { getReport, getReportForPrint } from "../api/reportsApi";
 import Sidebar from "../components/Sidebar";
 
 import {
@@ -7,18 +9,6 @@ import {
   FaSortAmountDown,
   FaPrint,
 } from "react-icons/fa";
-
-const readPrintClinicName = () => {
-  try {
-    const settings = JSON.parse(
-      localStorage.getItem("storeSettings") || "{}"
-    );
-
-    return String(settings?.storeName || "").trim();
-  } catch {
-    return "";
-  }
-};
 
 const escapePrintText = (value) =>
   String(value ?? "").replace(/[&<>"']/g, (character) => {
@@ -34,10 +24,6 @@ const escapePrintText = (value) =>
   });
 
 function Reports() {
-  // =========================================================
-  // HELPERS
-  // =========================================================
-
   const toInputDate = (date) => {
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -60,10 +46,6 @@ function Reports() {
     0
   );
 
-  // =========================================================
-  // DATE RANGE
-  // =========================================================
-
   const [startDate, setStartDate] = useState(
     toInputDate(firstDayOfMonth)
   );
@@ -73,255 +55,32 @@ function Reports() {
   );
 
   const [sortBy, setSortBy] = useState("default");
-
-  // =========================================================
-  // PAGINATION
-  // =========================================================
-
   const [itemsPerPage, setItemsPerPage] = useState(5);
   const [currentPage, setCurrentPage] = useState(1);
 
-  // =========================================================
-  // APPOINTMENTS
-  // =========================================================
+  const context = useOutletContext();
 
-  const appointmentsData = [
-    {
-      id: 1,
-      pet: "Bella",
-      owner: "John Smith",
-      date: "2026-09-03",
-      status: "Completed",
-    },
-    {
-      id: 2,
-      pet: "Luna",
-      owner: "Emily Johnson",
-      date: "2026-09-06",
-      status: "Completed",
-    },
-    {
-      id: 3,
-      pet: "Max",
-      owner: "Daniel Brown",
-      date: "2026-09-10",
-      status: "Completed",
-    },
-    {
-      id: 4,
-      pet: "Charlie",
-      owner: "Sophia Wilson",
-      date: "2026-09-14",
-      status: "Scheduled",
-    },
-    {
-      id: 5,
-      pet: "Rocky",
-      owner: "James Miller",
-      date: "2026-09-18",
-      status: "Scheduled",
-    },
-    {
-      id: 6,
-      pet: "Milo",
-      owner: "Olivia Davis",
-      date: "2026-09-22",
-      status: "Scheduled",
-    },
-    {
-      id: 7,
-      pet: "Lucy",
-      owner: "William Taylor",
-      date: "2026-09-25",
-      status: "Scheduled",
-    },
-    {
-      id: 8,
-      pet: "Coco",
-      owner: "Emma Anderson",
-      date: "2026-09-29",
-      status: "Scheduled",
-    },
-    {
-      id: 9,
-      pet: "Buddy",
-      owner: "Tala El Hajj",
-      date: "2026-10-02",
-      status: "Confirmed",
-    },
-    {
-      id: 10,
-      pet: "Leo",
-      owner: "Fatima Abbas",
-      date: "2026-10-05",
-      status: "Completed",
-    },
-    {
-      id: 11,
-      pet: "Nala",
-      owner: "Rami Khoury",
-      date: "2026-10-09",
-      status: "Pending",
-    },
-    {
-      id: 12,
-      pet: "Mia",
-      owner: "Sarah Haddad",
-      date: "2026-10-13",
-      status: "Confirmed",
-    },
-    {
-      id: 13,
-      pet: "Oscar",
-      owner: "Joe Saad",
-      date: "2026-10-18",
-      status: "Cancelled",
-    },
-    {
-      id: 14,
-      pet: "Simba",
-      owner: "Maya Nassar",
-      date: "2026-10-23",
-      status: "Completed",
-    },
-    {
-      id: 15,
-      pet: "Loki",
-      owner: "Nour Daher",
-      date: "2026-10-28",
-      status: "Confirmed",
-    },
-  ];
+  const scopeKey =
+    `${context?.user?.id ?? ""}:${context?.user?.clinicId ?? ""}`;
 
-  // =========================================================
-  // VACCINATIONS
-  // =========================================================
+  const requestKey = `${scopeKey}:${startDate}:${endDate}`;
 
-  const vaccinationsData = [
-    {
-      id: 1,
-      date: "2026-09-06",
-      pet: "Luna",
-      vaccine: "Rabies",
-      status: "Completed",
-    },
-    {
-      id: 2,
-      date: "2026-09-22",
-      pet: "Milo",
-      vaccine: "DHPP",
-      status: "Completed",
-    },
-    {
-      id: 3,
-      date: "2026-10-03",
-      pet: "Buddy",
-      vaccine: "Rabies",
-      status: "Completed",
-    },
-    {
-      id: 4,
-      date: "2026-10-07",
-      pet: "Leo",
-      vaccine: "DHPP",
-      status: "Completed",
-    },
-    {
-      id: 5,
-      date: "2026-10-12",
-      pet: "Nala",
-      vaccine: "Bordetella",
-      status: "Completed",
-    },
-    {
-      id: 6,
-      date: "2026-10-17",
-      pet: "Mia",
-      vaccine: "Rabies",
-      status: "Completed",
-    },
-    {
-      id: 7,
-      date: "2026-10-25",
-      pet: "Simba",
-      vaccine: "FVRCP",
-      status: "Completed",
-    },
-  ];
+  const [reportData, setReportData] = useState(null);
+  const [loadError, setLoadError] = useState("");
 
-  // =========================================================
-  // INVOICES
-  // =========================================================
+  const dataReady = reportData?.requestKey === requestKey;
 
-  const invoicesData = [
-    {
-      id: 1,
-      invoiceNumber: "INV-001",
-      date: "2026-09-29",
-      amount: 50,
-      status: "Paid",
-    },
-    {
-      id: 2,
-      invoiceNumber: "INV-002",
-      date: "2026-09-28",
-      amount: 35,
-      status: "Unpaid",
-    },
-    {
-      id: 3,
-      invoiceNumber: "INV-003",
-      date: "2026-10-02",
-      amount: 55,
-      status: "Paid",
-    },
-    {
-      id: 4,
-      invoiceNumber: "INV-004",
-      date: "2026-10-05",
-      amount: 40,
-      status: "Paid",
-    },
-    {
-      id: 5,
-      invoiceNumber: "INV-005",
-      date: "2026-10-09",
-      amount: 75,
-      status: "Paid",
-    },
-    {
-      id: 6,
-      invoiceNumber: "INV-006",
-      date: "2026-10-13",
-      amount: 35,
-      status: "Unpaid",
-    },
-    {
-      id: 7,
-      invoiceNumber: "INV-007",
-      date: "2026-10-18",
-      amount: 90,
-      status: "Paid",
-    },
-    {
-      id: 8,
-      invoiceNumber: "INV-008",
-      date: "2026-10-23",
-      amount: 65,
-      status: "Paid",
-    },
-    {
-      id: 9,
-      invoiceNumber: "INV-009",
-      date: "2026-10-28",
-      amount: 110,
-      status: "Paid",
-    },
-  ];
+  const appointmentsData = dataReady
+    ? reportData.appointments
+    : [];
 
-  // =========================================================
-  // VALID RANGE
-  // =========================================================
+  const vaccinationsData = dataReady
+    ? reportData.vaccinations
+    : [];
+
+  const invoicesData = dataReady
+    ? reportData.invoices
+    : [];
 
   const validRange =
     startDate && endDate && startDate <= endDate;
@@ -332,9 +91,64 @@ function Reports() {
     return date >= startDate && date <= endDate;
   };
 
-  // =========================================================
-  // FILTER DATA BY DATE
-  // =========================================================
+  useEffect(() => {
+    if (!validRange) return;
+
+    let disposed = false;
+    let controller;
+
+    const load = async () => {
+      controller?.abort();
+      controller = new AbortController();
+
+      const signal = controller.signal;
+
+      setLoadError("");
+
+      try {
+        const report = await getReport(
+          startDate,
+          endDate,
+          { signal }
+        );
+
+        if (!disposed && !signal.aborted) {
+          setReportData({
+            ...report,
+            requestKey,
+          });
+        }
+      } catch (error) {
+        if (!disposed && !signal.aborted) {
+          setReportData(null);
+          setLoadError(
+            error.message || "Unable to load the report."
+          );
+        }
+      }
+    };
+
+    void load();
+
+    window.addEventListener("focus", load);
+    window.addEventListener("billingUpdated", load);
+    window.addEventListener("reportsUpdated", load);
+
+    return () => {
+      disposed = true;
+      controller?.abort();
+
+      window.removeEventListener("focus", load);
+      window.removeEventListener("billingUpdated", load);
+      window.removeEventListener("reportsUpdated", load);
+    };
+  }, [
+    startDate,
+    endDate,
+    scopeKey,
+    requestKey,
+    validRange,
+  ]);
 
   const filteredAppointments = useMemo(() => {
     if (!validRange) return [];
@@ -342,7 +156,7 @@ function Reports() {
     return appointmentsData.filter((item) =>
       isInsideRange(item.date)
     );
-  }, [startDate, endDate]);
+  }, [startDate, endDate, appointmentsData]);
 
   const filteredVaccinations = useMemo(() => {
     if (!validRange) return [];
@@ -350,7 +164,7 @@ function Reports() {
     return vaccinationsData.filter((item) =>
       isInsideRange(item.date)
     );
-  }, [startDate, endDate]);
+  }, [startDate, endDate, vaccinationsData]);
 
   const filteredInvoices = useMemo(() => {
     if (!validRange) return [];
@@ -358,11 +172,7 @@ function Reports() {
     return invoicesData.filter((item) =>
       isInsideRange(item.date)
     );
-  }, [startDate, endDate]);
-
-  // =========================================================
-  // TOTALS
-  // =========================================================
+  }, [startDate, endDate, invoicesData]);
 
   const appointmentTotal = filteredAppointments.length;
   const vaccinationTotal = filteredVaccinations.length;
@@ -382,32 +192,25 @@ function Reports() {
     invoiceTotal === 0 &&
     revenueTotal === 0;
 
-  // =========================================================
-  // SUMMARY TABLE
-  // =========================================================
-
   const summaryData = useMemo(() => {
     const data = [
       {
         id: 1,
         category: "Appointments",
         total: appointmentTotal,
-        description:
-          "Appointments in selected date range",
+        description: "Appointments in selected date range",
       },
       {
         id: 2,
         category: "Vaccinations",
         total: vaccinationTotal,
-        description:
-          "Vaccinations in selected date range",
+        description: "Vaccinations in selected date range",
       },
       {
         id: 3,
         category: "Invoices",
         total: invoiceTotal,
-        description:
-          "Invoices created in selected date range",
+        description: "Invoices created in selected date range",
       },
       {
         id: 4,
@@ -445,10 +248,6 @@ function Reports() {
     sortBy,
   ]);
 
-  // =========================================================
-  // PAGINATION
-  // =========================================================
-
   const totalPages = Math.max(
     1,
     Math.ceil(summaryData.length / itemsPerPage)
@@ -472,8 +271,8 @@ function Reports() {
     (_, index) => index + 1
   );
 
-  const handleItemsPerPageChange = (e) => {
-    setItemsPerPage(Number(e.target.value));
+  const handleItemsPerPageChange = (event) => {
+    setItemsPerPage(Number(event.target.value));
     setCurrentPage(1);
   };
 
@@ -489,19 +288,13 @@ function Reports() {
     );
   };
 
-  // =========================================================
-  // APPOINTMENTS BY STATUS
-  // =========================================================
-
   const appointmentStatusData = useMemo(() => {
-    const counts = {};
+    const counts = Object.create(null);
 
     filteredAppointments.forEach((appointment) => {
-      const status =
-        appointment.status || "Unknown";
+      const status = appointment.status || "Unknown";
 
-      counts[status] =
-        (counts[status] || 0) + 1;
+      counts[status] = (counts[status] || 0) + 1;
     });
 
     return Object.entries(counts).map(
@@ -514,22 +307,14 @@ function Reports() {
 
   const maxStatusTotal = Math.max(
     1,
-    ...appointmentStatusData.map(
-      (item) => item.total
-    )
+    ...appointmentStatusData.map((item) => item.total)
   );
 
-  // =========================================================
-  // REVENUE BY DATE
-  // =========================================================
-
   const revenueByDate = useMemo(() => {
-    const revenueMap = {};
+    const revenueMap = Object.create(null);
 
     filteredInvoices
-      .filter(
-        (invoice) => invoice.status === "Paid"
-      )
+      .filter((invoice) => invoice.status === "Paid")
       .forEach((invoice) => {
         revenueMap[invoice.date] =
           (revenueMap[invoice.date] || 0) +
@@ -551,10 +336,6 @@ function Reports() {
     ...revenueByDate.map((item) => item.total)
   );
 
-  // =========================================================
-  // DATE DISPLAY
-  // =========================================================
-
   const formatDisplayDate = (dateString) => {
     if (!dateString) return "";
 
@@ -562,11 +343,7 @@ function Reports() {
       .split("-")
       .map(Number);
 
-    const date = new Date(
-      year,
-      month - 1,
-      day
-    );
+    const date = new Date(year, month - 1, day);
 
     return date.toLocaleDateString("en-GB", {
       day: "numeric",
@@ -582,11 +359,7 @@ function Reports() {
       .split("-")
       .map(Number);
 
-    const date = new Date(
-      year,
-      month - 1,
-      day
-    );
+    const date = new Date(year, month - 1, day);
 
     return date.toLocaleDateString("en-GB", {
       day: "numeric",
@@ -595,14 +368,8 @@ function Reports() {
   };
 
   const selectedRangeText = validRange
-    ? `${formatDisplayDate(
-        startDate
-      )} – ${formatDisplayDate(endDate)}`
+    ? `${formatDisplayDate(startDate)} – ${formatDisplayDate(endDate)}`
     : "Choose a valid date range";
-
-  // =========================================================
-  // QUICK DATE BUTTONS
-  // =========================================================
 
   const setTodayRange = () => {
     const current = new Date();
@@ -664,40 +431,34 @@ function Reports() {
     setCurrentPage(1);
   };
 
-  // =========================================================
-  // EXPORT
-  // =========================================================
-
   const escapeCsv = (value) => {
-    const safeValue = String(
-      value ?? ""
-    ).replace(/"/g, '""');
+    const safeValue = String(value ?? "")
+      .replace(/"/g, '""');
 
     return `"${safeValue}"`;
   };
 
   const handleExport = () => {
-    if (!validRange) {
+    if (!dataReady) {
       alert(
-        "Please select a valid From and To date."
+        loadError ||
+          "Wait for the report to load before exporting."
       );
+      return;
+    }
+
+    if (!validRange) {
+      alert("Please select a valid From and To date.");
       return;
     }
 
     const rows = [
       ["VET CLINIC REPORT"],
       [],
-      [
-        "From",
-        formatDisplayDate(startDate),
-      ],
+      ["From", formatDisplayDate(startDate)],
       ["To", formatDisplayDate(endDate)],
       [],
-      [
-        "Category",
-        "Total",
-        "Description",
-      ],
+      ["Category", "Total", "Description"],
       ...summaryData.map((report) => [
         report.category,
         report.money
@@ -709,9 +470,7 @@ function Reports() {
 
     const csvContent = rows
       .map((row) =>
-        row
-          .map((value) => escapeCsv(value))
-          .join(",")
+        row.map((value) => escapeCsv(value)).join(",")
       )
       .join("\n");
 
@@ -723,8 +482,7 @@ function Reports() {
     );
 
     const url = URL.createObjectURL(blob);
-    const link =
-      document.createElement("a");
+    const link = document.createElement("a");
 
     link.href = url;
     link.download =
@@ -735,44 +493,75 @@ function Reports() {
     document.body.removeChild(link);
 
     URL.revokeObjectURL(url);
-  };  // =========================================================
-  // PRINT ONE SUMMARY REPORT
-  // =========================================================
-
-  const handlePrintReport = (report) => {
-    if (!validRange) {
+  };  const handlePrintReport = async (report) => {
+    if (!validRange || !dataReady) {
       alert(
-        "Please select a valid From and To date."
+        loadError ||
+          "Wait for a valid report to load before printing."
       );
       return;
     }
 
-    const printClinicName = readPrintClinicName();
+    const printWindow = window.open(
+      "",
+      "_blank",
+      "width=1000,height=800"
+    );
 
-    let printLogo = "";
+    if (!printWindow) {
+      alert("Please allow pop-ups to print the report.");
+      return;
+    }
+
+    let fresh;
 
     try {
-      const settings = JSON.parse(
-        localStorage.getItem("storeSettings") || "{}"
+      fresh = await getReportForPrint(startDate, endDate);
+    } catch (error) {
+      printWindow.close();
+      alert(
+        error.message ||
+          "Unable to load the report for printing."
       );
-
-      const savedImage = settings?.storeBanner;
-
-      if (typeof savedImage === "string") {
-        const imageValue = savedImage.trim();
-
-        if (
-          /^data:image\/(?:png|jpeg|webp);base64,/i.test(imageValue) ||
-          /^https?:\/\//i.test(imageValue) ||
-          /^blob:/i.test(imageValue) ||
-          /^\/(?!\/)/.test(imageValue)
-        ) {
-          printLogo = imageValue;
-        }
-      }
-    } catch {
-      printLogo = "";
+      return;
     }
+
+    if (printWindow.closed) return;
+
+    const printAppointments = fresh.appointments;
+    const printVaccinations = fresh.vaccinations;
+    const printInvoices = fresh.invoices;
+
+    const paidInvoices = printInvoices.filter(
+      (invoice) => invoice.status === "Paid"
+    );
+
+    const totals = {
+      Appointments: printAppointments.length,
+      Vaccinations: printVaccinations.length,
+      Invoices: printInvoices.length,
+      Revenue: paidInvoices.reduce(
+        (total, invoice) => total + invoice.amount,
+        0
+      ),
+    };
+
+    const printedReport = {
+      ...report,
+      total: totals[report.category],
+    };
+
+    const printClinicName = fresh.clinicName;
+    const imageValue = fresh.clinicLogo.trim();
+
+    const printLogo =
+      /^data:image\/(?:png|jpeg|jpg|webp|gif);base64,/i.test(
+        imageValue
+      ) ||
+      /^https?:\/\//i.test(imageValue) ||
+      /^\/(?!\/)/.test(imageValue)
+        ? imageValue
+        : "";
 
     let detailsHtml = "";
 
@@ -788,16 +577,14 @@ function Reports() {
             </tr>
           </thead>
           <tbody>
-            ${filteredAppointments
+            ${printAppointments
               .map(
                 (item) => `
                   <tr>
-                    <td>${item.pet}</td>
-                    <td>${item.owner}</td>
-                    <td>${formatDisplayDate(
-                      item.date
-                    )}</td>
-                    <td>${item.status}</td>
+                    <td>${escapePrintText(item.pet)}</td>
+                    <td>${escapePrintText(item.owner)}</td>
+                    <td>${formatDisplayDate(item.date)}</td>
+                    <td>${escapePrintText(item.status)}</td>
                   </tr>
                 `
               )
@@ -819,16 +606,14 @@ function Reports() {
             </tr>
           </thead>
           <tbody>
-            ${filteredVaccinations
+            ${printVaccinations
               .map(
                 (item) => `
                   <tr>
-                    <td>${item.pet}</td>
-                    <td>${item.vaccine}</td>
-                    <td>${formatDisplayDate(
-                      item.date
-                    )}</td>
-                    <td>${item.status}</td>
+                    <td>${escapePrintText(item.pet)}</td>
+                    <td>${escapePrintText(item.vaccine)}</td>
+                    <td>${formatDisplayDate(item.date)}</td>
+                    <td>${escapePrintText(item.status)}</td>
                   </tr>
                 `
               )
@@ -838,45 +623,14 @@ function Reports() {
       `;
     }
 
-    if (report.category === "Invoices") {
-      detailsHtml = `
-        <table>
-          <thead>
-            <tr>
-              <th>Invoice</th>
-              <th>Date</th>
-              <th>Amount</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${filteredInvoices
-              .map(
-                (item) => `
-                  <tr>
-                    <td>${item.invoiceNumber}</td>
-                    <td>${formatDisplayDate(
-                      item.date
-                    )}</td>
-                    <td>$${Number(
-                      item.amount
-                    ).toFixed(2)}</td>
-                    <td>${item.status}</td>
-                  </tr>
-                `
-              )
-              .join("")}
-          </tbody>
-        </table>
-      `;
-    }
-
-    if (report.category === "Revenue") {
-      const paidInvoices =
-        filteredInvoices.filter(
-          (invoice) =>
-            invoice.status === "Paid"
-        );
+    if (
+      report.category === "Invoices" ||
+      report.category === "Revenue"
+    ) {
+      const invoiceRows =
+        report.category === "Revenue"
+          ? paidInvoices
+          : printInvoices;
 
       detailsHtml = `
         <table>
@@ -889,18 +643,14 @@ function Reports() {
             </tr>
           </thead>
           <tbody>
-            ${paidInvoices
+            ${invoiceRows
               .map(
                 (item) => `
                   <tr>
-                    <td>${item.invoiceNumber}</td>
-                    <td>${formatDisplayDate(
-                      item.date
-                    )}</td>
-                    <td>$${Number(
-                      item.amount
-                    ).toFixed(2)}</td>
-                    <td>${item.status}</td>
+                    <td>${escapePrintText(item.invoiceNumber)}</td>
+                    <td>${formatDisplayDate(item.date)}</td>
+                    <td>$${Number(item.amount).toFixed(2)}</td>
+                    <td>${escapePrintText(item.status)}</td>
                   </tr>
                 `
               )
@@ -910,22 +660,9 @@ function Reports() {
       `;
     }
 
-    const printWindow = window.open(
-      "",
-      "_blank",
-      "width=1000,height=800"
-    );
-
-    if (!printWindow) {
-      alert(
-        "Please allow pop-ups to print the report."
-      );
-      return;
-    }
-
-    const totalValue = report.money
-      ? `$${Number(report.total).toFixed(2)}`
-      : report.total;
+    const totalValue = printedReport.money
+      ? `$${Number(printedReport.total).toFixed(2)}`
+      : printedReport.total;
 
     const logoHtml = printLogo
       ? `<img
@@ -939,7 +676,9 @@ function Reports() {
       <!DOCTYPE html>
       <html>
         <head>
-          <title>${report.category} Report</title>
+          <meta charset="UTF-8" />
+          <title>${escapePrintText(report.category)} Report</title>
+
           <style>
             body {
               font-family: Arial, sans-serif;
@@ -1025,9 +764,7 @@ function Reports() {
             <h1>${escapePrintText(printClinicName)}</h1>
           </div>
 
-          <h2>
-            ${report.category} Report
-          </h2>
+          <h2>${escapePrintText(report.category)} Report</h2>
 
           <div class="range">
             ${formatDisplayDate(startDate)}
@@ -1036,20 +773,14 @@ function Reports() {
           </div>
 
           <div class="summary">
-            <strong>
-              ${report.category}
-            </strong>
-
+            <strong>${escapePrintText(report.category)}</strong>
             <br /><br />
 
             Total:
-            <span class="total">
-              ${totalValue}
-            </span>
+            <span class="total">${totalValue}</span>
 
             <br /><br />
-
-            ${report.description}
+            ${escapePrintText(report.description)}
           </div>
 
           ${detailsHtml}
@@ -1099,17 +830,11 @@ function Reports() {
     void startPrinting();
   };
 
-  // =========================================================
-  // RETURN
-  // =========================================================
-
   return (
     <div className="dashboard-layout">
       <Sidebar />
 
       <main className="dashboard-main reports-page">
-        {/* HEADER */}
-
         <div className="reports-main-header">
           <div className="reports-title-area">
             <h1>Reports</h1>
@@ -1123,13 +848,12 @@ function Reports() {
             type="button"
             className="reports-export-button"
             onClick={handleExport}
+            disabled={!dataReady || !validRange}
           >
             <FaFileExcel />
             <span>Export</span>
           </button>
         </div>
-
-        {/* DATE BOX */}
 
         <div className="reports-date-box">
           <div className="reports-date-box-left">
@@ -1143,16 +867,14 @@ function Reports() {
               <input
                 type="date"
                 value={startDate}
-                onChange={(e) => {
-                  setStartDate(e.target.value);
+                onChange={(event) => {
+                  setStartDate(event.target.value);
                   setCurrentPage(1);
                 }}
               />
             </div>
 
-            <span className="reports-date-separator">
-              —
-            </span>
+            <span className="reports-date-separator">—</span>
 
             <div className="reports-date-field">
               <label>To</label>
@@ -1160,15 +882,13 @@ function Reports() {
               <input
                 type="date"
                 value={endDate}
-                onChange={(e) => {
-                  setEndDate(e.target.value);
+                onChange={(event) => {
+                  setEndDate(event.target.value);
                   setCurrentPage(1);
                 }}
               />
             </div>
           </div>
-
-          {/* ONLY THESE 4 BUTTONS GET NEW CSS */}
 
           <div className="reports-quick-buttons">
             <button
@@ -1211,7 +931,11 @@ function Reports() {
           </div>
         )}
 
-        {/* SUMMARY CARDS */}
+        {validRange && (loadError || !dataReady) && (
+          <div className="reports-date-error">
+            {loadError || "Loading report..."}
+          </div>
+        )}
 
         <div className="reports-summary-grid">
           <div className="reports-summary-card">
@@ -1271,11 +995,7 @@ function Reports() {
           </div>
         </div>
 
-        {/* CHARTS */}
-
         <div className="reports-charts-grid">
-          {/* REVENUE */}
-
           <div className="reports-chart-card">
             <div className="reports-chart-header">
               <div>
@@ -1283,9 +1003,7 @@ function Reports() {
                 <p>{selectedRangeText}</p>
               </div>
 
-              <strong>
-                ${revenueTotal.toFixed(2)}
-              </strong>
+              <strong>${revenueTotal.toFixed(2)}</strong>
             </div>
 
             {revenueByDate.length === 0 ? (
@@ -1327,8 +1045,6 @@ function Reports() {
               </div>
             )}
           </div>
-
-          {/* APPOINTMENTS BY STATUS */}
 
           <div className="reports-chart-card">
             <div className="reports-chart-header">
@@ -1376,8 +1092,6 @@ function Reports() {
           </div>
         </div>
 
-        {/* SUMMARY TABLE */}
-
         <div className="reports-summary-section">
           <div className="reports-summary-header">
             <div>
@@ -1390,27 +1104,21 @@ function Reports() {
 
               <select
                 value={sortBy}
-                onChange={(e) => {
-                  setSortBy(e.target.value);
+                onChange={(event) => {
+                  setSortBy(event.target.value);
                   setCurrentPage(1);
                 }}
               >
-                <option value="default">
-                  Sort By
-                </option>
-
+                <option value="default">Sort By</option>
                 <option value="category-asc">
                   Category A-Z
                 </option>
-
                 <option value="category-desc">
                   Category Z-A
                 </option>
-
                 <option value="total-high">
                   Total: High to Low
                 </option>
-
                 <option value="total-low">
                   Total: Low to High
                 </option>
@@ -1425,7 +1133,6 @@ function Reports() {
                   <th>Category</th>
                   <th>Total</th>
                   <th>Description</th>
-                  {/* NEW */}
                   <th>Print</th>
                 </tr>
               </thead>
@@ -1453,12 +1160,11 @@ function Reports() {
 
                       <td>{report.description}</td>
 
-                      {/* NEW PRINT - NO NEW TABLE CSS */}
-
                       <td>
                         <button
                           type="button"
                           className="reports-print-icon-button"
+                          disabled={!dataReady || !validRange}
                           onClick={() =>
                             handlePrintReport(report)
                           }
@@ -1475,8 +1181,6 @@ function Reports() {
             </table>
           </div>
         </div>
-
-        {/* PAGINATION */}
 
         {!everythingIsZero && (
           <div className="reports-pagination">

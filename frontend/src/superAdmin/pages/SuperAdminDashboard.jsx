@@ -1,5 +1,5 @@
 
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 
 import {
   ResponsiveContainer,
@@ -31,84 +31,6 @@ import SuperAdminSidebar from "../components/SuperAdminSidebar";
    DEMO DATA
 ===================================================== */
 
-const stats = [
-  {
-    title: "Total Users",
-    value: "1,245",
-    growth: "+12%",
-    icon: FaUsers,
-    color: "blue",
-  },
-  {
-    title: "Total Clinics",
-    value: "86",
-    growth: "+8%",
-    icon: FaBuilding,
-    color: "green",
-  },
-  {
-    title: "Active Plans",
-    value: "12",
-    growth: "+20%",
-    icon: FaLayerGroup,
-    color: "orange",
-  },
-  {
-    title: "Active Subscriptions",
-    value: "482",
-    growth: "+15%",
-    icon: FaCreditCard,
-    color: "purple",
-  },
-];
-
-const statuses = [
-  { name: "Active", value: 58, color: "#39aaa5" },
-  { name: "Pending", value: 12, color: "#ffc857" },
-  { name: "Suspended", value: 8, color: "#ff786c" },
-  { name: "Inactive", value: 8, color: "#a5b4be" },
-];
-
-const recentActivity = [
-  {
-    id: 1,
-    name: "Al Zahraa Clinic",
-    action: "New subscription",
-    date: "Oct 9, 2026",
-  },
-  {
-    id: 2,
-    name: "Dr. Sara Ahmed",
-    action: "Admin created",
-    date: "Oct 9, 2026",
-  },
-  {
-    id: 3,
-    name: "Healthy Smile",
-    action: "Plan upgraded",
-    date: "Oct 8, 2026",
-  },
-  {
-    id: 4,
-    name: "Mohammad Ali",
-    action: "User registered",
-    date: "Oct 8, 2026",
-  },
-  {
-    id: 5,
-    name: "Bright Care Clinic",
-    action: "Subscription expired",
-    date: "Oct 7, 2026",
-  },
-];
-
-const plans = [
-  { name: "Basic", subscribers: 180 },
-  { name: "Professional", subscribers: 120 },
-  { name: "Premium", subscribers: 95 },
-  { name: "Enterprise", subscribers: 87 },
-];
-
 const periods = [
   "Today",
   "Yesterday",
@@ -116,83 +38,6 @@ const periods = [
   "Last Year",
   "Last 7 Months",
 ];
-
-const growthSets = {
-  Today: {
-    labels: [
-      "00:00",
-      "04:00",
-      "08:00",
-      "12:00",
-      "16:00",
-      "20:00",
-      "23:00",
-    ],
-    values: [3, 5, 8, 12, 18, 23, 27],
-  },
-
-  Yesterday: {
-    labels: [
-      "00:00",
-      "04:00",
-      "08:00",
-      "12:00",
-      "16:00",
-      "20:00",
-      "23:00",
-    ],
-    values: [2, 4, 7, 11, 15, 19, 22],
-  },
-
-  "Last Month": {
-    labels: ["1", "5", "10", "15", "20", "25", "30"],
-    values: [8, 18, 32, 47, 61, 79, 94],
-  },
-
-  "Last Year": {
-    labels: [
-      "Jan",
-      "Feb",
-      "Mar",
-      "Apr",
-      "May",
-      "Jun",
-      "Jul",
-      "Aug",
-      "Sep",
-      "Oct",
-      "Nov",
-      "Dec",
-    ],
-    values: [
-      45, 55, 75, 102, 132, 150,
-      188, 205, 230, 251, 275, 310,
-    ],
-  },
-
-  "Last 7 Months": {
-    labels: [
-      "Apr",
-      "May",
-      "Jun",
-      "Jul",
-      "Aug",
-      "Sep",
-      "Oct",
-    ],
-    values: [45, 55, 75, 102, 132, 150, 188],
-  },
-};
-
-function getGrowth(period) {
-  const selected =
-    growthSets[period] || growthSets["Last 7 Months"];
-
-  return selected.labels.map((label, index) => ({
-    label,
-    users: selected.values[index],
-  }));
-}
 
 /* =====================================================
    CSV EXPORT
@@ -967,15 +812,109 @@ export default function SuperAdminDashboard() {
 
   const [exportOpen, setExportOpen] = useState(false);
 
-  const growthData = useMemo(
-    () => getGrowth(period),
-    [period]
-  );
 
-  const totalClinics = statuses.reduce(
-    (sum, item) => sum + item.value,
-    0
-  );
+  const [dashboard, setDashboard] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    setLoading(true);
+    setError("");
+    setDashboard(null);
+
+    const load = async () => {
+      try {
+        const response = await fetch(
+          `/api/super-admin/dashboard?period=${encodeURIComponent(period)}`,
+          {
+            credentials: "include",
+            cache: "no-store",
+            signal: controller.signal,
+            headers: { Accept: "application/json" },
+          }
+        );
+
+        const data = await response.json().catch(() => null);
+
+        if (!response.ok) {
+          throw new Error(
+            data?.message ||
+            (response.status === 401
+              ? "Please sign in again."
+              : response.status === 403
+                ? "Only a Super Admin can view this dashboard."
+                : "Unable to load dashboard data.")
+          );
+        }
+
+        if (
+          !data?.summary ||
+          ![
+            data.growth,
+            data.statuses,
+            data.plans,
+            data.recentActivity,
+          ].every(Array.isArray)
+        ) {
+          throw new Error("Invalid dashboard data returned by server.");
+        }
+
+        if (!controller.signal.aborted) {
+          setDashboard(data);
+        }
+      } catch (error) {
+        if (!controller.signal.aborted) {
+          setError(error.message);
+        }
+      } finally {
+        if (!controller.signal.aborted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    load();
+
+    return () => controller.abort();
+  }, [period, refreshKey]);
+
+  const summary = dashboard?.summary;
+
+  const stats = [
+    {
+      title: "Total Users",
+      value: summary?.totalUsers ?? "—",
+      icon: FaUsers,
+      color: "blue",
+    },
+    {
+      title: "Total Clinics",
+      value: summary?.totalClinics ?? "—",
+      icon: FaBuilding,
+      color: "green",
+    },
+    {
+      title: "Active Plans",
+      value: summary?.activePlans ?? "—",
+      icon: FaLayerGroup,
+      color: "orange",
+    },
+    {
+      title: "Active Subscriptions",
+      value: summary?.activeSubscriptions ?? "—",
+      icon: FaCreditCard,
+      color: "purple",
+    },
+  ];
+
+  const growthData = dashboard?.growth ?? [];
+  const statuses = dashboard?.statuses ?? [];
+  const plans = dashboard?.plans ?? [];
+  const recentActivity = dashboard?.recentActivity ?? [];
+  const totalClinics = summary?.totalClinics ?? "—";
 
   const handleSidebarToggle = () => {
     setCollapsed((previous) => {
@@ -994,14 +933,19 @@ export default function SuperAdminDashboard() {
     {
       label: "Overview CSV",
       filename: "dashboard-overview.csv",
-      rows: stats.map(({ title, value, growth }) => ({
-        Metric: title,
-        Value: value,
-        Growth: growth,
-      })),
+      rows: [
+        ...stats.map(({ title, value }) => ({
+          Metric: title,
+          Value: value,
+        })),
+        {
+          Metric: "Total Collected (USD)",
+          Value: summary?.totalCollected ?? "",
+        },
+      ],
     },
     {
-      label: "User Growth CSV",
+      label: "User Registrations CSV",
       filename: "user-growth.csv",
       rows: growthData,
     },
@@ -1085,6 +1029,7 @@ export default function SuperAdminDashboard() {
                 <button
                   type="button"
                   className="clinic-dashboard-export-button"
+                  disabled={loading || !dashboard}
                   onClick={() =>
                     setExportOpen((previous) => !previous)
                   }
@@ -1126,12 +1071,39 @@ export default function SuperAdminDashboard() {
                 SMALLER KPI CARDS
             ======================================== */}
 
+            {loading && (
+              <p role="status">Loading dashboard...</p>
+            )}
+
+            {error && (
+              <div role="alert" style={{ color: "#bb4d4d" }}>
+                <p>{error}</p>
+                <button
+                  type="button"
+                  className="clinic-dashboard-control"
+                  onClick={() => setRefreshKey((key) => key + 1)}
+                >
+                  Retry
+                </button>
+              </div>
+            )}
+
+            {!loading && !error && (
+              <button
+                type="button"
+                className="clinic-dashboard-control"
+                style={{ alignSelf: "flex-end" }}
+                onClick={() => setRefreshKey((key) => key + 1)}
+              >
+                Refresh data
+              </button>
+            )}
+
             <section className="clinic-dashboard-stats">
               {stats.map(
                 ({
                   title,
                   value,
-                  growth,
                   icon: Icon,
                   color,
                 }) => (
@@ -1152,7 +1124,11 @@ export default function SuperAdminDashboard() {
                     </h2>
 
                     <div className="clinic-dashboard-stat-growth">
-                      <strong>↑ {growth}</strong> vs last month
+                      {loading
+                        ? "Loading..."
+                        : error
+                          ? "Unavailable"
+                          : "Current total"}
                     </div>
                   </article>
                 )
@@ -1170,12 +1146,12 @@ export default function SuperAdminDashboard() {
 
               <article className="clinic-dashboard-panel">
                 <div className="clinic-dashboard-panel-heading">
-                  <h2>User Growth</h2>
+                  <h2>New User Registrations</h2>
 
                   <select
                     className="clinic-dashboard-control"
                     value={period}
-                    aria-label="Select user growth period"
+                    aria-label="Select user registration period"
                     onChange={(event) =>
                       setPeriod(event.target.value)
                     }
@@ -1263,7 +1239,7 @@ export default function SuperAdminDashboard() {
                       <Area
                         type="monotone"
                         dataKey="users"
-                        name="Users"
+                        name="Registrations"
                         stroke="#39aaa5"
                         strokeWidth={3}
                         fill="url(#clinicGrowthGradient)"
@@ -1375,6 +1351,12 @@ export default function SuperAdminDashboard() {
                   </thead>
 
                   <tbody>
+                    {!loading && !error && recentActivity.length === 0 && (
+                      <tr>
+                        <td colSpan={3}>No activity recorded yet.</td>
+                      </tr>
+                    )}
+
                     {recentActivity.map((item) => (
                       <tr key={item.id}>
                         <td data-label="Name">

@@ -1,7 +1,8 @@
-
 import { useEffect, useState } from "react";
+import { useOutletContext } from "react-router-dom";
 
 import StoreHeader from "./StoreHeader";
+import { getPublicStoreSettings } from "../api/storeSettingsApi";
 
 import {
   FaEnvelope,
@@ -15,18 +16,43 @@ import {
   FaPaperPlane,
 } from "react-icons/fa6";
 
-const STORE_SETTINGS_KEY = "storeSettings";
-
-const loadStoreSettings = () => {
-  try {
-    const saved = localStorage.getItem(STORE_SETTINGS_KEY);
-    const parsed = saved ? JSON.parse(saved) : {};
-    return parsed && typeof parsed === "object" ? parsed : {};
-  } catch (error) {
-    console.error("Could not load store settings:", error);
-    return {};
-  }
+const DEFAULT_COLORS = {
+  primaryColor: "#199a96",
+  secondaryColor: "#117b78",
+  lightColor: "#eaf8f7",
+  borderColor: "#dcebea",
 };
+
+function normalizeSettings(data = {}) {
+  const colors = { ...DEFAULT_COLORS };
+
+  Object.keys(colors).forEach((key) => {
+    const value = data?.storeColors?.[key];
+
+    if (
+      typeof value === "string" &&
+      /^#[0-9a-fA-F]{6}$/.test(value)
+    ) {
+      colors[key] = value;
+    }
+  });
+
+  const text = (key) =>
+    typeof data?.[key] === "string" ? data[key] : "";
+
+  return {
+    contactDescription: text("contactDescription"),
+    contactEmail: text("contactEmail"),
+    email: text("email"),
+    contactAddress: text("contactAddress"),
+    address: text("address"),
+    socialWhatsapp: text("socialWhatsapp"),
+    instagram: text("instagram"),
+    facebook: text("facebook"),
+    tiktok: text("tiktok"),
+    storeColors: colors,
+  };
+}
 
 const firstFilled = (...values) =>
   values.find(
@@ -87,7 +113,19 @@ const mapsUrl = (address) => {
 };
 
 function Contact() {
-  const [settings, setSettings] = useState(loadStoreSettings);
+  const { clinicId } = useOutletContext();
+
+  const [settingsState, setSettingsState] = useState(() => ({
+    clinicId: String(clinicId),
+    data: normalizeSettings(),
+  }));
+
+  const [settingsError, setSettingsError] = useState("");
+
+  const settings =
+    settingsState.clinicId === String(clinicId)
+      ? settingsState.data
+      : normalizeSettings();
 
   const [formData, setFormData] = useState({
     fullName: "",
@@ -101,42 +139,99 @@ function Contact() {
   const [messageSent, setMessageSent] = useState(false);
 
   useEffect(() => {
-    const refreshSettings = () => {
-      setSettings(loadStoreSettings());
+    let controller = null;
+    let disposed = false;
+
+    setSettingsState({
+      clinicId: String(clinicId),
+      data: normalizeSettings(),
+    });
+    setSettingsError("");
+
+    const loadSettings = async () => {
+      controller?.abort();
+
+      const currentController = new AbortController();
+      controller = currentController;
+
+      try {
+        const result = await getPublicStoreSettings(
+          clinicId,
+          { signal: currentController.signal }
+        );
+
+        if (
+          disposed ||
+          currentController.signal.aborted
+        ) {
+          return;
+        }
+
+        setSettingsState({
+          clinicId: String(clinicId),
+          data: normalizeSettings(result),
+        });
+        setSettingsError("");
+      } catch (exception) {
+        if (
+          disposed ||
+          currentController.signal.aborted
+        ) {
+          return;
+        }
+
+        setSettingsError(
+          exception.message ||
+            "Unable to load contact information."
+        );
+      }
     };
 
-    refreshSettings();
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") {
+        loadSettings();
+      }
+    };
+
+    loadSettings();
 
     window.addEventListener(
       "storeSettingsUpdated",
-      refreshSettings
+      loadSettings
+    );
+    window.addEventListener(
+      "clinic-branding-updated",
+      loadSettings
+    );
+    window.addEventListener("focus", loadSettings);
+
+    document.addEventListener(
+      "visibilitychange",
+      handleVisibility
     );
 
-    window.addEventListener("storage", refreshSettings);
-
-    window.addEventListener("focus", refreshSettings);
-
     return () => {
+      disposed = true;
+      controller?.abort();
+
       window.removeEventListener(
         "storeSettingsUpdated",
-        refreshSettings
+        loadSettings
       );
-
       window.removeEventListener(
-        "storage",
-        refreshSettings
+        "clinic-branding-updated",
+        loadSettings
       );
+      window.removeEventListener("focus", loadSettings);
 
-      window.removeEventListener("focus", refreshSettings);
+      document.removeEventListener(
+        "visibilitychange",
+        handleVisibility
+      );
     };
-  }, []);
+  }, [clinicId]);
 
-  // SAME KEYS USED BY ADMIN SETTINGS
-
-  const contactTitle = firstFilled(
-    settings.contactTitle,
-    "Contact Us"
-  );
+  const contactTitle = "Contact Us";
 
   const contactDescription = firstFilled(
     settings.contactDescription,
@@ -145,28 +240,15 @@ function Contact() {
 
   const email = firstFilled(
     settings.contactEmail,
-    settings.email,
-    settings.storeEmail
-  );
-
-  const phone = firstFilled(
-    settings.contactPhone,
-    settings.phone,
-    settings.storePhone
+    settings.email
   );
 
   const address = firstFilled(
     settings.contactAddress,
-    settings.location,
-    settings.storeLocation,
     settings.address
   );
 
-  const whatsapp = firstFilled(
-    settings.socialWhatsapp,
-    settings.whatsapp
-  );
-
+  const whatsapp = firstFilled(settings.socialWhatsapp);
   const instagram = firstFilled(settings.instagram);
   const facebook = firstFilled(settings.facebook);
   const tiktok = firstFilled(settings.tiktok);
@@ -211,9 +293,7 @@ function Contact() {
   const handleSubmit = (event) => {
     event.preventDefault();
 
-    // The existing form is frontend-only.
-    // A backend/API is needed to actually deliver messages.
-
+    // Message delivery is not connected to an API yet.
     setMessageSent(true);
 
     setFormData({
@@ -226,29 +306,18 @@ function Contact() {
     });
   };
 
-  // DYNAMIC COLORS FROM ADMIN SETTINGS
-  // Only colors are changed; layout and functionality stay the same.
-
-  const storeColors = settings.storeColors || {};
+  const storeColors = settings.storeColors;
 
   const contactColors = {
-    "--contact-primary":
-      storeColors.primaryColor || "#199a96",
-
-    "--contact-secondary":
-      storeColors.secondaryColor || "#117b78",
-
-    "--contact-light":
-      storeColors.lightColor || "#eaf8f7",
-
-    "--contact-border":
-      storeColors.borderColor || "#dcebea",
-  };
-
-  return (
+    "--contact-primary": storeColors.primaryColor,
+    "--contact-secondary": storeColors.secondaryColor,
+    "--contact-light": storeColors.lightColor,
+    "--contact-border": storeColors.borderColor,
+  };  return (
     <div className="contact-page" style={contactColors}>
       <style>{`
-        * {
+        .contact-page,
+        .contact-page * {
           box-sizing: border-box;
         }
 
@@ -257,8 +326,6 @@ function Contact() {
           background: #ffffff;
           color: #263b3a;
         }
-
-        /* TOP SECTION */
 
         .contact-top {
           padding: 32px 24px 28px;
@@ -302,16 +369,12 @@ function Contact() {
           white-space: pre-line;
         }
 
-        /* MAIN */
-
         .contact-main {
           width: 100%;
           max-width: 1180px;
           margin: 0 auto;
           padding: 35px 25px 65px;
         }
-
-        /* CONTACT INFORMATION */
 
         .contact-info-box {
           display: grid;
@@ -320,7 +383,7 @@ function Contact() {
           border-radius: 16px;
           background: #ffffff;
           overflow: hidden;
-          box-shadow: 0 10px 30px rgba(31, 76, 73, 0.05);
+          box-shadow: 0 10px 30px rgba(31,76,73,.05);
         }
 
         .contact-info-item {
@@ -384,7 +447,7 @@ function Contact() {
           font-size: 10px;
           font-weight: 800;
           text-decoration: none;
-          transition: 0.2s ease;
+          transition: .2s ease;
         }
 
         .contact-info-link:hover {
@@ -400,8 +463,6 @@ function Contact() {
           color: #9cacab !important;
           font-style: italic;
         }
-
-        /* SOCIAL MEDIA */
 
         .contact-social-icons {
           display: flex;
@@ -422,7 +483,7 @@ function Contact() {
           justify-content: center;
           font-size: 12px;
           text-decoration: none;
-          transition: 0.2s ease;
+          transition: .2s ease;
         }
 
         .contact-social-icon:hover {
@@ -432,16 +493,11 @@ function Contact() {
           transform: translateY(-2px);
         }
 
-        /* PART 2 CONTINUES HERE */
-
-
-        /* CONTACT FORM SECTION */
-
         .contact-form-section {
           margin-top: 35px;
           display: grid;
           grid-template-columns:
-            minmax(240px, 0.7fr)
+            minmax(240px, .7fr)
             minmax(0, 1.3fr);
           gap: 42px;
           padding: 34px;
@@ -452,7 +508,7 @@ function Contact() {
             var(--contact-light),
             #ffffff
           );
-          box-shadow: 0 10px 30px rgba(32, 76, 73, 0.04);
+          box-shadow: 0 10px 30px rgba(32,76,73,.04);
         }
 
         .contact-form-intro {
@@ -510,8 +566,6 @@ function Contact() {
           line-height: 1.6;
         }
 
-        /* FORM */
-
         .contact-form {
           width: 100%;
         }
@@ -551,8 +605,8 @@ function Contact() {
           font-family: inherit;
           font-size: 11px;
           transition:
-            border-color 0.2s ease,
-            box-shadow 0.2s ease;
+            border-color .2s ease,
+            box-shadow .2s ease;
         }
 
         .contact-form-field input,
@@ -602,8 +656,8 @@ function Contact() {
           font-weight: 800;
           cursor: pointer;
           transition:
-            background 0.2s ease,
-            transform 0.2s ease;
+            background .2s ease,
+            transform .2s ease;
         }
 
         .contact-send-button:hover {
@@ -622,7 +676,16 @@ function Contact() {
           font-weight: 650;
         }
 
-        /* RESPONSIVE */
+        .contact-settings-error {
+          margin-bottom: 20px;
+          padding: 12px 15px;
+          border: 1px solid #f0cccc;
+          border-radius: 10px;
+          background: #fff1f0;
+          color: #b42318;
+          font-size: 12px;
+          line-height: 1.6;
+        }
 
         @media (max-width: 1000px) {
           .contact-info-box {
@@ -697,7 +760,6 @@ function Contact() {
 
       <StoreHeader />
 
-      {/* CONTACT PAGE HEADER */}
       <section className="contact-top">
         <div className="contact-top-badge">
           <FaPaw />
@@ -709,9 +771,16 @@ function Contact() {
       </section>
 
       <main className="contact-main">
-        {/* CONTACT INFORMATION CARDS */}
+        {settingsError && (
+          <div
+            className="contact-settings-error"
+            role="alert"
+          >
+            {settingsError}
+          </div>
+        )}
+
         <section className="contact-info-box">
-          {/* WHATSAPP */}
           <div className="contact-info-item">
             <div className="contact-info-icon">
               <FaWhatsapp />
@@ -745,7 +814,6 @@ function Contact() {
             </div>
           </div>
 
-          {/* EMAIL */}
           <div className="contact-info-item">
             <div className="contact-info-icon">
               <FaEnvelope />
@@ -777,7 +845,6 @@ function Contact() {
             </div>
           </div>
 
-          {/* LOCATION */}
           <div className="contact-info-item">
             <div className="contact-info-icon">
               <FaLocationDot />
@@ -785,6 +852,7 @@ function Contact() {
 
             <div className="contact-info-content">
               <h3>Find Our Clinic</h3>
+
               <p>
                 Visit our clinic or find us on Google Maps.
               </p>
@@ -813,7 +881,6 @@ function Contact() {
             </div>
           </div>
 
-          {/* SOCIAL MEDIA */}
           <div className="contact-info-item">
             <div className="contact-info-icon">
               <FaPaw />
@@ -850,7 +917,6 @@ function Contact() {
           </div>
         </section>
 
-        {/* SEND MESSAGE SECTION */}
         <section className="contact-form-section">
           <div className="contact-form-intro">
             <span className="contact-form-intro-badge">
@@ -961,27 +1027,21 @@ function Contact() {
                 <option value="">
                   Select a reason
                 </option>
-
                 <option value="General Inquiry">
                   General Inquiry
                 </option>
-
                 <option value="Appointment">
                   Appointment
                 </option>
-
                 <option value="Pet Health">
                   Pet Health
                 </option>
-
                 <option value="Products">
                   Products
                 </option>
-
                 <option value="Orders">
                   Orders
                 </option>
-
                 <option value="Other">
                   Other
                 </option>

@@ -1,12 +1,21 @@
 import { useEffect, useState } from "react";
 import {
+  Link,
+  useOutletContext,
+  useParams,
+} from "react-router-dom";
+
+import {
   FaPhoneAlt,
   FaEnvelope,
   FaWhatsapp,
   FaInstagram,
   FaMapMarkerAlt,
 } from "react-icons/fa";
+
 import { FaTiktok } from "react-icons/fa6";
+import { getPublicStoreSettings } from "../api/storeSettingsApi";
+
 import "../components/Footer.css";
 
 const DEFAULT_FOOTER_COLOR = "#11797b";
@@ -17,61 +26,54 @@ const getFooterPhoneNumbers = (settings) => {
     : [];
 
   const validNumbers = numbers
-    .map((number) => String(number ?? "").trim())
+    .filter((number) => typeof number === "string")
+    .map((number) => number.trim())
     .filter(Boolean);
 
   if (validNumbers.length > 0) {
-    return validNumbers;
+    return [...new Set(validNumbers)];
   }
 
-  const oldPhone = String(settings?.phone ?? "").trim();
-  return oldPhone ? [oldPhone] : [];
+  const phone =
+    typeof settings?.phone === "string"
+      ? settings.phone.trim()
+      : "";
+
+  return phone ? [phone] : [];
 };
 
-const readFooterSettings = () => {
-  try {
-    const parsed = JSON.parse(
-      localStorage.getItem("storeSettings") || "{}"
-    );
+const normalizeFooterSettings = (settings = {}) => {
+  const text = (key) =>
+    typeof settings?.[key] === "string"
+      ? settings[key].trim()
+      : "";
 
-    const settings =
-      parsed && typeof parsed === "object" ? parsed : {};
+  const color = (key, fallback) => {
+    const value = settings?.storeColors?.[key];
 
-    return {
-      storeName: settings.storeName || "",
-      storeDescription: settings.storeDescription || "",
-      email: settings.email || "",
-      phone: settings.phone || "",
-      phoneNumbers: getFooterPhoneNumbers(settings),
-      whatsapp: settings.whatsapp || "",
-      address: settings.address || "",
-      instagram: settings.instagram || "",
-      tiktok: settings.tiktok || "",
-      storeBanner: settings.storeBanner || null,
-      backgroundColor:
-        settings.storeColors?.backgroundColor || "#ffffff",
-      footerColor:
-        settings.storeColors?.footerColor ||
-        DEFAULT_FOOTER_COLOR,
-    };
-  } catch (error) {
-    console.error("Could not load store settings:", error);
+    return typeof value === "string" &&
+      /^#[0-9a-fA-F]{6}$/.test(value)
+      ? value
+      : fallback;
+  };
 
-    return {
-      storeName: "",
-      storeDescription: "",
-      email: "",
-      phone: "",
-      phoneNumbers: [],
-      whatsapp: "",
-      address: "",
-      instagram: "",
-      tiktok: "",
-      storeBanner: null,
-      backgroundColor: "#ffffff",
-      footerColor: DEFAULT_FOOTER_COLOR,
-    };
-  }
+  return {
+    storeName: text("storeName"),
+    storeDescription: text("storeDescription"),
+    email: text("email"),
+    phone: text("phone"),
+    phoneNumbers: getFooterPhoneNumbers(settings),
+    whatsapp: text("socialWhatsapp"),
+    address: text("address"),
+    instagram: text("instagram"),
+    tiktok: text("tiktok"),
+    storeBanner: text("storeBanner"),
+    backgroundColor: color("backgroundColor", "#ffffff"),
+    footerColor: color(
+      "footerColor",
+      DEFAULT_FOOTER_COLOR
+    ),
+  };
 };
 
 const getReadableFooterText = (hex) => {
@@ -98,14 +100,115 @@ const getReadableFooterText = (hex) => {
   return luminance > 0.179 ? "#172b2b" : "#ffffff";
 };
 
+const getSocialLink = (value, platform) => {
+  const input = String(value || "").trim();
+
+  if (!input) return "";
+
+  if (/^https?:\/\//i.test(input)) {
+    return input;
+  }
+
+  const username = input.replace(/^@/, "");
+
+  if (platform === "instagram") {
+    return `https://instagram.com/${username}`;
+  }
+
+  if (platform === "tiktok") {
+    return `https://tiktok.com/@${username}`;
+  }
+
+  return "";
+};
+
+const getWhatsAppLink = (value) => {
+  const input = String(value || "").trim();
+
+  if (!input) return "";
+
+  if (/^https?:\/\//i.test(input)) {
+    return input;
+  }
+
+  const cleanNumber = input.replace(/\D/g, "");
+
+  return cleanNumber
+    ? `https://wa.me/${cleanNumber}`
+    : "";
+};
+
 function Footer() {
-  const [storeSettings, setStoreSettings] = useState(
-    readFooterSettings
+  const context = useOutletContext();
+  const params = useParams();
+
+  const clinicId = Number(
+    context?.clinicId ?? params.clinicId
   );
 
+  const validClinicId =
+    Number.isInteger(clinicId) &&
+    clinicId > 0 &&
+    clinicId <= 2147483647;
+
+  const storeBasePath = validClinicId
+    ? `/store/${clinicId}`
+    : "";
+
+  const [settingsState, setSettingsState] = useState(() => ({
+    clinicId: String(clinicId),
+    data: normalizeFooterSettings(),
+  }));
+
+  const storeSettings =
+    settingsState.clinicId === String(clinicId)
+      ? settingsState.data
+      : normalizeFooterSettings();
+
   useEffect(() => {
-    const loadSettings = () => {
-      setStoreSettings(readFooterSettings());
+    let controller = null;
+    let disposed = false;
+
+    setSettingsState({
+      clinicId: String(clinicId),
+      data: normalizeFooterSettings(),
+    });
+
+    if (!validClinicId) return;
+
+    const loadSettings = async () => {
+      controller?.abort();
+
+      const currentController = new AbortController();
+      controller = currentController;
+
+      try {
+        const result = await getPublicStoreSettings(
+          clinicId,
+          { signal: currentController.signal }
+        );
+
+        if (
+          disposed ||
+          currentController.signal.aborted
+        ) {
+          return;
+        }
+
+        setSettingsState({
+          clinicId: String(clinicId),
+          data: normalizeFooterSettings(result),
+        });
+      } catch {
+        // Keep this clinic's last successfully loaded settings.
+        // Never use another clinic's cached branding.
+      }
+    };
+
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") {
+        loadSettings();
+      }
     };
 
     loadSettings();
@@ -114,54 +217,48 @@ function Footer() {
       "storeSettingsUpdated",
       loadSettings
     );
-    window.addEventListener("storage", loadSettings);
+    window.addEventListener(
+      "clinic-branding-updated",
+      loadSettings
+    );
+    window.addEventListener("focus", loadSettings);
+
+    document.addEventListener(
+      "visibilitychange",
+      handleVisibility
+    );
 
     return () => {
+      disposed = true;
+      controller?.abort();
+
       window.removeEventListener(
         "storeSettingsUpdated",
         loadSettings
       );
-      window.removeEventListener("storage", loadSettings);
+      window.removeEventListener(
+        "clinic-branding-updated",
+        loadSettings
+      );
+      window.removeEventListener("focus", loadSettings);
+
+      document.removeEventListener(
+        "visibilitychange",
+        handleVisibility
+      );
     };
-  }, []);
-
-  const getSocialLink = (value, platform) => {
-    if (!value) return "#";
-
-    if (
-      value.startsWith("http://") ||
-      value.startsWith("https://")
-    ) {
-      return value;
-    }
-
-    const username = value.replace("@", "").trim();
-
-    if (platform === "instagram") {
-      return `https://instagram.com/${username}`;
-    }
-
-    if (platform === "tiktok") {
-      return `https://tiktok.com/@${username}`;
-    }
-
-    return "#";
-  };
-
-  const getWhatsAppLink = (number) => {
-    if (!number) return "#";
-
-    const cleanNumber = number.replace(/\D/g, "");
-    return `https://wa.me/${cleanNumber}`;
-  };
+  }, [clinicId, validClinicId]);
 
   const currentYear = new Date().getFullYear();
-  const phoneNumbers = getFooterPhoneNumbers(storeSettings);
+
+  const phoneNumbers =
+    getFooterPhoneNumbers(storeSettings);
 
   const footerColor =
     storeSettings.footerColor || DEFAULT_FOOTER_COLOR;
 
-  const footerTextColor = getReadableFooterText(footerColor);
+  const footerTextColor =
+    getReadableFooterText(footerColor);
 
   const footerMutedColor =
     footerTextColor === "#ffffff"
@@ -177,24 +274,37 @@ function Footer() {
       storeSettings.backgroundColor || "#ffffff",
   };
 
-  return (
+  const whatsappLink =
+    getWhatsAppLink(storeSettings.whatsapp);
+
+  const instagramLink = getSocialLink(
+    storeSettings.instagram,
+    "instagram"
+  );
+
+  const tiktokLink = getSocialLink(
+    storeSettings.tiktok,
+    "tiktok"
+  );  return (
     <footer className="store-footer" style={footerStyles}>
       <style>{`
         html body #root footer.store-footer {
-          background-color: var(--footer-page-background) !important;
+          background-color:
+            var(--footer-page-background) !important;
         }
 
         html body #root footer.store-footer > .footer-wave,
         html body #root footer.store-footer > .footer-wave > svg {
-          background-color: var(--footer-page-background) !important;
+          background-color:
+            var(--footer-page-background) !important;
         }
       `}</style>
 
-      {/* CURVED TOP */}
       <div className="footer-wave">
         <svg
           viewBox="0 0 1440 120"
           preserveAspectRatio="none"
+          aria-hidden="true"
         >
           <path
             className="footer-wave-line footer-wave-line-one"
@@ -211,10 +321,10 @@ function Footer() {
             d="M0,92 C300,150 560,40 850,75 C1110,110 1280,140 1440,85 L1440,120 L0,120 Z"
           />
         </svg>
-      </div>      {/* FOOTER CONTENT */}
+      </div>
+
       <div className="footer-main">
         <div className="footer-container">
-          {/* BRAND */}
           <div className="footer-brand">
             {storeSettings.storeBanner && (
               <div className="footer-banner">
@@ -236,16 +346,30 @@ function Footer() {
             )}
           </div>
 
-          {/* EXPLORE */}
           <div className="footer-column">
             <h3>Explore</h3>
-            <a href="/">Home</a>
-            <a href="/products">All Products</a>
-            <a href="/cart">Cart</a>
-            <a href="/contact">Contact</a>
+
+            {validClinicId && (
+              <>
+                <Link to={storeBasePath}>
+                  Home
+                </Link>
+
+                <Link to={`${storeBasePath}/products`}>
+                  All Products
+                </Link>
+
+                <Link to={`${storeBasePath}/cart`}>
+                  Cart
+                </Link>
+
+                <Link to={`${storeBasePath}/contact`}>
+                  Contact
+                </Link>
+              </>
+            )}
           </div>
 
-          {/* CONTACT */}
           <div className="footer-column">
             <h3>Contact</h3>
 
@@ -270,9 +394,9 @@ function Footer() {
               </a>
             )}
 
-            {storeSettings.whatsapp && (
+            {whatsappLink && (
               <a
-                href={getWhatsAppLink(storeSettings.whatsapp)}
+                href={whatsappLink}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="footer-contact-link"
@@ -290,16 +414,12 @@ function Footer() {
             )}
           </div>
 
-          {/* FOLLOW */}
           <div className="footer-column">
             <h3>Follow</h3>
 
-            {storeSettings.instagram && (
+            {instagramLink && (
               <a
-                href={getSocialLink(
-                  storeSettings.instagram,
-                  "instagram"
-                )}
+                href={instagramLink}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="footer-contact-link"
@@ -309,12 +429,9 @@ function Footer() {
               </a>
             )}
 
-            {storeSettings.tiktok && (
+            {tiktokLink && (
               <a
-                href={getSocialLink(
-                  storeSettings.tiktok,
-                  "tiktok"
-                )}
+                href={tiktokLink}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="footer-contact-link"
@@ -327,7 +444,6 @@ function Footer() {
         </div>
       </div>
 
-      {/* BOTTOM BAR */}
       <div className="footer-bottom">
         <div className="footer-bottom-container">
           <p>

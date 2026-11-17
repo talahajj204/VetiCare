@@ -1,7 +1,20 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import {
+  useNavigate,
+  useOutletContext,
+} from "react-router-dom";
+
 import StoreHeader from "./StoreHeader";
-import { FaPaw, FaArrowRight, FaShoppingCart } from "react-icons/fa";
+
+import { getStoreProducts } from "../api/storeProductsApi";
+import { getStoreCategories } from "../api/storeCategoriesApi";
+import { getPublicStoreSettings } from "../api/storeSettingsApi";
+
+import {
+  FaPaw,
+  FaArrowRight,
+  FaShoppingCart,
+} from "react-icons/fa";
 
 const DEFAULT_COLORS = {
   primaryColor: "#1aa6a6",
@@ -15,190 +28,479 @@ const DEFAULT_COLORS = {
   footerColor: "#11797b",
 };
 
-const readSettings = () => {
-  try {
-    return (
-      JSON.parse(localStorage.getItem("storeSettings") || "{}") || {}
-    );
-  } catch {
-    return {};
+function normalizeSettings(data = {}) {
+  const colors = { ...DEFAULT_COLORS };
+
+  Object.keys(colors).forEach((key) => {
+    const value = data?.storeColors?.[key];
+
+    if (
+      typeof value === "string" &&
+      /^#[0-9a-fA-F]{6}$/.test(value)
+    ) {
+      colors[key] = value;
+    }
+  });
+
+  const text = (key) =>
+    typeof data?.[key] === "string" ? data[key] : "";
+
+  return {
+    homeBanner: text("homeBanner"),
+    homeBannerBadge: text("homeBannerBadge"),
+    homeBannerTitle: text("homeBannerTitle"),
+    homeBannerDescription: text("homeBannerDescription"),
+    homeBannerButtonText: text("homeBannerButtonText"),
+    storeColors: colors,
+  };
+}
+
+function readCart(key) {
+  const saved = localStorage.getItem(key);
+
+  if (saved === null) return [];
+
+  const parsed = JSON.parse(saved);
+
+  if (!Array.isArray(parsed)) {
+    throw new Error("Your saved cart could not be read.");
   }
-};
 
-const readCategories = () => {
-  try {
-    const data = JSON.parse(
-      localStorage.getItem("vetClinicCategories") || "[]"
-    );
-
-    if (!Array.isArray(data)) return [];
-
-    return [...data].sort(
-      (a, b) =>
-        Number(a.sortOrder || 0) -
-        Number(b.sortOrder || 0)
-    );
-  } catch {
-    return [];
-  }
-};
-
-const readProducts = () => {
-  try {
-    const data = JSON.parse(
-      localStorage.getItem("vetClinicProducts") || "[]"
-    );
-
-    if (!Array.isArray(data)) return [];
-
-    const visible = data.filter(
-      (product) => product.showOnStore === true
-    );
-
-    const featured = visible.filter(
-      (product) => product.featured === true
-    );
-
-    const other = visible.filter(
-      (product) => product.featured !== true
-    );
-
-    return [...featured, ...other].slice(0, 4);
-  } catch {
-    return [];
-  }
-};
+  return parsed;
+}
 
 function Home() {
   const navigate = useNavigate();
+  const { clinicId, storeBasePath } = useOutletContext();
 
-  const [settings, setSettings] = useState(readSettings);
-  const [categories, setCategories] = useState(readCategories);
-  const [products, setProducts] = useState(readProducts);
+  const cartKey = `vetClinicStoreCart:${clinicId}`;
+  const pendingKey = `vetClinicPendingStoreOrder:${clinicId}`;
+
+  const [settingsState, setSettingsState] = useState(() => ({
+    clinicId: String(clinicId),
+    data: normalizeSettings(),
+  }));
+
+  const settings =
+    settingsState.clinicId === String(clinicId)
+      ? settingsState.data
+      : normalizeSettings();
+
+  const [settingsError, setSettingsError] = useState("");
+
+  const [categories, setCategories] = useState([]);
+  const [products, setProducts] = useState([]);
+
+  const [categoriesLoading, setCategoriesLoading] =
+    useState(true);
+  const [productsLoading, setProductsLoading] =
+    useState(true);
+
+  const [categoriesError, setCategoriesError] =
+    useState("");
+  const [productsError, setProductsError] =
+    useState("");
+  const [cartError, setCartError] = useState("");
+
+  const [cart, setCart] = useState([]);
+  const [pendingCheckout, setPendingCheckout] =
+    useState(false);
 
   useEffect(() => {
-    const refreshSettings = () => setSettings(readSettings());
-    const refreshCategories = () => setCategories(readCategories());
-    const refreshProducts = () => setProducts(readProducts());
+    window.scrollTo(0, 0);
 
-    const refreshAll = () => {
-      refreshSettings();
-      refreshCategories();
-      refreshProducts();
+    let controller = null;
+    let disposed = false;
+
+    setSettingsState({
+      clinicId: String(clinicId),
+      data: normalizeSettings(),
+    });
+    setSettingsError("");
+
+    const loadSettings = async () => {
+      controller?.abort();
+
+      const currentController = new AbortController();
+      controller = currentController;
+
+      try {
+        const result = await getPublicStoreSettings(
+          clinicId,
+          { signal: currentController.signal }
+        );
+
+        if (
+          disposed ||
+          currentController.signal.aborted
+        ) {
+          return;
+        }
+
+        setSettingsState({
+          clinicId: String(clinicId),
+          data: normalizeSettings(result),
+        });
+        setSettingsError("");
+      } catch (exception) {
+        if (
+          disposed ||
+          currentController.signal.aborted
+        ) {
+          return;
+        }
+
+        setSettingsError(
+          exception.message ||
+            "Unable to load store settings."
+        );
+      }
     };
+
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") {
+        loadSettings();
+      }
+    };
+
+    loadSettings();
 
     window.addEventListener(
       "storeSettingsUpdated",
-      refreshSettings
+      loadSettings
     );
+    window.addEventListener(
+      "clinic-branding-updated",
+      loadSettings
+    );
+    window.addEventListener("focus", loadSettings);
+
+    document.addEventListener(
+      "visibilitychange",
+      handleVisibility
+    );
+
+    return () => {
+      disposed = true;
+      controller?.abort();
+
+      window.removeEventListener(
+        "storeSettingsUpdated",
+        loadSettings
+      );
+      window.removeEventListener(
+        "clinic-branding-updated",
+        loadSettings
+      );
+      window.removeEventListener("focus", loadSettings);
+
+      document.removeEventListener(
+        "visibilitychange",
+        handleVisibility
+      );
+    };
+  }, [clinicId]);
+
+  useEffect(() => {
+    let controller = null;
+    let disposed = false;
+
+    const loadStore = async () => {
+      controller?.abort();
+
+      const currentController = new AbortController();
+      controller = currentController;
+
+      setCategoriesLoading(true);
+      setProductsLoading(true);
+
+      const [categoryResult, productResult] =
+        await Promise.allSettled([
+          getStoreCategories(clinicId, {
+            signal: currentController.signal,
+          }),
+          getStoreProducts(clinicId, {
+            signal: currentController.signal,
+          }),
+        ]);
+
+      if (
+        disposed ||
+        currentController.signal.aborted
+      ) {
+        return;
+      }
+
+      if (categoryResult.status === "fulfilled") {
+        setCategories(categoryResult.value);
+        setCategoriesError("");
+      } else {
+        setCategoriesError(
+          categoryResult.reason?.message ||
+            "Unable to load categories."
+        );
+      }
+
+      if (productResult.status === "fulfilled") {
+        const visible = productResult.value.filter(
+          (product) =>
+            product &&
+            Number(product.clinicId) === Number(clinicId) &&
+            product.showOnStore === true
+        );
+
+        const featured = visible.filter(
+          (product) => product.featured === true
+        );
+
+        const other = visible.filter(
+          (product) => product.featured !== true
+        );
+
+        setProducts(
+          [...featured, ...other].slice(0, 4)
+        );
+        setProductsError("");
+      } else {
+        setProductsError(
+          productResult.reason?.message ||
+            "Unable to load products."
+        );
+      }
+
+      setCategoriesLoading(false);
+      setProductsLoading(false);
+    };
+
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") {
+        loadStore();
+      }
+    };
+
+    setCategories([]);
+    setProducts([]);
+    setCategoriesError("");
+    setProductsError("");
+
+    loadStore();
 
     window.addEventListener(
       "vetClinicCategoriesUpdated",
-      refreshCategories
+      loadStore
     );
-
     window.addEventListener(
       "vetClinicProductsUpdated",
-      refreshProducts
+      loadStore
+    );
+    window.addEventListener("productsUpdated", loadStore);
+    window.addEventListener("focus", loadStore);
+
+    document.addEventListener(
+      "visibilitychange",
+      handleVisibility
     );
 
-    window.addEventListener("storage", refreshAll);
-
     return () => {
-      window.removeEventListener(
-        "storeSettingsUpdated",
-        refreshSettings
-      );
+      disposed = true;
+      controller?.abort();
 
       window.removeEventListener(
         "vetClinicCategoriesUpdated",
-        refreshCategories
+        loadStore
       );
-
       window.removeEventListener(
         "vetClinicProductsUpdated",
-        refreshProducts
+        loadStore
       );
+      window.removeEventListener(
+        "productsUpdated",
+        loadStore
+      );
+      window.removeEventListener("focus", loadStore);
 
-      window.removeEventListener("storage", refreshAll);
+      document.removeEventListener(
+        "visibilitychange",
+        handleVisibility
+      );
     };
-  }, []);
+  }, [clinicId]);
 
-  const goToProducts = () => navigate("/products");
+  useEffect(() => {
+    const refreshCart = () => {
+      try {
+        setCart(readCart(cartKey));
+        setPendingCheckout(
+          localStorage.getItem(pendingKey) !== null
+        );
+      } catch (exception) {
+        setCartError(
+          exception.message || "Could not read your cart."
+        );
+      }
+    };
+
+    const handleStorage = (event) => {
+      if (
+        event.key === null ||
+        event.key === cartKey ||
+        event.key === pendingKey
+      ) {
+        refreshCart();
+      }
+    };
+
+    setCartError("");
+    refreshCart();
+
+    window.addEventListener("cartUpdated", refreshCart);
+    window.addEventListener("storage", handleStorage);
+
+    return () => {
+      window.removeEventListener("cartUpdated", refreshCart);
+      window.removeEventListener("storage", handleStorage);
+    };
+  }, [cartKey, pendingKey]);
+
+  const goToProducts = () => {
+    navigate(`${storeBasePath}/products`);
+  };
 
   const goToCategory = (title) => {
     navigate(
-      `/products?category=${encodeURIComponent(title)}`
+      `${storeBasePath}/products?category=${encodeURIComponent(
+        title
+      )}`
     );
   };
 
   const goToProduct = (product) => {
-    navigate(`/products/${product.id}`);
+    navigate(`${storeBasePath}/products/${product.id}`);
+  };
+
+  const getProductStock = (product) => {
+    const quantity = Number(product.quantity);
+
+    return Number.isSafeInteger(quantity) && quantity >= 0
+      ? quantity
+      : 0;
+  };
+
+  const getProductPrice = (product) => {
+    const price = Number(product.sellingPrice);
+
+    return Number.isFinite(price) && price >= 0
+      ? price
+      : 0;
+  };
+
+  const getCartQuantity = (productId) => {
+    const item = cart.find(
+      (entry) => String(entry.id) === String(productId)
+    );
+
+    return Number(item?.quantity) || 0;
   };
 
   const addToCart = (product) => {
+    setCartError("");
+
+    const productId = Number(product.id);
+    const stock = getProductStock(product);
+    const price = Number(product.sellingPrice);
+
+    if (
+      Number(product.clinicId) !== Number(clinicId) ||
+      product.showOnStore !== true ||
+      !Number.isSafeInteger(productId) ||
+      productId <= 0 ||
+      productId > 2147483647 ||
+      !Number.isFinite(price) ||
+      price < 0 ||
+      stock <= 0
+    ) {
+      setCartError("This product is currently unavailable.");
+      return;
+    }
+
     try {
-      const stored = JSON.parse(
-        localStorage.getItem("vetClinicStoreCart") || "[]"
-      );
-
-      const cart = Array.isArray(stored)
-        ? [...stored]
-        : [];
-
-      const existing = cart.find(
-        (item) =>
-          String(item.id) === String(product.id)
-      );
-
-      if (existing) {
-        existing.quantity =
-          Number(existing.quantity || 0) + 1;
-      } else {
-        cart.push({
-          id: product.id,
-          name: product.name,
-          image: product.image || "",
-          price: Number(product.sellingPrice || 0),
-          quantity: 1,
-        });
+      if (localStorage.getItem(pendingKey) !== null) {
+        setPendingCheckout(true);
+        setCartError(
+          "Please return to your cart and confirm your previous order first."
+        );
+        return;
       }
 
-      localStorage.setItem(
-        "vetClinicStoreCart",
-        JSON.stringify(cart)
+      const currentCart = readCart(cartKey);
+
+      const existing = currentCart.find(
+        (item) => String(item.id) === String(productId)
       );
 
+      const quantity = existing
+        ? Number(existing.quantity)
+        : 0;
+
+      if (
+        !Number.isSafeInteger(quantity) ||
+        quantity < 0
+      ) {
+        setCartError(
+          "This item's saved quantity is invalid. Remove it from your cart and try again."
+        );
+        return;
+      }
+
+      if (quantity >= stock) {
+        setCart(currentCart);
+        setCartError(
+          "You already have the available quantity in your cart."
+        );
+        return;
+      }
+
+      const cartProduct = {
+        id: productId,
+        clinicId: Number(clinicId),
+        name: product.name,
+        category: product.category || "Uncategorized",
+        image: product.image || "",
+        price,
+        stock,
+        quantity: quantity + 1,
+      };
+
+      const updatedCart = existing
+        ? currentCart.map((item) =>
+            String(item.id) === String(productId)
+              ? cartProduct
+              : item
+          )
+        : [...currentCart, cartProduct];
+
+      localStorage.setItem(
+        cartKey,
+        JSON.stringify(updatedCart)
+      );
+
+      setCart(updatedCart);
       window.dispatchEvent(new Event("cartUpdated"));
-    } catch (error) {
-      console.error("Cart error:", error);
+    } catch (exception) {
+      setCartError(
+        exception.message ||
+          "Could not save your cart. Please try again."
+      );
     }
   };
 
-  const badge = String(
-    settings.homeBannerBadge || ""
-  ).trim();
+  const badge = settings.homeBannerBadge.trim();
+  const title = settings.homeBannerTitle.trim();
+  const description = settings.homeBannerDescription.trim();
+  const buttonText = settings.homeBannerButtonText.trim();
+  const bannerImage = settings.homeBanner;
 
-  const title = String(
-    settings.homeBannerTitle || ""
-  ).trim();
-
-  const description = String(
-    settings.homeBannerDescription || ""
-  ).trim();
-
-  const buttonText = String(
-    settings.homeBannerButtonText || ""
-  ).trim();
-
-  const bannerImage = settings.homeBanner || "";
-
-  // COLORS FROM ADMIN SETTINGS
-
-  const colors = {
-    ...DEFAULT_COLORS,
-    ...(settings.storeColors || {}),
-  };
+  const colors = settings.storeColors;
 
   const homeColors = {
     "--home-primary": colors.primaryColor,
@@ -209,17 +511,11 @@ function Home() {
     "--home-text": colors.textColor,
     "--home-button": colors.buttonColor,
     "--home-button-text": colors.buttonTextColor,
-  };
-
-  return (
+  };  return (
     <div className="home-page" style={homeColors}>
       <StoreHeader />
 
       <style>{`
-        /* ======================================
-           HOME PAGE - ISOLATED STYLES
-        ====================================== */
-
         .home-page {
           min-height: 100vh;
           width: 100%;
@@ -233,26 +529,21 @@ function Home() {
           box-sizing: border-box;
         }
 
-        /* HERO BANNER */
-
         .home-page .home-hero {
           position: relative;
           width: min(94%, 1380px);
           min-height: 440px;
           margin: 30px auto 0;
           padding: 65px 7%;
-
           display: flex;
           align-items: center;
           overflow: hidden;
-
           border-radius: 24px;
           background: linear-gradient(
             120deg,
             var(--home-light) 0%,
             var(--home-background) 100%
           );
-
           background-size: cover;
           background-position: center;
         }
@@ -348,8 +639,6 @@ function Home() {
           color: rgba(255,255,255,.88);
         }
 
-        /* SHOP BUTTON */
-
         .home-page button.home-shop-button {
           display: inline-flex !important;
           align-items: center;
@@ -380,8 +669,6 @@ function Home() {
           transform: translateY(-2px);
         }
 
-        /* MAIN CONTENT */
-
         .home-page .home-container {
           width: min(92%, 1240px);
           margin: 0 auto;
@@ -409,15 +696,14 @@ function Home() {
           line-height: 1.7;
         }
 
-        /* CATEGORY CAROUSEL */
-
         .home-page .home-categories-section {
           margin-bottom: 75px;
         }
 
         .home-page .home-categories-window {
           width: 100%;
-          overflow: hidden;
+          overflow-x: auto;
+          overflow-y: hidden;
           padding: 8px 0 20px;
         }
 
@@ -425,24 +711,11 @@ function Home() {
           display: flex;
           gap: 17px;
           width: max-content;
-          animation: homeCategoryScroll 35s linear infinite;
+          min-width: 100%;
+          justify-content: center;
+          animation: none;
+          transform: none;
         }
-
-        .home-page .home-categories-window:hover
-        .home-categories-track {
-          animation-play-state: paused;
-        }
-
-        @keyframes homeCategoryScroll {
-          from {
-            transform: translateX(0);
-          }
-          to {
-            transform: translateX(-50%);
-          }
-        }
-
-        /* CATEGORY CARD */
 
         .home-page button.home-category-card {
           display: flex;
@@ -464,12 +737,6 @@ function Home() {
             box-shadow .2s ease,
             border-color .2s ease;
         }
-
-        /*
-          FIX:
-          NO TURQUOISE BACKGROUND ON HOVER.
-          NO PURPLE/RED TEXT FROM GLOBAL CSS.
-        */
 
         .home-page button.home-category-card:hover,
         .home-page button.home-category-card:focus-visible {
@@ -530,13 +797,11 @@ function Home() {
           transition: color .2s ease;
         }
 
-        /* ONLY NAME COLOR CHANGES ON HOVER */
-
         .home-page button.home-category-card:hover
         .home-category-name {
           background: var(--home-background) !important;
           color: var(--home-primary) !important;
-        }        /* FEATURED PRODUCTS */
+        }
 
         .home-page .home-products-header {
           display: flex;
@@ -552,42 +817,31 @@ function Home() {
           text-align: left;
         }
 
-        /* VIEW ALL BUTTON */
-
         .home-page .home-products-header
         button.home-view-all-button {
           display: inline-flex !important;
           align-items: center !important;
           justify-content: center !important;
           gap: 8px !important;
-
           width: max-content !important;
           min-width: 0 !important;
           max-width: max-content !important;
-
           height: 42px !important;
           min-height: 42px !important;
-
           flex: 0 0 auto !important;
           flex-grow: 0 !important;
           flex-shrink: 0 !important;
-
           margin: 0 0 0 auto !important;
           padding: 10px 16px !important;
-
           border: 1px solid var(--home-border) !important;
           border-radius: 9px !important;
-
           background: var(--home-background) !important;
           color: var(--home-primary) !important;
-
           font-size: 12px !important;
           font-weight: 800 !important;
           line-height: 1 !important;
           white-space: nowrap !important;
-
           cursor: pointer;
-
           transition:
             background .2s ease,
             border-color .2s ease;
@@ -602,19 +856,16 @@ function Home() {
 
         .home-page .home-products-grid {
           display: grid;
-          grid-template-columns:
-            repeat(4, minmax(0, 1fr));
+          grid-template-columns: repeat(4, minmax(0, 1fr));
           gap: 20px;
         }
 
-        /* PRODUCT CARDS */
-
         .home-page .home-product-card {
+          min-width: 0;
           overflow: hidden;
           border: 1px solid var(--home-border);
           border-radius: 16px;
           background: var(--home-background);
-
           transition:
             transform .2s ease,
             box-shadow .2s ease,
@@ -669,6 +920,7 @@ function Home() {
           font-weight: 800;
           color: var(--home-text);
           cursor: pointer;
+          overflow-wrap: anywhere;
         }
 
         .home-page .home-product-info h3:hover {
@@ -704,21 +956,16 @@ function Home() {
           min-height: 36px !important;
           padding: 0 !important;
           flex: 0 0 36px !important;
-
           display: inline-flex !important;
           align-items: center !important;
           justify-content: center !important;
-
           border: 0 !important;
           border-radius: 8px;
-
           background: var(--home-light) !important;
           color: var(--home-secondary) !important;
-
           font-size: 16px;
           font-weight: 800;
           cursor: pointer;
-
           transition:
             background .2s ease,
             color .2s ease;
@@ -731,9 +978,14 @@ function Home() {
           color: inherit !important;
         }
 
-        .home-page button.home-add-cart:hover {
+        .home-page button.home-add-cart:hover:not(:disabled) {
           background: var(--home-button) !important;
           color: var(--home-button-text) !important;
+        }
+
+        .home-page button.home-add-cart:disabled {
+          opacity: .45;
+          cursor: not-allowed;
         }
 
         .home-page .home-empty {
@@ -746,12 +998,26 @@ function Home() {
           font-size: 13px;
         }
 
-        /* RESPONSIVE */
+        .home-page .home-message {
+          padding: 12px 15px;
+          margin-bottom: 18px;
+          border: 1px solid var(--home-border);
+          border-radius: 10px;
+          background: var(--home-light);
+          color: var(--home-secondary);
+          font-size: 12px;
+          line-height: 1.6;
+        }
+
+        .home-page .home-message.error {
+          background: #fff1f0;
+          border-color: #f0cccc;
+          color: #b42318;
+        }
 
         @media (max-width: 1000px) {
           .home-page .home-products-grid {
-            grid-template-columns:
-              repeat(2, minmax(0, 1fr));
+            grid-template-columns: repeat(2, minmax(0, 1fr));
           }
         }
 
@@ -798,8 +1064,7 @@ function Home() {
           }
 
           .home-page .home-products-grid {
-            grid-template-columns:
-              repeat(2, minmax(0, 1fr));
+            grid-template-columns: repeat(2, minmax(0, 1fr));
             gap: 12px;
           }
 
@@ -835,8 +1100,6 @@ function Home() {
         }
       `}</style>
 
-      {/* HOME BANNER — ALL TEXT FROM SETTINGS */}
-
       <section
         className={`home-hero ${
           bannerImage ? "has-image" : ""
@@ -844,7 +1107,9 @@ function Home() {
         style={
           bannerImage
             ? {
-                backgroundImage: `url("${bannerImage}")`,
+                backgroundImage: `url(${JSON.stringify(
+                  bannerImage
+                )})`,
               }
             : undefined
         }
@@ -887,7 +1152,24 @@ function Home() {
       </section>
 
       <main className="home-container">
-        {/* SHOP BY CATEGORY */}
+        {settingsError && (
+          <div className="home-message error" role="alert">
+            {settingsError}
+          </div>
+        )}
+
+        {cartError && (
+          <div className="home-message error" role="alert">
+            {cartError}
+          </div>
+        )}
+
+        {pendingCheckout && !cartError && (
+          <div className="home-message" role="status">
+            Return to your cart to confirm your previous
+            order before adding more items.
+          </div>
+        )}
 
         <section className="home-categories-section">
           <div className="home-section-header">
@@ -895,49 +1177,55 @@ function Home() {
             <p>Explore our available categories.</p>
           </div>
 
+          {categoriesError && (
+            <div className="home-message error" role="alert">
+              {categoriesError}
+            </div>
+          )}
+
           {categories.length > 0 ? (
             <div className="home-categories-window">
               <div className="home-categories-track">
-                {[...categories, ...categories].map(
-                  (category, index) => (
-                    <button
-                      type="button"
-                      key={`${category.id}-${index}`}
-                      className="home-category-card"
-                      onClick={() =>
-                        goToCategory(category.title)
-                      }
-                    >
-                      <div className="home-category-image-wrapper">
-                        {category.image ? (
-                          <img
-                            src={category.image}
-                            alt={category.title}
-                            className="home-category-image"
-                          />
-                        ) : (
-                          <div className="home-category-no-image">
-                            <FaPaw />
-                          </div>
-                        )}
-                      </div>
+                {categories.map((category) => (
+                  <button
+                    type="button"
+                    key={category.id}
+                    className="home-category-card"
+                    onClick={() =>
+                      goToCategory(category.title)
+                    }
+                  >
+                    <div className="home-category-image-wrapper">
+                      {category.image ? (
+                        <img
+                          src={category.image}
+                          alt={category.title}
+                          className="home-category-image"
+                        />
+                      ) : (
+                        <div className="home-category-no-image">
+                          <FaPaw />
+                        </div>
+                      )}
+                    </div>
 
-                      <span className="home-category-name">
-                        {category.title}
-                      </span>
-                    </button>
-                  )
-                )}
+                    <span className="home-category-name">
+                      {category.title}
+                    </span>
+                  </button>
+                ))}
               </div>
             </div>
-          ) : (
+          ) : categoriesLoading ? (
+            <div className="home-empty" role="status">
+              Loading categories...
+            </div>
+          ) : !categoriesError ? (
             <div className="home-empty">
               No categories available yet.
             </div>
-          )}
+          ) : null}
         </section>
-
-        {/* FEATURED PRODUCTS */}
 
         <section className="home-products-section">
           <div className="home-products-header">
@@ -956,74 +1244,127 @@ function Home() {
             </button>
           </div>
 
+          {productsError && (
+            <div className="home-message error" role="alert">
+              {productsError}
+            </div>
+          )}
+
           {products.length > 0 ? (
             <div className="home-products-grid">
-              {products.map((product) => (
-                <article
-                  className="home-product-card"
-                  key={product.id}
-                >
-                  <div
-                    className="home-product-image-area"
-                    onClick={() =>
-                      goToProduct(product)
-                    }
-                  >
-                    {product.image ? (
-                      <img
-                        src={product.image}
-                        alt={product.name}
-                        className="home-product-image"
-                      />
-                    ) : (
-                      <div className="home-product-placeholder">
-                        <FaPaw />
-                      </div>
-                    )}
-                  </div>
+              {products.map((product) => {
+                const stock = getProductStock(product);
+                const price = getProductPrice(product);
 
-                  <div className="home-product-info">
-                    <h3
+                const stockLimitReached =
+                  getCartQuantity(product.id) >= stock;
+
+                const rawPrice = Number(
+                  product.sellingPrice
+                );
+
+                const invalidPrice =
+                  !Number.isFinite(rawPrice) ||
+                  rawPrice < 0;
+
+                const cartDisabled =
+                  stock <= 0 ||
+                  stockLimitReached ||
+                  pendingCheckout ||
+                  invalidPrice;
+
+                const cartLabel =
+                  stock <= 0
+                    ? "Out of Stock"
+                    : pendingCheckout
+                      ? "Confirm your previous order first"
+                      : invalidPrice
+                        ? "Currently unavailable"
+                        : stockLimitReached
+                          ? "Stock Limit Reached"
+                          : "Add to Cart";
+
+                return (
+                  <article
+                    className="home-product-card"
+                    key={product.id}
+                  >
+                    <div
+                      className="home-product-image-area"
+                      role="link"
+                      tabIndex={0}
+                      aria-label={`View ${product.name}`}
                       onClick={() =>
                         goToProduct(product)
                       }
+                      onKeyDown={(event) => {
+                        if (
+                          event.key === "Enter" ||
+                          event.key === " "
+                        ) {
+                          event.preventDefault();
+                          goToProduct(product);
+                        }
+                      }}
                     >
-                      {product.name}
-                    </h3>
+                      {product.image ? (
+                        <img
+                          src={product.image}
+                          alt={product.name}
+                          className="home-product-image"
+                        />
+                      ) : (
+                        <div className="home-product-placeholder">
+                          <FaPaw />
+                        </div>
+                      )}
+                    </div>
 
-                    <span className="home-product-category">
-                      {product.category}
-                    </span>
+                    <div className="home-product-info">
+                      <h3
+                        onClick={() =>
+                          goToProduct(product)
+                        }
+                      >
+                        {product.name}
+                      </h3>
 
-                    <div className="home-product-bottom">
-                      <span className="home-product-price">
-                        $
-                        {Number(
-                          product.sellingPrice || 0
-                        ).toFixed(2)}
+                      <span className="home-product-category">
+                        {product.category || "Uncategorized"}
                       </span>
 
-                      <button
-                        type="button"
-                        className="home-add-cart"
-                        onClick={() =>
-                          addToCart(product)
-                        }
-                        title="Add to Cart"
-                        aria-label={`Add ${product.name} to cart`}
-                      >
-                        <FaShoppingCart aria-hidden="true" />
-                      </button>
+                      <div className="home-product-bottom">
+                        <span className="home-product-price">
+                          ${price.toFixed(2)}
+                        </span>
+
+                        <button
+                          type="button"
+                          className="home-add-cart"
+                          onClick={() =>
+                            addToCart(product)
+                          }
+                          disabled={cartDisabled}
+                          title={cartLabel}
+                          aria-label={`${cartLabel}: ${product.name}`}
+                        >
+                          <FaShoppingCart aria-hidden="true" />
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                </article>
-              ))}
+                  </article>
+                );
+              })}
             </div>
-          ) : (
+          ) : productsLoading ? (
+            <div className="home-empty" role="status">
+              Loading products...
+            </div>
+          ) : !productsError ? (
             <div className="home-empty">
               No featured products available yet.
             </div>
-          )}
+          ) : null}
         </section>
       </main>
     </div>

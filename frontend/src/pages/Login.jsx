@@ -9,21 +9,82 @@ import {
 } from "react-icons/fa";
 import loginBg from "../assets/images.png";
 import clinicLogo from "../assets/clinic-logo.png";
+import { getHomePath } from "../auth/permissions";
 
 function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState("");
 
   const navigate = useNavigate();
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
 
-    console.log("Email:", email);
+    if (isSubmitting) return;
 
-    // Backend later
-    navigate("/dashboard");
+    setError("");
+    setIsSubmitting(true);
+
+    try {
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: email.trim(),
+          password,
+          rememberMe,
+        }),
+      });
+
+      if (!response.ok) {
+        setError(
+          response.status === 401
+            ? "Unable to sign in. Check your credentials or try again later."
+            : "Unable to sign in right now. Please try again."
+        );
+        return;
+      }
+
+      const user = await response.json();
+
+      if (!Array.isArray(user?.roles)) {
+        setError(
+          "Unable to determine your account permissions."
+        );
+        return;
+      }
+
+      if (user.roles.includes("SuperAdmin")) {
+        navigate("/super-admin/dashboard", {
+          replace: true,
+        });
+        return;
+      }
+
+      if (
+        user.roles.includes("ClinicAdmin") ||
+        user.roles.includes("Staff")
+      ) {
+        navigate(getHomePath(user), { replace: true });
+        return;
+      }
+      setError(
+        "Your account does not have permission to access a dashboard."
+      );
+    } catch {
+      setError(
+        "Unable to connect to the server. Please try again."
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -153,7 +214,10 @@ function Login() {
               billing, and clinic settings.
             </p>
 
-            <form onSubmit={handleLogin}>
+            <form
+              onSubmit={handleLogin}
+              aria-busy={isSubmitting}
+            >
               {/* EMAIL */}
               <div className="login-field">
                 <label>Email</label>
@@ -163,6 +227,7 @@ function Login() {
                   placeholder="Enter your email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
+                  autoComplete="username"
                   required
                 />
               </div>
@@ -179,6 +244,7 @@ function Login() {
                     onChange={(e) =>
                       setPassword(e.target.value)
                     }
+                    autoComplete="current-password"
                     required
                   />
 
@@ -206,7 +272,13 @@ function Login() {
               {/* OPTIONS */}
               <div className="login-options">
                 <label className="remember-me">
-                  <input type="checkbox" />
+                  <input
+                    type="checkbox"
+                    checked={rememberMe}
+                    onChange={(e) =>
+                      setRememberMe(e.target.checked)
+                    }
+                  />
                   <span>Remember me</span>
                 </label>
 
@@ -215,12 +287,27 @@ function Login() {
                 </Link>
               </div>
 
+              {error && (
+                <p
+                  role="alert"
+                  style={{
+                    color: "#c0392b",
+                    fontSize: "13px",
+                    lineHeight: 1.5,
+                    margin: "0 0 14px",
+                  }}
+                >
+                  {error}
+                </p>
+              )}
+
               {/* LOGIN */}
               <button
                 type="submit"
                 className="login-submit-button"
+                disabled={isSubmitting}
               >
-                Sign in
+                {isSubmitting ? "Signing in..." : "Sign in"}
               </button>
             </form>
 

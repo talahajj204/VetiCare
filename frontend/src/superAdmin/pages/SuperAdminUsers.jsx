@@ -1,8 +1,9 @@
-
-import { useMemo, useState } from "react";
+import { managedUsersRequest } from "../api/managedUsersApi";
+import { useEffect, useMemo, useRef, useState } from "react";
 import SuperAdminSidebar from "../components/SuperAdminSidebar";
 import {
-  FaUsers,
+  FaPlus,
+  FaTrashCan,
   FaBuilding,
   FaCircleCheck,
   FaClock,
@@ -13,94 +14,19 @@ import {
   FaInstagram,
   FaFacebook,
   FaGlobe,
-  FaEnvelope,
-  FaPhone,
-  FaLocationDot,
-  FaCrown,
   FaUserShield,
 } from "react-icons/fa6";
 
-// ==========================================
-// HARDCODED DEMO DATA
-// ==========================================
 
-const initialClinics = [
-  {
-    id: 1,
-    clinicName: "Happy Paws Veterinary Clinic",
-    adminName: "Dr. Sara Ahmed",
-    email: "contact@happypaws.com",
-    phone: "+961 70 123 456",
-    location: "Beirut, Lebanon",
-    plan: "Premium",
-    subscription: "Active",
-    status: "Active",
-    registered: "2026-09-12",
-    instagram: "https://instagram.com/",
-    facebook: "https://facebook.com/",
-    website: "https://example.com",
-  },
-  {
-    id: 2,
-    clinicName: "Pet Care Clinic",
-    adminName: "Dr. Omar Khaled",
-    email: "info@petcare.com",
-    phone: "+961 71 234 567",
-    location: "Baabda, Lebanon",
-    plan: "Professional",
-    subscription: "Active",
-    status: "Active",
-    registered: "2026-08-21",
-    instagram: "https://instagram.com/",
-    facebook: "",
-    website: "",
-  },
-  {
-    id: 3,
-    clinicName: "Animal Wellness Center",
-    adminName: "Dr. Maya Hassan",
-    email: "hello@animalwellness.com",
-    phone: "+961 76 345 678",
-    location: "Jounieh, Lebanon",
-    plan: "Basic",
-    subscription: "Pending",
-    status: "Pending",
-    registered: "2026-10-02",
-    instagram: "",
-    facebook: "https://facebook.com/",
-    website: "",
-  },
-  {
-    id: 4,
-    clinicName: "Healthy Tails Clinic",
-    adminName: "Dr. Karim Mansour",
-    email: "support@healthytails.com",
-    phone: "+961 03 456 789",
-    location: "Tripoli, Lebanon",
-    plan: "Premium",
-    subscription: "Expired",
-    status: "Suspended",
-    registered: "2026-07-15",
-    instagram: "",
-    facebook: "",
-    website: "https://example.com",
-  },
-  {
-    id: 5,
-    clinicName: "Pawfect Vet",
-    adminName: "Dr. Lina Nasser",
-    email: "contact@pawfectvet.com",
-    phone: "+961 81 567 890",
-    location: "Saida, Lebanon",
-    plan: "Professional",
-    subscription: "Active",
-    status: "Active",
-    registered: "2026-09-28",
-    instagram: "https://instagram.com/",
-    facebook: "",
-    website: "",
-  },
-];
+
+const emptyAdmin = {
+  clinicName: "",
+  name: "",
+  email: "",
+  phone: "",
+  password: "",
+  confirmPassword: "",
+};
 
 const styles = `
 .sau-page,
@@ -139,8 +65,16 @@ const styles = `
   letter-spacing: 1px;
 }
 
-.sau-header h1 {
-  margin: 0 0 9px;
+#root .sau-page .sau-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 9px;
+}
+
+#root .sau-page .sau-title-row h1 {
+  margin: 0;
   color: #143743;
   font-size: clamp(24px, 2.6vw, 32px);
 }
@@ -150,6 +84,28 @@ const styles = `
   color: #71838e;
   font-size: 14px;
   line-height: 1.6;
+}
+
+#root .sau-page button.sau-header-add {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex: 0 0 auto !important;
+  width: auto !important;
+  min-width: 150px !important;
+  height: 44px !important;
+  min-height: 44px !important;
+  padding: 10px 20px !important;
+  margin: 0 !important;
+  gap: 8px !important;
+  border: 0 !important;
+  border-radius: 9px !important;
+  background: #39aaa5 !important;
+  color: white !important;
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  white-space: nowrap !important;
+  cursor: pointer;
 }
 
 .sau-stats {
@@ -223,25 +179,23 @@ const styles = `
   font-size: 19px;
 }
 
-.sau-count {
-  color: #71838e;
-  font-size: 13px;
-}
-
-.sau-toolbar {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
+#root .sau-page .sau-toolbar {
+  display: grid !important;
+  grid-template-columns: minmax(0, 2fr) repeat(2, minmax(0, 1fr));
+  align-items: center !important;
+  width: 100% !important;
+  max-width: none !important;
+  gap: 12px !important;
   margin-bottom: 20px;
 }
 
-.sau-search {
+#root .sau-page .sau-toolbar .sau-search {
   display: flex;
   align-items: center;
   gap: 10px;
-  flex: 1 1 260px;
-  min-width: 0;
-  max-width: 430px;
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: none !important;
   height: 44px;
   padding: 0 13px;
   border: 1px solid #e0e9eb;
@@ -261,9 +215,11 @@ const styles = `
   font-size: 14px;
 }
 
-.sau-select {
+#root .sau-page .sau-toolbar .sau-select {
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: none !important;
   height: 44px;
-  min-width: 155px;
   padding: 0 12px;
   border: 1px solid #e0e9eb;
   border-radius: 10px;
@@ -387,6 +343,16 @@ const styles = `
   background: #d6f0ed;
 }
 
+.sau-page .sau-delete-admin {
+  background: #fdeaea !important;
+  color: #bb4d4d !important;
+}
+
+.sau-page .sau-delete-admin:disabled {
+  opacity: .35;
+  cursor: not-allowed;
+}
+
 .sau-empty {
   padding: 55px 20px;
   text-align: center;
@@ -395,61 +361,88 @@ const styles = `
 }
 
 .sau-modal-overlay {
-  position: fixed;
-  inset: 0;
+  position: fixed !important;
+  inset: 0 !important;
   z-index: 5000;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  height: 100dvh !important;
+  padding: 20px !important;
+  overflow: hidden !important;
+  box-sizing: border-box !important;
   background: rgba(12,34,42,.55);
 }
 
-.sau-modal {
-  width: 100%;
-  max-width: 650px;
-  max-height: 90vh;
-  overflow-y: auto;
-  padding: 26px;
-  border-radius: 16px;
+#root .sau-modal-overlay .sau-modal {
+  box-sizing: border-box !important;
+  width: min(650px, 100%) !important;
+  max-width: 650px !important;
+  max-height: calc(100dvh - 40px) !important;
+  margin: 0 !important;
+  padding: 26px !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  border-radius: 16px !important;
   background: white;
   box-shadow: 0 20px 60px rgba(0,0,0,.18);
 }
 
-.sau-modal-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 15px;
-  margin-bottom: 22px;
+#root .sau-modal-overlay .sau-modal-header {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  box-sizing: border-box !important;
+  width: auto !important;
+  max-width: none !important;
+  gap: 16px !important;
+  margin: -26px -26px 26px !important;
+  padding: 24px 26px !important;
+  background: #55b7b2 !important;
+  border-radius: 16px 16px 0 0 !important;
+}
+
+.sau-modal-header > div {
+  flex: 1 1 auto !important;
+  min-width: 0 !important;
 }
 
 .sau-modal-header h2 {
-  margin: 0 0 6px;
-  color: #173944;
+  margin: 0 0 6px !important;
+  color: white !important;
   font-size: 22px;
 }
 
 .sau-modal-header p {
-  margin: 0;
-  color: #84939c;
+  margin: 0 !important;
+  color: white !important;
   font-size: 13px;
 }
 
-.sau-page .sau-close {
-  width: 34px !important;
-  height: 34px;
+#root .sau-modal-overlay button.sau-close {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex: 0 0 36px !important;
+  width: 36px !important;
+  min-width: 36px !important;
+  max-width: 36px !important;
+  height: 36px !important;
+  min-height: 36px !important;
+  max-height: 36px !important;
   padding: 0 !important;
-  border: 0;
-  border-radius: 8px;
-  background: #f1f4f5;
-  color: #607481;
+  margin: 0 !important;
+  border: 0 !important;
+  border-radius: 50% !important;
+  background: white !important;
+  color: #526b70 !important;
   cursor: pointer;
 }
 
 .sau-detail-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0,1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 20px;
   margin-bottom: 24px;
 }
@@ -499,44 +492,49 @@ const styles = `
   font-size: 16px;
 }
 
-.sau-modal-actions {
-  display: flex;
-  justify-content: flex-end;
-  flex-wrap: wrap;
-  gap: 10px;
+#root .sau-modal-overlay .sau-modal-actions {
+  display: flex !important;
+  flex-direction: row !important;
+  justify-content: flex-end !important;
+  align-items: center !important;
+  flex-wrap: wrap !important;
+  gap: 10px !important;
   margin-top: 24px;
 }
 
-.sau-page .sau-button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
+#root .sau-modal-overlay button.sau-button {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex: 0 0 auto !important;
   width: auto !important;
-  min-height: 42px;
+  min-width: 0 !important;
+  min-height: 42px !important;
+  margin: 0 !important;
   padding: 10px 17px !important;
-  border: 0;
-  border-radius: 9px;
-  background: #39aaa5;
-  color: white;
-  font-size: 13px;
+  gap: 8px !important;
+  border: 0 !important;
+  border-radius: 9px !important;
+  background: #39aaa5 !important;
+  color: white !important;
+  font-size: 13px !important;
   font-weight: 700;
   cursor: pointer;
 }
 
-.sau-page .sau-button.secondary {
-  background: #edf1f3;
-  color: #344e5a;
+#root .sau-modal-overlay button.sau-button.secondary {
+  background: #edf1f3 !important;
+  color: #344e5a !important;
 }
 
-.sau-page .sau-button.danger {
-  background: #fdeaea;
-  color: #bb4d4d;
+#root .sau-modal-overlay button.sau-button.danger {
+  background: #fdeaea !important;
+  color: #bb4d4d !important;
 }
 
 .sau-edit-grid {
   display: grid;
-  grid-template-columns: repeat(2,minmax(0,1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 15px;
 }
 
@@ -544,10 +542,7 @@ const styles = `
   display: flex;
   flex-direction: column;
   gap: 7px;
-}
-
-.sau-edit-field.full {
-  grid-column: 1 / -1;
+  min-width: 0;
 }
 
 .sau-edit-field label {
@@ -558,7 +553,9 @@ const styles = `
 
 .sau-edit-field input,
 .sau-edit-field select {
+  box-sizing: border-box;
   width: 100%;
+  min-width: 0;
   height: 42px;
   padding: 0 12px;
   border: 1px solid #e0e9eb;
@@ -568,13 +565,48 @@ const styles = `
   font-size: 13px;
 }
 
-@media(max-width:1100px) {
+.sau-modal-overlay .sau-admin-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.sau-modal-overlay .sau-admin-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  color: #607481;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.sau-modal-overlay .sau-admin-form input {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  min-height: 42px;
+  padding: 10px 12px;
+  border: 1px solid #dce8eb;
+  border-radius: 9px;
+  background: white;
+  color: #173944;
+  font: inherit;
+}
+
+.sau-form-error {
+  margin: 16px 0 0;
+  color: #bb4d4d;
+  font-size: 13px;
+}
+
+@media (max-width: 1100px) {
   .sau-stats {
-    grid-template-columns: repeat(2,minmax(0,1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
-@media(max-width:768px) {
+@media (max-width: 768px) {
   .sau-page {
     display: block !important;
   }
@@ -594,7 +626,32 @@ const styles = `
   }
 }
 
-@media(max-width:480px) {
+@media (max-width: 600px) {
+  #root .sau-page .sau-toolbar {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  #root .sau-page .sau-toolbar .sau-search {
+    grid-column: 1 / -1;
+  }
+
+  #root .sau-page .sau-title-row {
+    gap: 10px;
+  }
+
+  #root .sau-page button.sau-header-add {
+    min-width: 0 !important;
+    padding: 10px 12px !important;
+  }
+}
+
+@media (max-width: 540px) {
+  .sau-modal-overlay .sau-admin-form {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 480px) {
   .sau-stats {
     grid-template-columns: 1fr;
   }
@@ -602,19 +659,18 @@ const styles = `
   .sau-main {
     padding: 84px 14px 24px !important;
   }
-
-  .sau-modal {
-    padding: 18px;
-  }
 }
 `;
 
-const formatDate = (value) =>
-  new Intl.DateTimeFormat("en", {
+const formatDate = (value) => {
+  if (!value) return "—";
+
+  return new Intl.DateTimeFormat("en", {
     year: "numeric",
     month: "short",
     day: "numeric",
-  }).format(new Date(value));
+  }).format(new Date(`${value}T00:00:00`));
+};
 
 function StatusBadge({ value }) {
   return (
@@ -634,17 +690,159 @@ function Detail({ label, value }) {
 }
 
 export default function SuperAdminUsers() {
-  const [clinics, setClinics] = useState(initialClinics);
+  const [clinics, setClinics] = useState([]);
+  const [addingAdmin, setAddingAdmin] = useState(false);
+  const [adminError, setAdminError] = useState("");
+  const [newAdmin, setNewAdmin] = useState({ ...emptyAdmin });
+
   const [search, setSearch] = useState("");
   const [planFilter, setPlanFilter] = useState("All");
   const [statusFilter, setStatusFilter] = useState("All");
+
   const [selectedId, setSelectedId] = useState(null);
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(null);
 
+  const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState(false);
+  const [pageError, setPageError] = useState("");
+  const [editError, setEditError] = useState("");
+
+  const mutationLock = useRef(false);
+
   const selectedClinic = clinics.find(
     (clinic) => clinic.id === selectedId
   );
+
+  const loadClinics = async (signal) => {
+    setLoading(true);
+    setPageError("");
+
+    try {
+      const data = await managedUsersRequest("", { signal });
+
+      if (!Array.isArray(data)) {
+        throw new Error("Invalid clinic data returned by server.");
+      }
+
+      setClinics(data);
+    } catch (error) {
+      if (error.name !== "AbortError") {
+        setPageError(error.message);
+      }
+    } finally {
+      if (!signal?.aborted) {
+        setLoading(false);
+      }
+    }
+  };
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    loadClinics(controller.signal);
+
+    return () => controller.abort();
+  }, []);
+
+  const replaceClinic = (updatedClinic) => {
+    setClinics((previous) => {
+      const exists = previous.some(
+        (clinic) => clinic.id === updatedClinic.id
+      );
+
+      return exists
+        ? previous.map((clinic) =>
+            clinic.id === updatedClinic.id
+              ? updatedClinic
+              : clinic
+          )
+        : [...previous, updatedClinic];
+    });
+  };
+
+  const closeAddAdmin = () => {
+    if (mutationLock.current) return;
+
+    setAddingAdmin(false);
+    setNewAdmin({ ...emptyAdmin });
+    setAdminError("");
+  };
+
+  const changeAdmin = (field, value) => {
+    setNewAdmin((previous) => ({
+      ...previous,
+      [field]: value,
+    }));
+
+    setAdminError("");
+  };
+
+  const addAdmin = async (event) => {
+    event.preventDefault();
+
+    if (mutationLock.current) return;
+
+    if (!newAdmin.clinicName.trim() || !newAdmin.name.trim()) {
+      setAdminError("Enter the clinic and admin names.");
+      return;
+    }
+
+    if (newAdmin.password !== newAdmin.confirmPassword) {
+      setAdminError("Passwords do not match.");
+      return;
+    }
+
+    mutationLock.current = true;
+    setBusy(true);
+    setAdminError("");
+
+    try {
+      const created = await managedUsersRequest("/admins", {
+        method: "POST",
+        body: JSON.stringify(newAdmin),
+      });
+
+      replaceClinic(created);
+
+      mutationLock.current = false;
+      closeAddAdmin();
+    } catch (error) {
+      setAdminError(error.message);
+    } finally {
+      mutationLock.current = false;
+      setBusy(false);
+    }
+  };
+
+  const deleteAdmin = async (clinic) => {
+    if (mutationLock.current || !clinic.adminName) return;
+
+    const confirmed = window.confirm(
+      `Delete admin account "${clinic.adminName}"? ` +
+      "The clinic and its data will remain."
+    );
+
+    if (!confirmed) return;
+
+    mutationLock.current = true;
+    setBusy(true);
+    setPageError("");
+
+    try {
+      replaceClinic(
+        await managedUsersRequest(
+          `/clinics/${clinic.id}/admin`,
+          { method: "DELETE" }
+        )
+      );
+    } catch (error) {
+      setPageError(error.message);
+    } finally {
+      mutationLock.current = false;
+      setBusy(false);
+    }
+  };
 
   const filteredClinics = useMemo(() => {
     const query = search.toLowerCase().trim();
@@ -654,19 +852,18 @@ export default function SuperAdminUsers() {
         clinic.clinicName,
         clinic.adminName,
         clinic.email,
+        clinic.adminEmail,
         clinic.location,
       ]
         .join(" ")
         .toLowerCase()
         .includes(query);
 
-      const matchesPlan =
-        planFilter === "All" || clinic.plan === planFilter;
-
-      const matchesStatus =
-        statusFilter === "All" || clinic.status === statusFilter;
-
-      return matchesSearch && matchesPlan && matchesStatus;
+      return (
+        matchesSearch &&
+        (planFilter === "All" || clinic.plan === planFilter) &&
+        (statusFilter === "All" || clinic.status === statusFilter)
+      );
     });
   }, [clinics, search, planFilter, statusFilter]);
 
@@ -679,70 +876,115 @@ export default function SuperAdminUsers() {
     },
     {
       title: "Active Clinics",
-      value: clinics.filter((c) => c.status === "Active").length,
+      value: clinics.filter(
+        (clinic) => clinic.status === "Active"
+      ).length,
       icon: FaCircleCheck,
       color: "green",
     },
     {
       title: "Pending Clinics",
-      value: clinics.filter((c) => c.status === "Pending").length,
+      value: clinics.filter(
+        (clinic) => clinic.status === "Pending"
+      ).length,
       icon: FaClock,
       color: "orange",
     },
     {
       title: "Clinic Admins",
-      value: clinics.length,
+      value: clinics.filter(
+        (clinic) => clinic.adminName
+      ).length,
       icon: FaUserShield,
       color: "purple",
     },
   ];
 
   const openDetails = (clinic) => {
+    if (mutationLock.current) return;
+
     setSelectedId(clinic.id);
     setEditing(false);
     setDraft(null);
+    setEditError("");
   };
 
   const openEdit = (clinic) => {
+    if (mutationLock.current) return;
+
     setSelectedId(clinic.id);
     setDraft({ ...clinic });
     setEditing(true);
+    setEditError("");
   };
 
   const closeModal = () => {
+    if (mutationLock.current) return;
+
     setSelectedId(null);
     setEditing(false);
     setDraft(null);
+    setEditError("");
   };
 
-  const saveEdit = (event) => {
+  const saveEdit = async (event) => {
     event.preventDefault();
 
-    setClinics((previous) =>
-      previous.map((clinic) =>
-        clinic.id === draft.id ? { ...draft } : clinic
-      )
-    );
+    if (!draft || mutationLock.current) return;
 
-    setEditing(false);
-    setDraft(null);
+    mutationLock.current = true;
+    setBusy(true);
+    setEditError("");
+
+    try {
+      const updated = await managedUsersRequest(
+        `/clinics/${draft.id}`,
+        {
+          method: "PUT",
+          body: JSON.stringify({
+            ...draft,
+            email: draft.email.trim() || null,
+          }),
+        }
+      );
+
+      replaceClinic(updated);
+
+      mutationLock.current = false;
+      closeModal();
+    } catch (error) {
+      setEditError(error.message);
+    } finally {
+      mutationLock.current = false;
+      setBusy(false);
+    }
   };
 
-  const toggleStatus = () => {
-    if (!selectedClinic) return;
+  const toggleStatus = async () => {
+    if (!selectedClinic || mutationLock.current) return;
 
-    const nextStatus =
-      selectedClinic.status === "Suspended"
-        ? "Active"
-        : "Suspended";
+    mutationLock.current = true;
+    setBusy(true);
+    setEditError("");
 
-    setClinics((previous) =>
-      previous.map((clinic) =>
-        clinic.id === selectedId
-          ? { ...clinic, status: nextStatus }
-          : clinic
-      )
-    );
+    try {
+      replaceClinic(
+        await managedUsersRequest(
+          `/clinics/${selectedClinic.id}/status`,
+          {
+            method: "PUT",
+            body: JSON.stringify({
+              isActive: selectedClinic.status === "Suspended",
+            }),
+          }
+        )
+      );
+    } catch (error) {
+      setEditError(error.message);
+    } finally {
+      mutationLock.current = false;
+      setBusy(false);
+    }
   };
 
   const updateDraft = (field, value) => {
@@ -761,35 +1003,39 @@ export default function SuperAdminUsers() {
 
         <main className="sau-main">
           <header className="sau-header">
-            <p className="sau-eyebrow">
-              PLATFORM MANAGEMENT
-            </p>
+            <p className="sau-eyebrow">PLATFORM MANAGEMENT</p>
 
-            <h1>Admin & Users</h1>
+            <div className="sau-title-row">
+              <h1>Admin & Users</h1>
+
+              <button disabled={loading || busy}
+                type="button"
+                className="sau-header-add"
+                onClick={() => {
+                  setNewAdmin({ ...emptyAdmin });
+                  setAdminError("");
+                  setAddingAdmin(true);
+                }}
+              >
+                <FaPlus /> Add Admin
+              </button>
+            </div>
 
             <p className="sau-subtitle">
-              Manage registered clinics, administrators,
-              contact details and subscription information.
+              Manage registered clinics, administrators, contact details
+              and subscription information.
             </p>
           </header>
 
           <section className="sau-stats">
             {overview.map(({ title, value, icon: Icon, color }) => (
-              <article
-                key={title}
-                className={`sau-stat ${color}`}
-              >
+              <article key={title} className={`sau-stat ${color}`}>
                 <div className="sau-stat-icon">
                   <Icon />
                 </div>
 
-                <h2 className="sau-stat-value">
-                  {value}
-                </h2>
-
-                <p className="sau-stat-label">
-                  {title}
-                </p>
+                <h2 className="sau-stat-value">{value}</h2>
+                <p className="sau-stat-label">{title}</p>
               </article>
             ))}
           </section>
@@ -797,31 +1043,26 @@ export default function SuperAdminUsers() {
           <section className="sau-panel">
             <div className="sau-panel-top">
               <h2>Registered Clinics</h2>
-
-              <span className="sau-count">
-                Showing {filteredClinics.length} of {clinics.length}
-              </span>
             </div>
 
             <div className="sau-toolbar">
               <label className="sau-search">
                 <FaMagnifyingGlass />
+
                 <input
                   type="search"
+                  aria-label="Search clinics"
                   placeholder="Search clinic, admin or email..."
                   value={search}
-                  onChange={(event) =>
-                    setSearch(event.target.value)
-                  }
+                  onChange={(event) => setSearch(event.target.value)}
                 />
               </label>
 
               <select
                 className="sau-select"
+                aria-label="Filter by plan"
                 value={planFilter}
-                onChange={(event) =>
-                  setPlanFilter(event.target.value)
-                }
+                onChange={(event) => setPlanFilter(event.target.value)}
               >
                 <option value="All">All Plans</option>
                 <option value="Basic">Basic</option>
@@ -831,10 +1072,9 @@ export default function SuperAdminUsers() {
 
               <select
                 className="sau-select"
+                aria-label="Filter by status"
                 value={statusFilter}
-                onChange={(event) =>
-                  setStatusFilter(event.target.value)
-                }
+                onChange={(event) => setStatusFilter(event.target.value)}
               >
                 <option value="All">All Statuses</option>
                 <option value="Active">Active</option>
@@ -843,7 +1083,22 @@ export default function SuperAdminUsers() {
               </select>
             </div>
 
-            {filteredClinics.length === 0 ? (
+            {pageError && (
+              <div role="alert" className="sau-form-error">
+                <p>{pageError}</p>
+                <button
+                  type="button"
+                  disabled={loading || busy}
+                  onClick={() => loadClinics()}
+                >
+                  Retry
+                </button>
+              </div>
+            )}
+
+            {loading ? (
+              <div className="sau-empty">Loading clinics...</div>
+            ) : filteredClinics.length === 0 ? (
               <div className="sau-empty">
                 No clinics match your search.
               </div>
@@ -857,7 +1112,6 @@ export default function SuperAdminUsers() {
                       <th>Email</th>
                       <th>Plan</th>
                       <th>Subscription</th>
-                      <th>Status</th>
                       <th>Actions</th>
                     </tr>
                   </thead>
@@ -869,13 +1123,19 @@ export default function SuperAdminUsers() {
                           <div className="sau-clinic-name">
                             {clinic.clinicName}
                           </div>
+
                           <div className="sau-secondary">
-                            {clinic.location}
+                            {clinic.location || "—"}
                           </div>
                         </td>
 
-                        <td>{clinic.adminName}</td>
-                        <td>{clinic.email}</td>
+                        <td>
+                          {clinic.adminName || "No admin assigned"}
+                        </td>
+
+                        <td>
+                          {clinic.email || clinic.adminEmail || "—"}
+                        </td>
 
                         <td>
                           <StatusBadge value={clinic.plan} />
@@ -886,27 +1146,36 @@ export default function SuperAdminUsers() {
                         </td>
 
                         <td>
-                          <StatusBadge value={clinic.status} />
-                        </td>
-
-                        <td>
                           <div className="sau-actions">
-                            <button
+                            <button disabled={busy}
                               type="button"
                               className="sau-icon-button"
                               title="View details"
+                              aria-label={`View ${clinic.clinicName}`}
                               onClick={() => openDetails(clinic)}
                             >
                               <FaEye />
                             </button>
 
-                            <button
+                            <button disabled={busy}
                               type="button"
                               className="sau-icon-button"
                               title="Edit clinic"
+                              aria-label={`Edit ${clinic.clinicName}`}
                               onClick={() => openEdit(clinic)}
                             >
                               <FaPen />
+                            </button>
+
+                            <button
+                              type="button"
+                              className="sau-icon-button sau-delete-admin"
+                              title="Delete admin account"
+                              aria-label={`Delete admin ${clinic.adminName || ""}`}
+                              disabled={busy || !clinic.adminName}
+                              onClick={() => deleteAdmin(clinic)}
+                            >
+                              <FaTrashCan />
                             </button>
                           </div>
                         </td>
@@ -920,6 +1189,168 @@ export default function SuperAdminUsers() {
         </main>
       </div>
 
+      {addingAdmin && (
+        <div
+          className="sau-modal-overlay"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) {
+              closeAddAdmin();
+            }
+          }}
+          onKeyDown={(event) => {
+            if (event.key === "Escape") closeAddAdmin();
+          }}
+        >
+          <div
+            className="sau-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="sau-add-admin-title"
+          >
+            <div className="sau-modal-header">
+              <div>
+                <h2 id="sau-add-admin-title">Add Admin</h2>
+                <p>Create a Clinic Admin account.</p>
+              </div>
+
+              <button disabled={busy}
+                type="button"
+                className="sau-close"
+                aria-label="Close"
+                onClick={closeAddAdmin}
+              >
+                <FaXmark />
+              </button>
+            </div>
+
+            <form onSubmit={addAdmin}>
+              <div className="sau-admin-form">
+                <label>
+                  Clinic
+                  <input
+                    required
+                    autoFocus
+                    type="text"
+                    list="sau-clinic-options"
+                    maxLength={200}
+                    autoComplete="off"
+                    placeholder="Type a new or existing clinic name"
+                    value={newAdmin.clinicName}
+                    onChange={(event) =>
+                      changeAdmin("clinicName", event.target.value)
+                    }
+                  />
+
+                  <datalist id="sau-clinic-options">
+                    {clinics
+                      .filter((clinic) => !clinic.adminName)
+                      .map((clinic) => (
+                        <option
+                          key={clinic.id}
+                          value={clinic.clinicName}
+                        />
+                      ))}
+                  </datalist>
+                </label>
+
+                <label>
+                  Admin Name
+                  <input
+                    required
+                    type="text"
+                    maxLength={200}
+                    autoComplete="name"
+                    placeholder="Enter admin name"
+                    value={newAdmin.name}
+                    onChange={(event) =>
+                      changeAdmin("name", event.target.value)
+                    }
+                  />
+                </label>
+
+                <label>
+                  Email
+                  <input
+                    required
+                    type="email"
+                    maxLength={254}
+                    autoComplete="email"
+                    placeholder="Enter admin email"
+                    value={newAdmin.email}
+                    onChange={(event) =>
+                      changeAdmin("email", event.target.value)
+                    }
+                  />
+                </label>
+
+                <label>
+                  Phone
+                  <input
+                    type="tel"
+                    autoComplete="tel"
+                    placeholder="Enter phone number"
+                    value={newAdmin.phone}
+                    onChange={(event) =>
+                      changeAdmin("phone", event.target.value)
+                    }
+                  />
+                </label>
+
+                <label>
+                  Password
+                  <input
+                    required
+                    type="password"
+                    minLength={12}
+                    autoComplete="new-password"
+                    placeholder="At least 12 characters"
+                    value={newAdmin.password}
+                    onChange={(event) =>
+                      changeAdmin("password", event.target.value)
+                    }
+                  />
+                </label>
+
+                <label>
+                  Confirm Password
+                  <input
+                    required
+                    type="password"
+                    minLength={12}
+                    autoComplete="new-password"
+                    placeholder="Confirm password"
+                    value={newAdmin.confirmPassword}
+                    onChange={(event) =>
+                      changeAdmin("confirmPassword", event.target.value)
+                    }
+                  />
+                </label>
+              </div>
+
+              {adminError && (
+                <p role="alert" className="sau-form-error">
+                  {adminError}
+                </p>
+              )}
+
+              <div className="sau-modal-actions">
+                <button disabled={busy}
+                  type="button"
+                  className="sau-button secondary"
+                  onClick={closeAddAdmin}
+                >
+                  Cancel
+                </button>
+
+                <button disabled={busy} type="submit" className="sau-button">
+                  Add Admin
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {selectedClinic && (
         <div
           className="sau-modal-overlay"
@@ -928,21 +1359,20 @@ export default function SuperAdminUsers() {
               closeModal();
             }
           }}
+          onKeyDown={(event) => {
+            if (event.key === "Escape") closeModal();
+          }}
         >
           <div
             className="sau-modal"
             role="dialog"
             aria-modal="true"
-            aria-label={
-              editing ? "Edit clinic" : "Clinic details"
-            }
+            aria-labelledby="sau-clinic-modal-title"
           >
             <div className="sau-modal-header">
               <div>
-                <h2>
-                  {editing
-                    ? "Edit Clinic"
-                    : selectedClinic.clinicName}
+                <h2 id="sau-clinic-modal-title">
+                  {editing ? "Edit Clinic" : selectedClinic.clinicName}
                 </h2>
 
                 <p>
@@ -952,7 +1382,7 @@ export default function SuperAdminUsers() {
                 </p>
               </div>
 
-              <button
+              <button disabled={busy}
                 type="button"
                 className="sau-close"
                 onClick={closeModal}
@@ -961,6 +1391,12 @@ export default function SuperAdminUsers() {
                 <FaXmark />
               </button>
             </div>
+
+            {editError && (
+              <p role="alert" className="sau-form-error">
+                {editError}
+              </p>
+            )}
 
             {editing && draft ? (
               <form onSubmit={saveEdit}>
@@ -985,23 +1421,22 @@ export default function SuperAdminUsers() {
                         type={
                           field === "email"
                             ? "email"
-                            : "text"
+                            : field === "phone"
+                              ? "tel"
+                              : "text"
                         }
-                        value={draft[field]}
+                        value={draft[field] ?? ""}
                         onChange={(event) =>
                           updateDraft(field, event.target.value)
                         }
-                        required={[
-                          "clinicName",
-                          "adminName",
-                          "email",
-                        ].includes(field)}
+                        required={field === "clinicName"}
                       />
                     </div>
                   ))}
 
                   <div className="sau-edit-field">
                     <label htmlFor="edit-plan">Plan</label>
+
                     <select
                       id="edit-plan"
                       value={draft.plan}
@@ -1019,14 +1454,12 @@ export default function SuperAdminUsers() {
                     <label htmlFor="edit-subscription">
                       Subscription
                     </label>
+
                     <select
                       id="edit-subscription"
                       value={draft.subscription}
                       onChange={(event) =>
-                        updateDraft(
-                          "subscription",
-                          event.target.value
-                        )
+                        updateDraft("subscription", event.target.value)
                       }
                     >
                       <option>Active</option>
@@ -1037,21 +1470,15 @@ export default function SuperAdminUsers() {
                 </div>
 
                 <div className="sau-modal-actions">
-                  <button
+                  <button disabled={busy}
                     type="button"
                     className="sau-button secondary"
-                    onClick={() => {
-                      setEditing(false);
-                      setDraft(null);
-                    }}
+                    onClick={closeModal}
                   >
                     Cancel
                   </button>
 
-                  <button
-                    type="submit"
-                    className="sau-button"
-                  >
+                  <button disabled={busy} type="submit" className="sau-button">
                     Save Changes
                   </button>
                 </div>
@@ -1086,31 +1513,35 @@ export default function SuperAdminUsers() {
 
                   <Detail
                     label="Registration Date"
-                    value={formatDate(
-                      selectedClinic.registered
-                    )}
+                    value={formatDate(selectedClinic.registered)}
                   />
 
+                  {selectedClinic.adminEmail && (
+                    <Detail
+                      label="Admin Email"
+                      value={selectedClinic.adminEmail}
+                    />
+                  )}
+
+                  {selectedClinic.adminPhone && (
+                    <Detail
+                      label="Admin Phone"
+                      value={selectedClinic.adminPhone}
+                    />
+                  )}
+
                   <div>
-                    <p className="sau-detail-label">
-                      Current Plan
-                    </p>
+                    <p className="sau-detail-label">Current Plan</p>
                     <StatusBadge value={selectedClinic.plan} />
                   </div>
 
                   <div>
-                    <p className="sau-detail-label">
-                      Subscription
-                    </p>
-                    <StatusBadge
-                      value={selectedClinic.subscription}
-                    />
+                    <p className="sau-detail-label">Subscription</p>
+                    <StatusBadge value={selectedClinic.subscription} />
                   </div>
 
                   <div>
-                    <p className="sau-detail-label">
-                      Account Status
-                    </p>
+                    <p className="sau-detail-label">Account Status</p>
                     <StatusBadge value={selectedClinic.status} />
                   </div>
                 </div>
@@ -1160,16 +1591,15 @@ export default function SuperAdminUsers() {
                 </div>
 
                 <div className="sau-modal-actions">
-                  <button
+                  <button disabled={busy}
                     type="button"
                     className="sau-button secondary"
                     onClick={() => openEdit(selectedClinic)}
                   >
-                    <FaPen />
-                    Edit
+                    <FaPen /> Edit
                   </button>
 
-                  <button
+                  <button disabled={busy}
                     type="button"
                     className={
                       selectedClinic.status === "Suspended"

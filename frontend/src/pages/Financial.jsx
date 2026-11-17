@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
-import { useLocation } from "react-router-dom";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useLocation, useOutletContext } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
 
 import {
@@ -15,12 +15,18 @@ import {
 
 import * as XLSX from "xlsx";
 
+import {
+  getFinancialEntries,
+  createFinancialEntry,
+  deleteFinancialEntry,
+} from "../api/financialApi";
+
 function Financial() {
   const location = useLocation();
+  const context = useOutletContext();
 
-  // =========================================================
-  // PAGE
-  // =========================================================
+  const scopeKey =
+    `${context?.user?.id ?? ""}:${context?.user?.clinicId ?? ""}`;
 
   const financialTab = useMemo(() => {
     const params = new URLSearchParams(location.search);
@@ -36,159 +42,15 @@ function Financial() {
   const isRevenue = financialTab === "revenue";
   const isExpenses = financialTab === "expenses";
 
-  // =========================================================
-  // REVENUES
-  // =========================================================
+  const [revenues, setRevenues] = useState([]);
+  const [expenses, setExpenses] = useState([]);
 
-  const [revenues, setRevenues] = useState(() => {
-    const saved = localStorage.getItem("financialRevenues");
+  const [dataReady, setDataReady] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch {
-        // use default data
-      }
-    }
-
-    return [
-      {
-        id: 1,
-        date: "2026-05-08",
-        type: "Visit",
-        description: "General consultation",
-        amount: 380,
-      },
-      {
-        id: 2,
-        date: "2026-06-12",
-        type: "Vaccination",
-        description: "Vaccination services",
-        amount: 520,
-      },
-      {
-        id: 3,
-        date: "2026-07-18",
-        type: "Visit",
-        description: "Pet examination",
-        amount: 430,
-      },
-      {
-        id: 4,
-        date: "2026-08-14",
-        type: "Surgery",
-        description: "Minor surgery",
-        amount: 720,
-      },
-      {
-        id: 5,
-        date: "2026-09-10",
-        type: "Visit",
-        description: "General consultation",
-        amount: 610,
-      },
-      {
-        id: 6,
-        date: "2026-10-04",
-        type: "Medication",
-        description: "Medication sales",
-        amount: 760,
-      },
-      {
-        id: 7,
-        date: "2026-11-11",
-        type: "Visit",
-        description: "Pet examination",
-        amount: 840,
-      },
-      {
-        id: 8,
-        date: "2026-12-05",
-        type: "Vaccination",
-        description: "Vaccination services",
-        amount: 920,
-      },
-    ];
-  });
-
-  // =========================================================
-  // EXPENSES
-  // =========================================================
-
-  const [expenses, setExpenses] = useState(() => {
-    const saved = localStorage.getItem("financialExpenses");
-
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch {
-        // use default data
-      }
-    }
-
-    return [
-      {
-        id: 1,
-        date: "2026-05-10",
-        type: "Medical Supplies",
-        description: "Syringes and gloves",
-        amount: 150,
-      },
-      {
-        id: 2,
-        date: "2026-06-15",
-        type: "Medication",
-        description: "Medication stock",
-        amount: 210,
-      },
-      {
-        id: 3,
-        date: "2026-07-08",
-        type: "Utilities",
-        description: "Electricity and water",
-        amount: 180,
-      },
-      {
-        id: 4,
-        date: "2026-08-20",
-        type: "Equipment",
-        description: "Medical equipment",
-        amount: 260,
-      },
-      {
-        id: 5,
-        date: "2026-09-13",
-        type: "Maintenance",
-        description: "Clinic maintenance",
-        amount: 200,
-      },
-      {
-        id: 6,
-        date: "2026-10-09",
-        type: "Medical Supplies",
-        description: "Medical supplies",
-        amount: 290,
-      },
-      {
-        id: 7,
-        date: "2026-11-18",
-        type: "Utilities",
-        description: "Clinic utilities",
-        amount: 240,
-      },
-      {
-        id: 8,
-        date: "2026-12-12",
-        type: "Medication",
-        description: "Medication stock",
-        amount: 320,
-      },
-    ];
-  });
-
-  // =========================================================
-  // MODALS
-  // =========================================================
+  const busyRef = useRef(false);
+  const pendingRef = useRef({});
+  const refreshRef = useRef(() => {});
 
   const [showRevenueModal, setShowRevenueModal] =
     useState(false);
@@ -196,16 +58,8 @@ function Financial() {
   const [showExpenseModal, setShowExpenseModal] =
     useState(false);
 
-  // =========================================================
-  // CHART
-  // =========================================================
-
   const [chartMetric, setChartMetric] = useState("all");
   const [chartPeriod, setChartPeriod] = useState("month");
-
-  // =========================================================
-  // FORMS
-  // =========================================================
 
   const [newRevenue, setNewRevenue] = useState({
     date: "",
@@ -221,10 +75,6 @@ function Financial() {
     amount: "",
   });
 
-  // =========================================================
-  // PAGINATION
-  // =========================================================
-
   const [itemsPerPage, setItemsPerPage] = useState(5);
   const [currentPage, setCurrentPage] = useState(1);
 
@@ -239,14 +89,9 @@ function Financial() {
     Math.ceil(totalRows / itemsPerPage)
   );
 
-  const safeCurrentPage = Math.min(
-    currentPage,
-    totalPages
-  );
+  const safeCurrentPage = Math.min(currentPage, totalPages);
 
-  const startIndex =
-    (safeCurrentPage - 1) * itemsPerPage;
-
+  const startIndex = (safeCurrentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
 
   const paginatedRevenues = revenues.slice(
@@ -274,37 +119,73 @@ function Financial() {
     }
   }, [currentPage, totalPages]);
 
-  // =========================================================
-  // LOCAL STORAGE
-  // =========================================================
-
   useEffect(() => {
-    localStorage.setItem(
-      "financialRevenues",
-      JSON.stringify(revenues)
-    );
-  }, [revenues]);
+    let disposed = false;
+    let controller;
 
-  useEffect(() => {
-    localStorage.setItem(
-      "financialExpenses",
-      JSON.stringify(expenses)
-    );
-  }, [expenses]);
+    setRevenues([]);
+    setExpenses([]);
+    setDataReady(false);
+    setShowRevenueModal(false);
+    setShowExpenseModal(false);
 
-  // =========================================================
-  // TOTALS
-  // =========================================================
+    pendingRef.current = {};
+
+    const load = async () => {
+      if (disposed || busyRef.current) return;
+
+      controller?.abort();
+      controller = new AbortController();
+
+      const signal = controller.signal;
+
+      try {
+        const entries = await getFinancialEntries({ signal });
+
+        if (disposed || signal.aborted) return;
+
+        setRevenues(
+          entries.filter((item) => item.kind === "Revenue")
+        );
+
+        setExpenses(
+          entries.filter((item) => item.kind === "Expense")
+        );
+
+        setDataReady(true);
+      } catch (error) {
+        if (!disposed && !signal.aborted) {
+          alert(
+            error.message ||
+              "Unable to load financial records."
+          );
+        }
+      }
+    };
+
+    refreshRef.current = load;
+
+    void load();
+
+    window.addEventListener("focus", load);
+    window.addEventListener("financialUpdated", load);
+
+    return () => {
+      disposed = true;
+      controller?.abort();
+
+      window.removeEventListener("focus", load);
+      window.removeEventListener("financialUpdated", load);
+    };
+  }, [scopeKey]);
 
   const totalRevenue = revenues.reduce(
-    (total, item) =>
-      total + Number(item.amount || 0),
+    (total, item) => total + Number(item.amount || 0),
     0
   );
 
   const totalExpenses = expenses.reduce(
-    (total, item) =>
-      total + Number(item.amount || 0),
+    (total, item) => total + Number(item.amount || 0),
     0
   );
 
@@ -317,19 +198,12 @@ function Financial() {
   const visitRevenue = revenues
     .filter((item) => item.type === "Visit")
     .reduce(
-      (total, item) =>
-        total + Number(item.amount || 0),
+      (total, item) => total + Number(item.amount || 0),
       0
     );
 
   const averageVisitRevenue =
-    totalVisits > 0
-      ? visitRevenue / totalVisits
-      : 0;
-
-  // =========================================================
-  // MONTHLY DATA
-  // =========================================================
+    totalVisits > 0 ? visitRevenue / totalVisits : 0;
 
   const monthlyData = useMemo(() => {
     const months = [
@@ -350,25 +224,19 @@ function Financial() {
     return months.map((month) => {
       const revenue = revenues
         .filter(
-          (item) =>
-            item.date?.slice(5, 7) ===
-            month.number
+          (item) => item.date?.slice(5, 7) === month.number
         )
         .reduce(
-          (total, item) =>
-            total + Number(item.amount || 0),
+          (total, item) => total + Number(item.amount || 0),
           0
         );
 
       const expense = expenses
         .filter(
-          (item) =>
-            item.date?.slice(5, 7) ===
-            month.number
+          (item) => item.date?.slice(5, 7) === month.number
         )
         .reduce(
-          (total, item) =>
-            total + Number(item.amount || 0),
+          (total, item) => total + Number(item.amount || 0),
           0
         );
 
@@ -414,11 +282,9 @@ function Financial() {
       })
       .join(" ");
 
-  // =========================================================
-  // FORM CHANGE
-  // =========================================================
-
   const handleRevenueChange = (event) => {
+    if (busyRef.current) return;
+
     const { name, value } = event.target;
 
     setNewRevenue((previous) => ({
@@ -428,6 +294,8 @@ function Financial() {
   };
 
   const handleExpenseChange = (event) => {
+    if (busyRef.current) return;
+
     const { name, value } = event.target;
 
     setNewExpense((previous) => ({
@@ -436,89 +304,159 @@ function Financial() {
     }));
   };
 
-  // =========================================================
-  // ADD
-  // =========================================================
+  const saveEntry = async (kind, form) => {
+    if (busyRef.current) return;
+
+    if (!dataReady) {
+      alert(
+        "Financial records are not loaded yet. Refresh the page and try again."
+      );
+      return;
+    }
+
+    const amount = Number(form.amount);
+
+    if (
+      !form.date ||
+      !form.type ||
+      !form.description.trim() ||
+      form.amount === "" ||
+      !Number.isFinite(amount) ||
+      amount < 0
+    ) {
+      alert("Complete all fields with a valid amount.");
+      return;
+    }
+
+    const payload = {
+      kind,
+      date: form.date,
+      type: form.type,
+      description: form.description.trim(),
+      amount,
+    };
+
+    const fingerprint = JSON.stringify(payload);
+    const previous = pendingRef.current[kind];
+
+    const pending =
+      previous?.fingerprint === fingerprint
+        ? previous
+        : {
+            fingerprint,
+            requestId: crypto.randomUUID(),
+          };
+
+    pendingRef.current[kind] = pending;
+    busyRef.current = true;
+    setIsSaving(true);
+
+    try {
+      const saved = await createFinancialEntry({
+        ...payload,
+        requestId: pending.requestId,
+      });
+
+      delete pendingRef.current[kind];
+
+      if (kind === "Revenue") {
+        setRevenues((items) => [
+          ...items.filter((item) => item.id !== saved.id),
+          saved,
+        ]);
+
+        setNewRevenue({
+          date: "",
+          type: "Visit",
+          description: "",
+          amount: "",
+        });
+
+        setShowRevenueModal(false);
+      } else {
+        setExpenses((items) => [
+          ...items.filter((item) => item.id !== saved.id),
+          saved,
+        ]);
+
+        setNewExpense({
+          date: "",
+          type: "Medical Supplies",
+          description: "",
+          amount: "",
+        });
+
+        setShowExpenseModal(false);
+      }
+    } catch (error) {
+      if (error.status === 400) {
+        delete pendingRef.current[kind];
+      }
+
+      alert(
+        error.message || "Unable to save financial record."
+      );
+    } finally {
+      busyRef.current = false;
+      setIsSaving(false);
+
+      void refreshRef.current();
+    }
+  };
 
   const handleAddRevenue = (event) => {
     event.preventDefault();
-
-    const revenue = {
-      id: Date.now(),
-      ...newRevenue,
-      amount: Number(newRevenue.amount),
-    };
-
-    setRevenues((previous) => [
-      ...previous,
-      revenue,
-    ]);
-
-    setNewRevenue({
-      date: "",
-      type: "Visit",
-      description: "",
-      amount: "",
-    });
-
-    setShowRevenueModal(false);
+    void saveEntry("Revenue", newRevenue);
   };
 
   const handleAddExpense = (event) => {
     event.preventDefault();
-
-    const expense = {
-      id: Date.now(),
-      ...newExpense,
-      amount: Number(newExpense.amount),
-    };
-
-    setExpenses((previous) => [
-      ...previous,
-      expense,
-    ]);
-
-    setNewExpense({
-      date: "",
-      type: "Medical Supplies",
-      description: "",
-      amount: "",
-    });
-
-    setShowExpenseModal(false);
+    void saveEntry("Expense", newExpense);
   };
 
-  // =========================================================
-  // DELETE
-  // =========================================================
+  const removeEntry = async (id, kind) => {
+    if (busyRef.current || !dataReady) return;
 
-  const handleDeleteRevenue = (id) => {
     const confirmed = window.confirm(
-      "Are you sure you want to delete this revenue?"
+      kind === "Revenue"
+        ? "Are you sure you want to delete this revenue?"
+        : "Are you sure you want to delete this expense?"
     );
 
     if (!confirmed) return;
 
-    setRevenues((previous) =>
-      previous.filter((item) => item.id !== id)
-    );
+    busyRef.current = true;
+    setIsSaving(true);
+
+    try {
+      await deleteFinancialEntry(id);
+
+      if (kind === "Revenue") {
+        setRevenues((items) =>
+          items.filter((item) => item.id !== id)
+        );
+      } else {
+        setExpenses((items) =>
+          items.filter((item) => item.id !== id)
+        );
+      }
+    } catch (error) {
+      alert(
+        error.message || "Unable to delete financial record."
+      );
+    } finally {
+      busyRef.current = false;
+      setIsSaving(false);
+
+      void refreshRef.current();
+    }
   };
 
-  const handleDeleteExpense = (id) => {
-    const confirmed = window.confirm(
-      "Are you sure you want to delete this expense?"
-    );
+  const handleDeleteRevenue = (id) =>
+    void removeEntry(id, "Revenue");
 
-    if (!confirmed) return;
-
-    setExpenses((previous) =>
-      previous.filter((item) => item.id !== id)
-    );
-  };
-
-  // =========================================================
-  // EXPORT
-  // =========================================================
+  const handleDeleteExpense = (id) =>
+    void removeEntry(id, "Expense");
 
   const handleExport = () => {
     const summary = [
@@ -582,25 +520,12 @@ function Financial() {
       "Expenses"
     );
 
-    XLSX.writeFile(
-      workbook,
-      "Financial_Report.xlsx"
-    );
-  };
-
-  // =========================================================
-  // RENDER
-  // =========================================================
-
-  return (
+    XLSX.writeFile(workbook, "Financial_Report.xlsx");
+  };  return (
     <div className="dashboard-layout">
       <Sidebar />
 
       <main className="dashboard-main">
-        {/* =====================================================
-            HEADER
-        ===================================================== */}
-
         <div className="page-header financial-page-header">
           <div>
             <h1>
@@ -619,27 +544,10 @@ function Financial() {
                   : "Manage clinic revenues, expenses and financial performance"}
             </p>
           </div>
-
-          {/* {isOverview && (
-            <button
-              type="button"
-              className="financial-export-button"
-              onClick={handleExport}
-            >
-              <FaFileExcel />
-              
-            </button>
-          )} */}
         </div>
-
-        {/* =====================================================
-            FINANCIAL OVERVIEW ONLY
-        ===================================================== */}
 
         {isOverview && (
           <>
-            {/* STATS */}
-
             <div className="financial-stats">
               <div className="financial-stat-card">
                 <div className="financial-stat-icon revenue">
@@ -648,11 +556,7 @@ function Financial() {
 
                 <div>
                   <span>Total Revenue</span>
-
-                  <h2>
-                    ${totalRevenue.toLocaleString()}
-                  </h2>
-
+                  <h2>${totalRevenue.toLocaleString()}</h2>
                   <small>All clinic income</small>
                 </div>
               </div>
@@ -664,14 +568,8 @@ function Financial() {
 
                 <div>
                   <span>Total Expenses</span>
-
-                  <h2>
-                    ${totalExpenses.toLocaleString()}
-                  </h2>
-
-                  <small>
-                    Total clinic spending
-                  </small>
+                  <h2>${totalExpenses.toLocaleString()}</h2>
+                  <small>Total clinic spending</small>
                 </div>
               </div>
 
@@ -682,14 +580,8 @@ function Financial() {
 
                 <div>
                   <span>Net Profit</span>
-
-                  <h2>
-                    ${netProfit.toLocaleString()}
-                  </h2>
-
-                  <small>
-                    Revenue - Expenses
-                  </small>
+                  <h2>${netProfit.toLocaleString()}</h2>
+                  <small>Revenue - Expenses</small>
                 </div>
               </div>
 
@@ -700,28 +592,18 @@ function Financial() {
 
                 <div>
                   <span>Total Visits</span>
-
                   <h2>{totalVisits}</h2>
-
                   <small>Revenue visits</small>
                 </div>
               </div>
             </div>
 
-            {/* =================================================
-                FINANCIAL PERFORMANCE
-            ================================================= */}
-
             <section className="financial-analytics-card">
               <div className="financial-analytics-header">
                 <div>
-                  <h2>
-                    Financial Performance
-                  </h2>
-
+                  <h2>Financial Performance</h2>
                   <p>
-                    Track clinic revenue,
-                    expenses and profit
+                    Track clinic revenue, expenses and profit
                     throughout the year
                   </p>
                 </div>
@@ -733,26 +615,15 @@ function Financial() {
                     <select
                       value={chartMetric}
                       onChange={(event) =>
-                        setChartMetric(
-                          event.target.value
-                        )
+                        setChartMetric(event.target.value)
                       }
                     >
                       <option value="all">
                         All Financial Data
                       </option>
-
-                      <option value="revenue">
-                        Revenue
-                      </option>
-
-                      <option value="expenses">
-                        Expenses
-                      </option>
-
-                      <option value="profit">
-                        Profit
-                      </option>
+                      <option value="revenue">Revenue</option>
+                      <option value="expenses">Expenses</option>
+                      <option value="profit">Profit</option>
                     </select>
                   </div>
 
@@ -773,92 +644,62 @@ function Financial() {
                   className="financial-custom-chart"
                   preserveAspectRatio="none"
                 >
-                  {[40, 85, 130, 175, 220].map(
-                    (y) => (
-                      <line
-                        key={y}
-                        x1="35"
-                        y1={y}
-                        x2="940"
-                        y2={y}
-                        className="financial-grid-line"
-                      />
-                    )
-                  )}
+                  {[40, 85, 130, 175, 220].map((y) => (
+                    <line
+                      key={y}
+                      x1="35"
+                      y1={y}
+                      x2="940"
+                      y2={y}
+                      className="financial-grid-line"
+                    />
+                  ))}
 
-                  {monthlyData.map(
-                    (item, index) => {
-                      const x =
-                        48 + index * 75;
+                  {monthlyData.map((item, index) => {
+                    const x = 48 + index * 75;
+                    const revenueHeight = getHeight(item.revenue);
+                    const expenseHeight = getHeight(item.expense);
 
-                      const revenueHeight =
-                        getHeight(
-                          item.revenue
-                        );
+                    return (
+                      <g key={item.month}>
+                        {(chartMetric === "all" ||
+                          chartMetric === "revenue") && (
+                          <rect
+                            x={x}
+                            y={chartHeight - 35 - revenueHeight}
+                            width="22"
+                            height={revenueHeight}
+                            rx="3"
+                            className="financial-revenue-bar"
+                          />
+                        )}
 
-                      const expenseHeight =
-                        getHeight(
-                          item.expense
-                        );
+                        {(chartMetric === "all" ||
+                          chartMetric === "expenses") && (
+                          <rect
+                            x={x + 24}
+                            y={chartHeight - 35 - expenseHeight}
+                            width="22"
+                            height={expenseHeight}
+                            rx="3"
+                            className="financial-expense-bar"
+                          />
+                        )}
 
-                      return (
-                        <g key={item.month}>
-                          {(chartMetric ===
-                            "all" ||
-                            chartMetric ===
-                              "revenue") && (
-                            <rect
-                              x={x}
-                              y={
-                                chartHeight -
-                                35 -
-                                revenueHeight
-                              }
-                              width="22"
-                              height={
-                                revenueHeight
-                              }
-                              rx="3"
-                              className="financial-revenue-bar"
-                            />
-                          )}
-
-                          {(chartMetric ===
-                            "all" ||
-                            chartMetric ===
-                              "expenses") && (
-                            <rect
-                              x={x + 24}
-                              y={
-                                chartHeight -
-                                35 -
-                                expenseHeight
-                              }
-                              width="22"
-                              height={
-                                expenseHeight
-                              }
-                              rx="3"
-                              className="financial-expense-bar"
-                            />
-                          )}
-
-                          <text
-                            x={x + 22}
-                            y="270"
-                            textAnchor="middle"
-                            className="financial-month-label"
-                          >
-                            {item.month}
-                          </text>
-                        </g>
-                      );
-                    }
-                  )}
+                        <text
+                          x={x + 22}
+                          y="270"
+                          textAnchor="middle"
+                          className="financial-month-label"
+                        >
+                          {item.month}
+                        </text>
+                      </g>
+                    );
+                  })}
 
                   {(chartMetric === "all" ||
-                    chartMetric ===
-                      "profit") && (
+                    chartMetric === "profit") && (
                     <>
                       <polyline
                         points={getLinePoints()}
@@ -866,33 +707,24 @@ function Financial() {
                         className="financial-profit-line"
                       />
 
-                      {monthlyData.map(
-                        (item, index) => {
-                          const x =
-                            60 +
-                            index * 75;
+                      {monthlyData.map((item, index) => {
+                        const x = 60 + index * 75;
 
-                          const y =
-                            chartHeight -
-                            35 -
-                            getHeight(
-                              Math.max(
-                                item.profit,
-                                0
-                              )
-                            );
+                        const y =
+                          chartHeight -
+                          35 -
+                          getHeight(Math.max(item.profit, 0));
 
-                          return (
-                            <circle
-                              key={`profit-${item.month}`}
-                              cx={x}
-                              cy={y}
-                              r="4"
-                              className="financial-profit-dot"
-                            />
-                          );
-                        }
-                      )}
+                        return (
+                          <circle
+                            key={`profit-${item.month}`}
+                            cx={x}
+                            cy={y}
+                            r="4"
+                            className="financial-profit-dot"
+                          />
+                        );
+                      })}
                     </>
                   )}
                 </svg>
@@ -921,42 +753,24 @@ function Financial() {
 
                   <button
                     type="button"
-                    className={
-                      chartPeriod === "day"
-                        ? "active"
-                        : ""
-                    }
-                    onClick={() =>
-                      setChartPeriod("day")
-                    }
+                    className={chartPeriod === "day" ? "active" : ""}
+                    onClick={() => setChartPeriod("day")}
                   >
                     Day
                   </button>
 
                   <button
                     type="button"
-                    className={
-                      chartPeriod === "week"
-                        ? "active"
-                        : ""
-                    }
-                    onClick={() =>
-                      setChartPeriod("week")
-                    }
+                    className={chartPeriod === "week" ? "active" : ""}
+                    onClick={() => setChartPeriod("week")}
                   >
                     Week
                   </button>
 
                   <button
                     type="button"
-                    className={
-                      chartPeriod === "month"
-                        ? "active"
-                        : ""
-                    }
-                    onClick={() =>
-                      setChartPeriod("month")
-                    }
+                    className={chartPeriod === "month" ? "active" : ""}
+                    onClick={() => setChartPeriod("month")}
                   >
                     Month
                   </button>
@@ -964,18 +778,11 @@ function Financial() {
               </div>
             </section>
 
-            {/* =================================================
-                SMALL ANALYTICS
-            ================================================= */}
-
             <div className="financial-bottom-analytics">
               <div className="financial-mini-chart-card">
                 <div className="financial-mini-title">
                   <div>
-                    <h3>
-                      Revenue Overview
-                    </h3>
-
+                    <h3>Revenue Overview</h3>
                     <p>Revenue by month</p>
                   </div>
 
@@ -983,46 +790,34 @@ function Financial() {
                 </div>
 
                 <div className="financial-mini-bars">
-                  {monthlyData
-                    .slice(4, 12)
-                    .map((item) => (
-                      <div
-                        className="financial-mini-bar-item"
-                        key={item.month}
-                      >
-                        <div className="mini-bar-track">
-                          <div
-                            className="mini-bar-fill revenue"
-                            style={{
-                              height: `${Math.max(
-                                10,
-                                (item.revenue /
-                                  maxChartValue) *
-                                  100
-                              )}%`,
-                            }}
-                          />
-                        </div>
-
-                        <span>
-                          {item.month}
-                        </span>
+                  {monthlyData.slice(4, 12).map((item) => (
+                    <div
+                      className="financial-mini-bar-item"
+                      key={item.month}
+                    >
+                      <div className="mini-bar-track">
+                        <div
+                          className="mini-bar-fill revenue"
+                          style={{
+                            height: `${Math.max(
+                              10,
+                              (item.revenue / maxChartValue) * 100
+                            )}%`,
+                          }}
+                        />
                       </div>
-                    ))}
+
+                      <span>{item.month}</span>
+                    </div>
+                  ))}
                 </div>
               </div>
 
               <div className="financial-mini-chart-card">
                 <div className="financial-mini-title">
                   <div>
-                    <h3>
-                      Financial Summary
-                    </h3>
-
-                    <p>
-                      Current clinic
-                      performance
-                    </p>
+                    <h3>Financial Summary</h3>
+                    <p>Current clinic performance</p>
                   </div>
 
                   <FaDollarSign />
@@ -1030,44 +825,30 @@ function Financial() {
 
                 <div className="financial-summary-list">
                   <div>
-                    <span>
-                      Visit Revenue
-                    </span>
-
+                    <span>Visit Revenue</span>
                     <strong>
-                      $
-                      {visitRevenue.toLocaleString()}
+                      ${visitRevenue.toLocaleString()}
                     </strong>
                   </div>
 
                   <div>
-                    <span>
-                      Average / Visit
-                    </span>
-
+                    <span>Average / Visit</span>
                     <strong>
-                      $
-                      {averageVisitRevenue.toFixed(
-                        2
-                      )}
+                      ${averageVisitRevenue.toFixed(2)}
                     </strong>
                   </div>
 
                   <div>
                     <span>Revenue</span>
-
                     <strong className="positive">
-                      +$
-                      {totalRevenue.toLocaleString()}
+                      +${totalRevenue.toLocaleString()}
                     </strong>
                   </div>
 
                   <div>
                     <span>Expenses</span>
-
                     <strong className="negative">
-                      -$
-                      {totalExpenses.toLocaleString()}
+                      -${totalExpenses.toLocaleString()}
                     </strong>
                   </div>
                 </div>
@@ -1075,10 +856,6 @@ function Financial() {
             </div>
           </>
         )}
-
-        {/* =====================================================
-            REVENUE TABLE ONLY
-        ===================================================== */}
 
         {isRevenue && (
           <section
@@ -1088,19 +865,13 @@ function Financial() {
             <div className="financial-section-header">
               <div>
                 <h2>Revenue</h2>
-
-                <p>
-                  Track all clinic revenue
-                  and income
-                </p>
+                <p>Track all clinic revenue and income</p>
               </div>
 
               <button
                 type="button"
                 className="add-button"
-                onClick={() =>
-                  setShowRevenueModal(true)
-                }
+                onClick={() => setShowRevenueModal(true)}
               >
                 <FaPlus />
                 Add Revenue
@@ -1120,59 +891,47 @@ function Financial() {
                 </thead>
 
                 <tbody>
-                  {paginatedRevenues.length >
-                  0 ? (
-                    paginatedRevenues.map(
-                      (revenue) => (
-                        <tr key={revenue.id}>
-                          <td>
-                            {revenue.date}
-                          </td>
+                  {paginatedRevenues.length > 0 ? (
+                    paginatedRevenues.map((revenue) => (
+                      <tr key={revenue.id}>
+                        <td>{revenue.date}</td>
 
-                          <td>
-                            <span className="financial-type-badge revenue-badge">
-                              {revenue.type}
-                            </span>
-                          </td>
+                        <td>
+                          <span className="financial-type-badge revenue-badge">
+                            {revenue.type}
+                          </span>
+                        </td>
 
-                          <td>
-                            {revenue.description ||
-                              "—"}
-                          </td>
+                        <td>{revenue.description || "—"}</td>
 
-                          <td className="financial-amount revenue-amount">
-                            +$
-                            {Number(
-                              revenue.amount ||
-                                0
-                            ).toLocaleString()}
-                          </td>
+                        <td className="financial-amount revenue-amount">
+                          +$
+                          {Number(
+                            revenue.amount || 0
+                          ).toLocaleString()}
+                        </td>
 
-                          <td>
-                            <button
-                              type="button"
-                              className="delete-button icon-button"
-                              onClick={() =>
-                                handleDeleteRevenue(
-                                  revenue.id
-                                )
-                              }
-                              title="Delete revenue"
-                            >
-                              <FaTrash />
-                            </button>
-                          </td>
-                        </tr>
-                      )
-                    )
+                        <td>
+                          <button
+                            type="button"
+                            className="delete-button icon-button"
+                            onClick={() =>
+                              handleDeleteRevenue(revenue.id)
+                            }
+                            title="Delete revenue"
+                          >
+                            <FaTrash />
+                          </button>
+                        </td>
+                      </tr>
+                    ))
                   ) : (
                     <tr>
                       <td
                         colSpan="5"
                         className="financial-empty-row"
                       >
-                        No revenue records
-                        found.
+                        No revenue records found.
                       </td>
                     </tr>
                   )}
@@ -1182,10 +941,6 @@ function Financial() {
           </section>
         )}
 
-        {/* =====================================================
-            EXPENSE TABLE ONLY
-        ===================================================== */}
-
         {isExpenses && (
           <section
             className="financial-section"
@@ -1194,19 +949,13 @@ function Financial() {
             <div className="financial-section-header">
               <div>
                 <h2>Expenses</h2>
-
-                <p>
-                  Track all clinic expenses
-                  and spending
-                </p>
+                <p>Track all clinic expenses and spending</p>
               </div>
 
               <button
                 type="button"
                 className="add-button"
-                onClick={() =>
-                  setShowExpenseModal(true)
-                }
+                onClick={() => setShowExpenseModal(true)}
               >
                 <FaPlus />
                 Add Expense
@@ -1226,59 +975,47 @@ function Financial() {
                 </thead>
 
                 <tbody>
-                  {paginatedExpenses.length >
-                  0 ? (
-                    paginatedExpenses.map(
-                      (expense) => (
-                        <tr key={expense.id}>
-                          <td>
-                            {expense.date}
-                          </td>
+                  {paginatedExpenses.length > 0 ? (
+                    paginatedExpenses.map((expense) => (
+                      <tr key={expense.id}>
+                        <td>{expense.date}</td>
 
-                          <td>
-                            <span className="financial-type-badge expense-badge">
-                              {expense.type}
-                            </span>
-                          </td>
+                        <td>
+                          <span className="financial-type-badge expense-badge">
+                            {expense.type}
+                          </span>
+                        </td>
 
-                          <td>
-                            {expense.description ||
-                              "—"}
-                          </td>
+                        <td>{expense.description || "—"}</td>
 
-                          <td className="financial-amount expense-amount">
-                            -$
-                            {Number(
-                              expense.amount ||
-                                0
-                            ).toLocaleString()}
-                          </td>
+                        <td className="financial-amount expense-amount">
+                          -$
+                          {Number(
+                            expense.amount || 0
+                          ).toLocaleString()}
+                        </td>
 
-                          <td>
-                            <button
-                              type="button"
-                              className="delete-button icon-button"
-                              onClick={() =>
-                                handleDeleteExpense(
-                                  expense.id
-                                )
-                              }
-                              title="Delete expense"
-                            >
-                              <FaTrash />
-                            </button>
-                          </td>
-                        </tr>
-                      )
-                    )
+                        <td>
+                          <button
+                            type="button"
+                            className="delete-button icon-button"
+                            onClick={() =>
+                              handleDeleteExpense(expense.id)
+                            }
+                            title="Delete expense"
+                          >
+                            <FaTrash />
+                          </button>
+                        </td>
+                      </tr>
+                    ))
                   ) : (
                     <tr>
                       <td
                         colSpan="5"
                         className="financial-empty-row"
                       >
-                        No expense records
-                        found.
+                        No expense records found.
                       </td>
                     </tr>
                   )}
@@ -1288,10 +1025,6 @@ function Financial() {
           </section>
         )}
 
-        {/* =====================================================
-            PAGINATION - TABLE PAGES ONLY
-        ===================================================== */}
-
         {(isRevenue || isExpenses) && (
           <div className="financial-page-pagination">
             <div className="financial-pagination-left">
@@ -1300,25 +1033,14 @@ function Financial() {
               <select
                 value={itemsPerPage}
                 onChange={(event) => {
-                  setItemsPerPage(
-                    Number(
-                      event.target.value
-                    )
-                  );
-
+                  setItemsPerPage(Number(event.target.value));
                   setCurrentPage(1);
                 }}
               >
                 <option value={5}>5</option>
-                <option value={10}>
-                  10
-                </option>
-                <option value={20}>
-                  20
-                </option>
-                <option value={50}>
-                  50
-                </option>
+                <option value={10}>10</option>
+                <option value={20}>20</option>
+                <option value={50}>50</option>
               </select>
             </div>
 
@@ -1326,16 +1048,10 @@ function Financial() {
               <button
                 type="button"
                 className="financial-pagination-nav"
-                disabled={
-                  safeCurrentPage === 1
-                }
+                disabled={safeCurrentPage === 1}
                 onClick={() =>
-                  setCurrentPage(
-                    (previous) =>
-                      Math.max(
-                        1,
-                        previous - 1
-                      )
+                  setCurrentPage((previous) =>
+                    Math.max(1, previous - 1)
                   )
                 }
               >
@@ -1347,13 +1063,9 @@ function Financial() {
                   type="button"
                   key={page}
                   className={`financial-page-number ${
-                    safeCurrentPage === page
-                      ? "active"
-                      : ""
+                    safeCurrentPage === page ? "active" : ""
                   }`}
-                  onClick={() =>
-                    setCurrentPage(page)
-                  }
+                  onClick={() => setCurrentPage(page)}
                 >
                   {page}
                 </button>
@@ -1362,17 +1074,10 @@ function Financial() {
               <button
                 type="button"
                 className="financial-pagination-nav"
-                disabled={
-                  safeCurrentPage ===
-                  totalPages
-                }
+                disabled={safeCurrentPage === totalPages}
                 onClick={() =>
-                  setCurrentPage(
-                    (previous) =>
-                      Math.min(
-                        totalPages,
-                        previous + 1
-                      )
+                  setCurrentPage((previous) =>
+                    Math.min(totalPages, previous + 1)
                   )
                 }
               >
@@ -1383,48 +1088,32 @@ function Financial() {
         )}
       </main>
 
-      {/* =====================================================
-          ADD REVENUE MODAL
-      ===================================================== */}
-
       {showRevenueModal && (
         <div
           className="modal-overlay"
-          onMouseDown={() =>
-            setShowRevenueModal(false)
-          }
+          onMouseDown={() => setShowRevenueModal(false)}
         >
           <div
             className="modal-container"
-            onMouseDown={(event) =>
-              event.stopPropagation()
-            }
+            onMouseDown={(event) => event.stopPropagation()}
           >
             <div className="modal-header">
               <div>
                 <h2>Add Revenue</h2>
-
-                <p>
-                  Add a new clinic revenue
-                  record
-                </p>
+                <p>Add a new clinic revenue record</p>
               </div>
 
               <button
                 type="button"
                 className="modal-close"
-                onClick={() =>
-                  setShowRevenueModal(false)
-                }
+                onClick={() => setShowRevenueModal(false)}
                 aria-label="Close"
               >
                 <FaXmark />
               </button>
             </div>
 
-            <form
-              onSubmit={handleAddRevenue}
-            >
+            <form onSubmit={handleAddRevenue}>
               <div className="form-row">
                 <div className="form-field">
                   <label>Date</label>
@@ -1433,57 +1122,28 @@ function Financial() {
                     type="date"
                     name="date"
                     value={newRevenue.date}
-                    onChange={
-                      handleRevenueChange
-                    }
+                    onChange={handleRevenueChange}
                     required
                   />
                 </div>
 
                 <div className="form-field">
-                  <label>
-                    Revenue Type
-                  </label>
+                  <label>Revenue Type</label>
 
                   <select
                     name="type"
                     value={newRevenue.type}
-                    onChange={
-                      handleRevenueChange
-                    }
+                    onChange={handleRevenueChange}
                     required
                   >
-                    <option value="Visit">
-                      Visit
-                    </option>
-
-                    <option value="Vaccination">
-                      Vaccination
-                    </option>
-
-                    <option value="Medication">
-                      Medication
-                    </option>
-
-                    <option value="Prescription">
-                      Prescription
-                    </option>
-
-                    <option value="Surgery">
-                      Surgery
-                    </option>
-
-                    <option value="Laboratory">
-                      Laboratory
-                    </option>
-
-                    <option value="Grooming">
-                      Grooming
-                    </option>
-
-                    <option value="Other">
-                      Other
-                    </option>
+                    <option value="Visit">Visit</option>
+                    <option value="Vaccination">Vaccination</option>
+                    <option value="Medication">Medication</option>
+                    <option value="Prescription">Prescription</option>
+                    <option value="Surgery">Surgery</option>
+                    <option value="Laboratory">Laboratory</option>
+                    <option value="Grooming">Grooming</option>
+                    <option value="Other">Other</option>
                   </select>
                 </div>
               </div>
@@ -1494,12 +1154,8 @@ function Financial() {
                 <input
                   type="text"
                   name="description"
-                  value={
-                    newRevenue.description
-                  }
-                  onChange={
-                    handleRevenueChange
-                  }
+                  value={newRevenue.description}
+                  onChange={handleRevenueChange}
                   placeholder="Enter revenue description"
                   required
                 />
@@ -1512,9 +1168,7 @@ function Financial() {
                   type="number"
                   name="amount"
                   value={newRevenue.amount}
-                  onChange={
-                    handleRevenueChange
-                  }
+                  onChange={handleRevenueChange}
                   min="0"
                   step="0.01"
                   placeholder="0.00"
@@ -1526,11 +1180,7 @@ function Financial() {
                 <button
                   type="button"
                   className="modal-cancel-button"
-                  onClick={() =>
-                    setShowRevenueModal(
-                      false
-                    )
-                  }
+                  onClick={() => setShowRevenueModal(false)}
                 >
                   Cancel
                 </button>
@@ -1538,6 +1188,7 @@ function Financial() {
                 <button
                   type="submit"
                   className="save-button"
+                  disabled={isSaving || !dataReady}
                 >
                   <FaPlus />
                   Add Revenue
@@ -1548,48 +1199,32 @@ function Financial() {
         </div>
       )}
 
-      {/* =====================================================
-          ADD EXPENSE MODAL
-      ===================================================== */}
-
       {showExpenseModal && (
         <div
           className="modal-overlay"
-          onMouseDown={() =>
-            setShowExpenseModal(false)
-          }
+          onMouseDown={() => setShowExpenseModal(false)}
         >
           <div
             className="modal-container"
-            onMouseDown={(event) =>
-              event.stopPropagation()
-            }
+            onMouseDown={(event) => event.stopPropagation()}
           >
             <div className="modal-header">
               <div>
                 <h2>Add Expense</h2>
-
-                <p>
-                  Add a new clinic expense
-                  record
-                </p>
+                <p>Add a new clinic expense record</p>
               </div>
 
               <button
                 type="button"
                 className="modal-close"
-                onClick={() =>
-                  setShowExpenseModal(false)
-                }
+                onClick={() => setShowExpenseModal(false)}
                 aria-label="Close"
               >
                 <FaXmark />
               </button>
             </div>
 
-            <form
-              onSubmit={handleAddExpense}
-            >
+            <form onSubmit={handleAddExpense}>
               <div className="form-row">
                 <div className="form-field">
                   <label>Date</label>
@@ -1598,61 +1233,31 @@ function Financial() {
                     type="date"
                     name="date"
                     value={newExpense.date}
-                    onChange={
-                      handleExpenseChange
-                    }
+                    onChange={handleExpenseChange}
                     required
                   />
                 </div>
 
                 <div className="form-field">
-                  <label>
-                    Expense Type
-                  </label>
+                  <label>Expense Type</label>
 
                   <select
                     name="type"
                     value={newExpense.type}
-                    onChange={
-                      handleExpenseChange
-                    }
+                    onChange={handleExpenseChange}
                     required
                   >
                     <option value="Medical Supplies">
                       Medical Supplies
                     </option>
-
-                    <option value="Medication">
-                      Medication
-                    </option>
-
-                    <option value="Equipment">
-                      Equipment
-                    </option>
-
-                    <option value="Salary">
-                      Salary
-                    </option>
-
-                    <option value="Rent">
-                      Rent
-                    </option>
-
-                    <option value="Utilities">
-                      Utilities
-                    </option>
-
-                    <option value="Maintenance">
-                      Maintenance
-                    </option>
-
-                    <option value="Marketing">
-                      Marketing
-                    </option>
-
-                    <option value="Other">
-                      Other
-                    </option>
+                    <option value="Medication">Medication</option>
+                    <option value="Equipment">Equipment</option>
+                    <option value="Salary">Salary</option>
+                    <option value="Rent">Rent</option>
+                    <option value="Utilities">Utilities</option>
+                    <option value="Maintenance">Maintenance</option>
+                    <option value="Marketing">Marketing</option>
+                    <option value="Other">Other</option>
                   </select>
                 </div>
               </div>
@@ -1663,12 +1268,8 @@ function Financial() {
                 <input
                   type="text"
                   name="description"
-                  value={
-                    newExpense.description
-                  }
-                  onChange={
-                    handleExpenseChange
-                  }
+                  value={newExpense.description}
+                  onChange={handleExpenseChange}
                   placeholder="Enter expense description"
                   required
                 />
@@ -1681,9 +1282,7 @@ function Financial() {
                   type="number"
                   name="amount"
                   value={newExpense.amount}
-                  onChange={
-                    handleExpenseChange
-                  }
+                  onChange={handleExpenseChange}
                   min="0"
                   step="0.01"
                   placeholder="0.00"
@@ -1695,11 +1294,7 @@ function Financial() {
                 <button
                   type="button"
                   className="modal-cancel-button"
-                  onClick={() =>
-                    setShowExpenseModal(
-                      false
-                    )
-                  }
+                  onClick={() => setShowExpenseModal(false)}
                 >
                   Cancel
                 </button>
@@ -1707,6 +1302,7 @@ function Financial() {
                 <button
                   type="submit"
                   className="save-button"
+                  disabled={isSaving || !dataReady}
                 >
                   <FaPlus />
                   Add Expense

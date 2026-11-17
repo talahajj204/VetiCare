@@ -1,14 +1,12 @@
+import clinicLogo from "../../assets/clinic-logo.png";
 import React, { useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 
 import {
-  FaShieldHalved,
   FaHouse,
   FaUsers,
   FaLayerGroup,
   FaCreditCard,
-  FaChevronLeft,
-  FaChevronRight,
   FaArrowRightFromBracket,
 } from "react-icons/fa6";
 
@@ -49,7 +47,8 @@ const styles = `
 
   .sp-page:has(> .myclinic-super-sidebar),
   .ss-page:has(> .myclinic-super-sidebar),
-  .sau-page:has(> .myclinic-super-sidebar) {
+  .sau-page:has(> .myclinic-super-sidebar),
+  .sa-clinics-page:has(> .myclinic-super-sidebar) {
     display: flex !important;
     flex-direction: row !important;
 
@@ -68,7 +67,8 @@ const styles = `
 
   .sp-page:has(> .myclinic-super-sidebar) > .sp-main,
   .ss-page:has(> .myclinic-super-sidebar) > .ss-main,
-  .sau-page:has(> .myclinic-super-sidebar) > .sau-main {
+  .sau-page:has(> .myclinic-super-sidebar) > .sau-main,
+  .sa-clinics-page:has(> .myclinic-super-sidebar) > .sa-clinics-main {
     flex: 1 1 0% !important;
 
     width: 0 !important;
@@ -167,44 +167,6 @@ const styles = `
     font-weight: 800;
     text-align: center;
     white-space: nowrap;
-  }
-
-  /* COLLAPSE BUTTON */
-
-  .myclinic-super-sidebar .myclinic-super-toggle {
-    position: absolute !important;
-
-    top: 10px;
-    right: 0;
-
-    display: grid !important;
-    place-items: center !important;
-
-    width: 26px !important;
-    height: 26px !important;
-
-    min-width: 26px !important;
-    min-height: 26px !important;
-
-    max-width: 26px !important;
-    max-height: 26px !important;
-
-    margin: 0 !important;
-    padding: 0 !important;
-
-    border: 1px solid rgba(255,255,255,.45) !important;
-    border-radius: 7px !important;
-
-    background: rgba(255,255,255,.12) !important;
-    color: #ffffff !important;
-
-    cursor: pointer !important;
-    z-index: 2;
-    box-shadow: none !important;
-  }
-
-  .myclinic-super-sidebar .myclinic-super-toggle:hover {
-    background: rgba(255,255,255,.27) !important;
   }
 
   /* NAVIGATION */
@@ -389,6 +351,115 @@ const styles = `
       padding: 12px 6px;
     }
   }
+
+/* VetiCare branding and profile toggle */
+.myclinic-super-sidebar .myclinic-super-header {
+  min-height: 148px !important;
+  padding: 14px 0 !important;
+  margin: 0 12px !important;
+}
+
+.myclinic-super-sidebar button.myclinic-super-profile {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 10px !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  height: auto !important;
+  padding: 9px 6px !important;
+  margin: 0 !important;
+  border: 0 !important;
+  border-radius: 12px !important;
+  background: transparent !important;
+  color: white !important;
+  font-family: inherit;
+  text-align: center;
+  cursor: pointer;
+}
+
+.myclinic-super-sidebar button.myclinic-super-profile:hover {
+  background: rgba(255,255,255,.12) !important;
+}
+
+.myclinic-super-sidebar button.myclinic-super-profile:focus-visible {
+  outline: 2px solid white;
+  outline-offset: -2px;
+}
+
+.myclinic-super-sidebar .myclinic-super-brand-image {
+  display: block;
+  flex: 0 0 auto;
+  width: 62px !important;
+  height: 62px !important;
+  object-fit: contain;
+  padding: 4px;
+  border-radius: 12px;
+  background: transparent;
+}
+
+.myclinic-super-brand-text {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.myclinic-super-brand-name {
+  color: white;
+  font-size: 21px;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.myclinic-super-brand-role {
+  color: rgba(255,255,255,.85);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.myclinic-super-sidebar.is-collapsed .myclinic-super-header {
+  min-height: 84px !important;
+  margin: 0 6px !important;
+  padding: 12px 0 !important;
+}
+
+.myclinic-super-sidebar.is-collapsed .myclinic-super-brand-image {
+  width: 38px !important;
+  height: 38px !important;
+  padding: 3px;
+  border-radius: 9px;
+}
+
+/* Keep Dashboard width synchronized with the sidebar. */
+.clinic-dashboard:has(.myclinic-super-sidebar:not(.is-collapsed)) {
+  --sidebar-size: 235px;
+}
+
+.clinic-dashboard:has(.myclinic-super-sidebar.is-collapsed) {
+  --sidebar-size: 68px;
+}
+
+@media (max-width: 600px) {
+  .myclinic-super-sidebar:not(.is-collapsed) {
+    flex: 0 0 235px !important;
+    width: 235px !important;
+    min-width: 235px !important;
+    max-width: 235px !important;
+  }
+
+  .myclinic-super-sidebar:not(.is-collapsed) .myclinic-super-label {
+    display: block !important;
+  }
+
+  .myclinic-super-sidebar:not(.is-collapsed) .myclinic-super-link {
+    justify-content: flex-start !important;
+    gap: 13px !important;
+    padding: 11px 13px !important;
+  }
+}
 `;
 
 export default function SuperAdminSidebar({
@@ -443,43 +514,44 @@ export default function SuperAdminSidebar({
         }`}
         aria-label="Super Admin Navigation"
       >
+
         {/* HEADER */}
         <div className="myclinic-super-header">
           <button
             type="button"
-            className="myclinic-super-toggle"
+            className="myclinic-super-profile"
             onClick={toggleSidebar}
+            aria-expanded={!collapsed}
+            aria-controls="veticare-super-navigation"
             aria-label={
-              collapsed
-                ? "Expand sidebar"
-                : "Collapse sidebar"
+              collapsed ? "Expand sidebar" : "Collapse sidebar"
             }
             title={
-              collapsed
-                ? "Expand sidebar"
-                : "Collapse sidebar"
+              collapsed ? "Expand sidebar" : "Collapse sidebar"
             }
           >
-            {collapsed ? (
-              <FaChevronRight />
-            ) : (
-              <FaChevronLeft />
+            <img
+              src={clinicLogo}
+              alt="VetiCare"
+              className="myclinic-super-brand-image"
+            />
+
+            {!collapsed && (
+              <span className="myclinic-super-brand-text">
+                <span className="myclinic-super-brand-name">
+                  VetiCare
+                </span>
+
+                <span className="myclinic-super-brand-role">
+                  Super Admin
+                </span>
+              </span>
             )}
           </button>
-
-          <div className="myclinic-super-logo">
-            <FaShieldHalved />
-          </div>
-
-          {!collapsed && (
-            <h2 className="myclinic-super-title">
-              Super Admin
-            </h2>
-          )}
         </div>
 
         {/* NAVIGATION */}
-        <nav className="myclinic-super-nav">
+        <nav id="veticare-super-navigation" className="myclinic-super-nav">
           {menuItems.map(({ label, path, icon: Icon }) => (
             <NavLink
               key={path}

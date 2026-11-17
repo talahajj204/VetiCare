@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { plansRequest } from "../api/plansApi";
+import { useEffect, useRef, useState } from "react";
 import SuperAdminSidebar from "../components/SuperAdminSidebar";
 
 import {
@@ -29,49 +30,7 @@ const FEATURES = [
   "Priority Support",
 ];
 
-const DEFAULT_PLANS = [
-  {
-    id: 1,
-    name: "Basic",
-    description: "Essential tools for small veterinary clinics.",
-    monthlyPrice: 19,
-    yearlyPrice: 190,
-    status: "Active",
-    features: [
-      "Appointments",
-      "Medical Records",
-      "Pet Management",
-      "Vaccinations",
-    ],
-  },
-  {
-    id: 2,
-    name: "Professional",
-    description: "Advanced tools for growing veterinary clinics.",
-    monthlyPrice: 39,
-    yearlyPrice: 390,
-    status: "Active",
-    features: [
-      "Appointments",
-      "Medical Records",
-      "Pet Management",
-      "Vaccinations",
-      "Inventory",
-      "Pharmacy",
-      "Staff Management",
-      "Reports & Analytics",
-    ],
-  },
-  {
-    id: 3,
-    name: "Premium",
-    description: "Complete management for larger clinics.",
-    monthlyPrice: 69,
-    yearlyPrice: 690,
-    status: "Active",
-    features: [...FEATURES],
-  },
-];
+
 
 const EMPTY_PLAN = {
   name: "",
@@ -82,14 +41,6 @@ const EMPTY_PLAN = {
   features: [],
 };
 
-function loadPlans() {
-  try {
-    const saved = localStorage.getItem("sa_demo_plans");
-    return saved ? JSON.parse(saved) : DEFAULT_PLANS;
-  } catch {
-    return DEFAULT_PLANS;
-  }
-}
 
 const money = (value) => `$${Number(value || 0).toFixed(2)}`;
 
@@ -595,25 +546,95 @@ const styles = `
     font-size: 18px;
   }
 }
+
+/* Align plan card buttons */
+.sp-grid {
+  align-items: stretch;
+}
+
+.sp-grid > .sp-card {
+  display: flex;
+  flex-direction: column;
+}
+
+.sp-grid > .sp-card > .sp-card-body {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.sp-card-body > .sp-feature-count {
+  align-self: flex-start;
+  margin-top: auto;
+}
+
+.sp-card-body > .sp-actions {
+  flex-shrink: 0;
+}
 `;export default function SuperAdminPlans() {
-  const [plans, setPlans] = useState(loadPlans);
+  const [plans, setPlans] = useState([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
-  const [form, setForm] = useState(EMPTY_PLAN);
+  const [form, setForm] = useState({ ...EMPTY_PLAN, features: [] });
+
+  const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState(false);
+  const [pageError, setPageError] = useState("");
+  const [formError, setFormError] = useState("");
+
+  const mutationLock = useRef(false);
+
+  const loadPlans = async (signal) => {
+    setLoading(true);
+    setPageError("");
+
+    try {
+      const records = await plansRequest("", { signal });
+
+      if (!Array.isArray(records)) {
+        throw new Error("Invalid plans data returned by server.");
+      }
+
+      setPlans(records);
+    } catch (error) {
+      if (error.name !== "AbortError") {
+        setPageError(error.message);
+      }
+    } finally {
+      if (!signal?.aborted) setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    localStorage.setItem("sa_demo_plans", JSON.stringify(plans));
-  }, [plans]);
+    const controller = new AbortController();
+
+    loadPlans(controller.signal);
+
+    return () => controller.abort();
+  }, []);
+
+  const closeModal = () => {
+    if (mutationLock.current) return;
+
+    setModalOpen(false);
+    setFormError("");
+  };
 
   const openCreate = () => {
+    if (mutationLock.current || loading) return;
+
     setEditingId(null);
     setForm({ ...EMPTY_PLAN, features: [] });
+    setFormError("");
     setModalOpen(true);
   };
 
   const openEdit = (plan) => {
+    if (mutationLock.current) return;
+
     setEditingId(plan.id);
     setForm({ ...plan, features: [...plan.features] });
+    setFormError("");
     setModalOpen(true);
   };
 
@@ -626,8 +647,10 @@ const styles = `
     }));
   };
 
-  const savePlan = (event) => {
+  const savePlan = async (event) => {
     event.preventDefault();
+
+    if (mutationLock.current) return;
 
     const name = form.name.trim();
     const monthlyPrice = Number(form.monthlyPrice);
@@ -635,61 +658,75 @@ const styles = `
 
     if (
       !name ||
+      String(form.monthlyPrice).trim() === "" ||
+      String(form.yearlyPrice).trim() === "" ||
       !Number.isFinite(monthlyPrice) ||
       !Number.isFinite(yearlyPrice) ||
       monthlyPrice < 0 ||
       yearlyPrice < 0
     ) {
-      window.alert("Please enter valid plan details.");
+      setFormError("Please enter valid plan details.");
       return;
     }
 
-    const updated = {
-      ...form,
-      name,
-      monthlyPrice,
-      yearlyPrice,
-    };
+    mutationLock.current = true;
+    setBusy(true);
+    setFormError("");
 
-    if (editingId !== null) {
-      setPlans((previous) =>
-        previous.map((plan) =>
-          plan.id === editingId
-            ? { ...updated, id: editingId }
-            : plan
-        )
+    try {
+      const saved = await plansRequest(
+        editingId === null ? "" : `/${editingId}`,
+        {
+          method: editingId === null ? "POST" : "PUT",
+          body: JSON.stringify({
+            name,
+            description: form.description,
+            monthlyPrice,
+            yearlyPrice,
+            status: form.status,
+            features: form.features,
+          }),
+        }
       );
-    } else {
-      setPlans((previous) => [
-        ...previous,
-        { ...updated, id: Date.now() },
-      ]);
-    }
 
-    setModalOpen(false);
+      setPlans((previous) =>
+        editingId === null
+          ? [...previous, saved]
+          : previous.map((plan) =>
+              plan.id === saved.id ? saved : plan
+            )
+      );
+
+      setPageError("");
+      setModalOpen(false);
+    } catch (error) {
+      setFormError(error.message);
+    } finally {
+      mutationLock.current = false;
+      setBusy(false);
+    }
   };
 
-  const deletePlan = (id) => {
-    try {
-      const subscriptions = JSON.parse(
-        localStorage.getItem("sa_demo_subscriptions") || "[]"
-      );
-
-      if (subscriptions.some((item) => item.planId === id)) {
-        window.alert(
-          "This plan is used by subscriptions and cannot be deleted."
-        );
-        return;
-      }
-    } catch {
-      // Continue with confirmation.
-    }
-
+  const deletePlan = async (id) => {
+    if (mutationLock.current) return;
     if (!window.confirm("Delete this plan?")) return;
 
-    setPlans((previous) =>
-      previous.filter((plan) => plan.id !== id)
-    );
+    mutationLock.current = true;
+    setBusy(true);
+    setPageError("");
+
+    try {
+      await plansRequest(`/${id}`, { method: "DELETE" });
+
+      setPlans((previous) =>
+        previous.filter((plan) => plan.id !== id)
+      );
+    } catch (error) {
+      setPageError(error.message);
+    } finally {
+      mutationLock.current = false;
+      setBusy(false);
+    }
   };
 
   const icons = [FaPaw, FaStethoscope, FaCrown];
@@ -713,7 +750,7 @@ const styles = `
               </p>
             </div>
 
-            <button
+            <button disabled={loading || busy}
               type="button"
               className="sp-btn"
               onClick={openCreate}
@@ -751,6 +788,26 @@ const styles = `
               </article>
             ))}
           </section>
+
+          {pageError && (
+            <div role="alert" style={{ color: "#bb4d4d", marginBottom: 16 }}>
+              <p>{pageError}</p>
+              <button
+                type="button"
+                className="sp-btn secondary"
+                disabled={loading || busy}
+                onClick={() => loadPlans()}
+              >
+                Retry
+              </button>
+            </div>
+          )}
+
+          {loading && <p>Loading plans...</p>}
+
+          {!loading && !pageError && plans.length === 0 && (
+            <p>No plans yet. Click New Plan to create one.</p>
+          )}
 
           <section className="sp-grid">
             {plans.map((plan, index) => {
@@ -804,7 +861,7 @@ const styles = `
                     </span>
 
                     <div className="sp-actions">
-                      <button
+                      <button disabled={busy}
                         type="button"
                         className="sp-btn secondary"
                         onClick={() => openEdit(plan)}
@@ -812,7 +869,7 @@ const styles = `
                         <FaPen /> Edit
                       </button>
 
-                      <button
+                      <button disabled={busy}
                         type="button"
                         className="sp-btn danger"
                         onClick={() => deletePlan(plan.id)}
@@ -885,10 +942,10 @@ const styles = `
                   : "Create New Plan"}
               </h2>
 
-              <button
+              <button disabled={busy}
                 type="button"
                 className="sp-close"
-                onClick={() => setModalOpen(false)}
+                onClick={closeModal}
                 aria-label="Close"
               >
                 <FaXmark />
@@ -896,6 +953,16 @@ const styles = `
             </div>
 
             <form onSubmit={savePlan}>
+              {formError && (
+                <p role="alert" style={{ color: "#bb4d4d" }}>
+                  {formError}
+                </p>
+              )}
+
+              <fieldset
+                disabled={busy}
+                style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}
+              >
               <div className="sp-form-grid">
                 <div className="sp-field full">
                   <label>Plan Name</label>
@@ -996,16 +1063,18 @@ const styles = `
                 ))}
               </div>
 
+              </fieldset>
+
               <div className="sp-modal-actions">
-                <button
+                <button disabled={busy}
                   type="button"
                   className="sp-btn secondary"
-                  onClick={() => setModalOpen(false)}
+                  onClick={closeModal}
                 >
                   Cancel
                 </button>
 
-                <button type="submit" className="sp-btn">
+                <button disabled={busy} type="submit" className="sp-btn">
                   <FaCheck />
                   {editingId !== null
                     ? "Save Changes"

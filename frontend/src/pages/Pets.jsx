@@ -1,6 +1,13 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
+import {
+  getPets,
+  createPet,
+  updatePet,
+  deletePet,
+} from "../api/petsApi";
+import { getOwners } from "../api/ownersApi";
 
 import {
   FaEye,
@@ -16,166 +23,67 @@ import {
   FaCamera,
 } from "react-icons/fa";
 
-/* =========================================================
-   PET SPECIES + BREEDS
-========================================================= */
+/* PET SPECIES + BREEDS */
 
 const PET_BREEDS = {
   Bird: [
-    "African Grey Parrot",
-    "Budgerigar",
-    "Canary",
-    "Cockatiel",
-    "Cockatoo",
-    "Conure",
-    "Finch",
-    "Lovebird",
-    "Macaw",
-    "Parrot",
-    "Other",
+    "African Grey Parrot", "Budgerigar", "Canary",
+    "Cockatiel", "Cockatoo", "Conure", "Finch",
+    "Lovebird", "Macaw", "Parrot", "Other",
   ],
-
   Cat: [
-    "Abyssinian",
-    "American Shorthair",
-    "Bengal",
-    "Birman",
-    "British Shorthair",
-    "Burmese",
-    "Domestic Longhair",
-    "Domestic Shorthair",
-    "Maine Coon",
-    "Norwegian Forest Cat",
-    "Persian",
-    "Ragdoll",
-    "Russian Blue",
-    "Scottish Fold",
-    "Siamese",
-    "Sphynx",
-    "Turkish Angora",
-    "Other",
+    "Abyssinian", "American Shorthair", "Bengal",
+    "Birman", "British Shorthair", "Burmese",
+    "Domestic Longhair", "Domestic Shorthair",
+    "Maine Coon", "Norwegian Forest Cat", "Persian",
+    "Ragdoll", "Russian Blue", "Scottish Fold",
+    "Siamese", "Sphynx", "Turkish Angora", "Other",
   ],
-
   Dog: [
-    "Akita",
-    "Alaskan Malamute",
-    "Australian Shepherd",
-    "Beagle",
-    "Belgian Malinois",
-    "Bernese Mountain Dog",
-    "Bichon Frise",
-    "Border Collie",
-    "Boston Terrier",
-    "Boxer",
-    "Bulldog",
-    "Cane Corso",
-    "Cavalier King Charles Spaniel",
-    "Chihuahua",
-    "Chow Chow",
-    "Cocker Spaniel",
-    "Dachshund",
-    "Dalmatian",
-    "Doberman Pinscher",
-    "French Bulldog",
-    "German Shepherd",
-    "Golden Retriever",
-    "Great Dane",
-    "Havanese",
-    "Husky",
-    "Jack Russell Terrier",
-    "Labrador Retriever",
-    "Maltese",
-    "Miniature Schnauzer",
-    "Mixed Breed",
-    "Pekingese",
-    "Pomeranian",
-    "Poodle",
-    "Pug",
-    "Rottweiler",
-    "Samoyed",
-    "Shih Tzu",
-    "Yorkshire Terrier",
-    "Other",
+    "Akita", "Alaskan Malamute", "Australian Shepherd",
+    "Beagle", "Belgian Malinois", "Bernese Mountain Dog",
+    "Bichon Frise", "Border Collie", "Boston Terrier",
+    "Boxer", "Bulldog", "Cane Corso",
+    "Cavalier King Charles Spaniel", "Chihuahua",
+    "Chow Chow", "Cocker Spaniel", "Dachshund",
+    "Dalmatian", "Doberman Pinscher", "French Bulldog",
+    "German Shepherd", "Golden Retriever", "Great Dane",
+    "Havanese", "Husky", "Jack Russell Terrier",
+    "Labrador Retriever", "Maltese", "Miniature Schnauzer",
+    "Mixed Breed", "Pekingese", "Pomeranian", "Poodle",
+    "Pug", "Rottweiler", "Samoyed", "Shih Tzu",
+    "Yorkshire Terrier", "Other",
   ],
-
   Ferret: [
-    "Albino",
-    "Black Sable",
-    "Champagne",
-    "Chocolate",
-    "Cinnamon",
-    "Sable",
-    "Other",
+    "Albino", "Black Sable", "Champagne", "Chocolate",
+    "Cinnamon", "Sable", "Other",
   ],
-
   Fish: [
-    "Angelfish",
-    "Betta",
-    "Cichlid",
-    "Goldfish",
-    "Guppy",
-    "Koi",
-    "Molly",
-    "Tetra",
-    "Other",
+    "Angelfish", "Betta", "Cichlid", "Goldfish",
+    "Guppy", "Koi", "Molly", "Tetra", "Other",
   ],
-
   "Guinea Pig": [
-    "Abyssinian",
-    "American",
-    "Peruvian",
-    "Silkie",
-    "Skinny Pig",
-    "Teddy",
-    "Other",
+    "Abyssinian", "American", "Peruvian", "Silkie",
+    "Skinny Pig", "Teddy", "Other",
   ],
-
   Hamster: [
-    "Campbell's Dwarf",
-    "Chinese",
-    "Roborovski",
-    "Syrian",
-    "Winter White",
-    "Other",
+    "Campbell's Dwarf", "Chinese", "Roborovski",
+    "Syrian", "Winter White", "Other",
   ],
-
   Horse: [
-    "Andalusian",
-    "Appaloosa",
-    "Arabian",
-    "Friesian",
-    "Quarter Horse",
-    "Thoroughbred",
-    "Warmblood",
-    "Other",
+    "Andalusian", "Appaloosa", "Arabian", "Friesian",
+    "Quarter Horse", "Thoroughbred", "Warmblood", "Other",
   ],
-
   Rabbit: [
-    "Angora",
-    "Dutch",
-    "Flemish Giant",
-    "Holland Lop",
-    "Lionhead",
-    "Mini Lop",
-    "Mini Rex",
-    "Netherland Dwarf",
-    "Rex",
-    "Other",
+    "Angora", "Dutch", "Flemish Giant", "Holland Lop",
+    "Lionhead", "Mini Lop", "Mini Rex",
+    "Netherland Dwarf", "Rex", "Other",
   ],
-
   Reptile: [
-    "Bearded Dragon",
-    "Boa Constrictor",
-    "Chameleon",
-    "Corn Snake",
-    "Gecko",
-    "Iguana",
-    "Python",
-    "Tortoise",
-    "Turtle",
-    "Other",
+    "Bearded Dragon", "Boa Constrictor", "Chameleon",
+    "Corn Snake", "Gecko", "Iguana", "Python",
+    "Tortoise", "Turtle", "Other",
   ],
-
   Other: ["Other"],
 };
 
@@ -183,69 +91,225 @@ const PET_SPECIES = Object.keys(PET_BREEDS).sort((a, b) =>
   a.localeCompare(b)
 );
 
-/* =========================================================
-   HELPERS
-========================================================= */
+/* AGE + DATE HELPERS */
 
-const calculateAgeFromDOB = (dateOfBirth) => {
-  if (!dateOfBirth) return "";
+// Use calendar dates without time-zone or daylight-saving shifts.
+const getTodayDate = () => {
+  const today = new Date();
 
-  const birthDate = new Date(`${dateOfBirth}T00:00:00`);
+  return new Date(Date.UTC(
+    today.getFullYear(),
+    today.getMonth(),
+    today.getDate()
+  ));
+};
 
-  if (Number.isNaN(birthDate.getTime())) {
+const formatCalendarDate = (date) => {
+  if (!date || Number.isNaN(date.getTime())) return "";
+
+  return [
+    String(date.getUTCFullYear()).padStart(4, "0"),
+    String(date.getUTCMonth() + 1).padStart(2, "0"),
+    String(date.getUTCDate()).padStart(2, "0"),
+  ].join("-");
+};
+
+const parseCalendarDate = (value) => {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(value || ""))) {
+    return null;
+  }
+
+  const date = new Date(`${value}T00:00:00Z`);
+
+  if (
+    Number.isNaN(date.getTime()) ||
+    formatCalendarDate(date) !== value
+  ) {
+    return null;
+  }
+
+  return date;
+};
+
+const shiftCalendarMonths = (date, amount) => {
+  const shifted = new Date(date.getTime());
+  const originalDay = shifted.getUTCDate();
+
+  shifted.setUTCDate(1);
+  shifted.setUTCMonth(shifted.getUTCMonth() + amount);
+
+  const lastDay = new Date(Date.UTC(
+    shifted.getUTCFullYear(),
+    shifted.getUTCMonth() + 1,
+    0
+  )).getUTCDate();
+
+  shifted.setUTCDate(Math.min(originalDay, lastDay));
+  return shifted;
+};
+
+const getAgePartsFromDOB = (dateOfBirth) => {
+  const birth = parseCalendarDate(dateOfBirth);
+  const today = getTodayDate();
+
+  if (!birth || birth > today) {
+    return {
+      ageYears: "",
+      ageMonths: "",
+      ageDays: "",
+    };
+  }
+
+  let totalMonths =
+    (today.getUTCFullYear() - birth.getUTCFullYear()) * 12 +
+    today.getUTCMonth() -
+    birth.getUTCMonth();
+
+  let anchor = shiftCalendarMonths(today, -totalMonths);
+
+  if (anchor < birth) {
+    totalMonths -= 1;
+    anchor = shiftCalendarMonths(today, -totalMonths);
+  }
+
+  const days = Math.round(
+    (anchor.getTime() - birth.getTime()) / 86400000
+  );
+
+  return {
+    ageYears: String(Math.floor(totalMonths / 12)),
+    ageMonths: String(totalMonths % 12),
+    ageDays: String(days),
+  };
+};
+
+const formatAgeParts = (parts) => {
+  const fields = [
+    ["ageYears", "year"],
+    ["ageMonths", "month"],
+    ["ageDays", "day"],
+  ];
+
+  return fields
+    .filter(([field]) =>
+      parts[field] !== "" &&
+      parts[field] !== null &&
+      parts[field] !== undefined
+    )
+    .map(([field, unit]) => {
+      const value = Number(parts[field]);
+      return `${value} ${unit}${value === 1 ? "" : "s"}`;
+    })
+    .join(" ");
+};
+
+const calculateAgeFromDOB = (dateOfBirth) =>
+  formatAgeParts(getAgePartsFromDOB(dateOfBirth));
+
+const estimatedDOBFromAgeParts = (parts) => {
+  const hasAnyValue = [
+    parts.ageYears,
+    parts.ageMonths,
+    parts.ageDays,
+  ].some((value) =>
+    value !== "" && value !== null && value !== undefined
+  );
+
+  if (!hasAnyValue) return "";
+
+  const years = Number(parts.ageYears || 0);
+  const months = Number(parts.ageMonths || 0);
+  const days = Number(parts.ageDays || 0);
+
+  if (
+    !Number.isInteger(years) ||
+    !Number.isInteger(months) ||
+    !Number.isInteger(days) ||
+    years < 0 ||
+    years > 999 ||
+    months < 0 ||
+    months > 11 ||
+    days < 0 ||
+    days > 31
+  ) {
     return "";
   }
 
-  const today = new Date();
+  const date = shiftCalendarMonths(
+    getTodayDate(),
+    -(years * 12 + months)
+  );
 
-  let years = today.getFullYear() - birthDate.getFullYear();
-  let months = today.getMonth() - birthDate.getMonth();
-
-  if (today.getDate() < birthDate.getDate()) {
-    months -= 1;
+  if (parts.ageDays === "" ||
+      parts.ageDays === null ||
+      parts.ageDays === undefined) {
+    // No day supplied: use the first day of the calculated month.
+    date.setUTCDate(1);
+  } else {
+    // An explicit zero is different from an empty Days field.
+    date.setUTCDate(date.getUTCDate() - days);
   }
 
-  if (months < 0) {
-    years -= 1;
-    months += 12;
+  if (date.getUTCFullYear() < 1) return "";
+
+  return formatCalendarDate(date);
+};
+
+const parseStoredAgeParts = (value) => {
+  const text = String(value || "").trim().toLowerCase();
+
+  const years = text.match(/(\d+)\s*years?\b/);
+  const months = text.match(/(\d+)\s*months?\b/);
+  const days = text.match(/(\d+)\s*days?\b/);
+
+  if (years || months || days) {
+    return {
+      ageYears: years ? years[1] : "",
+      ageMonths: months ? months[1] : "",
+      ageDays: days ? days[1] : "",
+    };
   }
 
-  if (years < 0) return "";
-
-  if (years === 0) {
-    if (months <= 0) {
-      return "Less than 1 month";
-    }
-
-    return `${months} ${months === 1 ? "month" : "months"}`;
+  if (/^\d+$/.test(text)) {
+    return {
+      ageYears: text,
+      ageMonths: "",
+      ageDays: "",
+    };
   }
 
-  return `${years} ${years === 1 ? "year" : "years"}`;
+  return null;
+};
+
+const getEditableAgeParts = (pet) => {
+  // Preserve the precision originally entered for estimated dates.
+  if (pet.estimatedDOB) {
+    const savedParts = parseStoredAgeParts(pet.age);
+    if (savedParts) return savedParts;
+  }
+
+  if (pet.dateOfBirth) {
+    return getAgePartsFromDOB(pet.dateOfBirth);
+  }
+
+  return parseStoredAgeParts(pet.age) || {
+    ageYears: "",
+    ageMonths: "",
+    ageDays: "",
+  };
 };
 
 const extractAgeYears = (value) => {
   if (value === null || value === undefined) return null;
 
   const match = String(value).match(/\d+/);
-
   if (!match) return null;
 
   const years = Number(match[0]);
-
-  if (Number.isNaN(years) || years < 0) return null;
-
-  return years;
+  return Number.isNaN(years) || years < 0 ? null : years;
 };
 
-const estimatedDOBFromAge = (age) => {
-  const years = extractAgeYears(age);
-
-  if (years === null) return "";
-
-  const currentYear = new Date().getFullYear();
-
-  return `${currentYear - years}-01-01`;
-};
+/* EXISTING HELPERS */
 
 const COLOR_PRESETS = [
   { name: "Black", value: "#1f1f1f" },
@@ -261,86 +325,346 @@ const COLOR_PRESETS = [
 const getColorHex = (color) => {
   const preset = COLOR_PRESETS.find(
     (item) =>
-      item.name.toLowerCase() === String(color || "").toLowerCase()
+      item.name.toLowerCase() ===
+      String(color || "").toLowerCase()
   );
 
   return preset?.value || "#55b7b2";
 };
 
-/* =========================================================
-   PETS
-========================================================= */
+const getOwnerName = (owner) =>
+  `${owner.firstName || ""} ${owner.lastName || ""}`.trim();
+
+const getEmptyPet = () => ({
+  name: "",
+  owner: "",
+  ownerId: "",
+  species: "",
+  breed: "",
+  age: "",
+  ageYears: "",
+  ageMonths: "",
+  ageDays: "",
+  dateOfBirth: "",
+  estimatedDOB: false,
+  sex: "",
+  color: "",
+  colorHex: "#55b7b2",
+  weight: "",
+  microchipNumber: "",
+  bloodType: "",
+  allergies: "",
+  chronicConditions: "",
+  notes: "",
+  profilePhoto: "",
+  timeline: [],
+});
+
+const getPetPayload = (pet) => {
+  const {
+    ageYears,
+    ageMonths,
+    ageDays,
+    ...payload
+  } = pet;
+
+  return payload;
+};
+
+/* SEARCHABLE OWNER INPUT */
+
+function OwnerSearchInput({
+  owners,
+  value,
+  selectedId,
+  onType,
+  onSelect,
+  disabled,
+  inputId,
+}) {
+  const [open, setOpen] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(-1);
+  const wrapperRef = useRef(null);
+  const listRef = useRef(null);
+
+  const query = String(value || "").trim().toLowerCase();
+
+  const matches = useMemo(
+    () => owners.filter((owner) =>
+      getOwnerName(owner).toLowerCase().includes(query)
+    ),
+    [owners, query]
+  );
+
+  useEffect(() => {
+    const closeOutside = (event) => {
+      if (!wrapperRef.current?.contains(event.target)) {
+        setOpen(false);
+        setActiveIndex(-1);
+      }
+    };
+
+    document.addEventListener("pointerdown", closeOutside);
+
+    return () =>
+      document.removeEventListener("pointerdown", closeOutside);
+  }, []);
+
+  useEffect(() => {
+    setActiveIndex(-1);
+  }, [query]);
+
+  useEffect(() => {
+    if (activeIndex >= 0) {
+      listRef.current
+        ?.querySelector(`[data-option-index="${activeIndex}"]`)
+        ?.scrollIntoView({ block: "nearest" });
+    }
+  }, [activeIndex]);
+
+  const chooseOwner = (owner) => {
+    onSelect(owner);
+    setOpen(false);
+    setActiveIndex(-1);
+  };
+
+  const listVisible = open && !disabled;
+
+  return (
+    <div
+      ref={wrapperRef}
+      className="pet-owner-search"
+      style={{ position: "relative", minWidth: 0 }}
+      onBlur={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget)) {
+          setOpen(false);
+          setActiveIndex(-1);
+        }
+      }}
+    >
+      <input
+        id={inputId}
+        type="text"
+        value={value || ""}
+        placeholder={
+          owners.length ? "Type owner name..." : "No owners available"
+        }
+        autoComplete="off"
+        required
+        disabled={disabled}
+        role="combobox"
+        aria-autocomplete="list"
+        aria-expanded={listVisible}
+        aria-controls={`${inputId}-options`}
+        aria-activedescendant={
+          listVisible && activeIndex >= 0
+            ? `${inputId}-option-${activeIndex}`
+            : undefined
+        }
+        onFocus={() => setOpen(true)}
+        onChange={(event) => {
+          onType(event.target.value);
+          setOpen(true);
+        }}
+        onKeyDown={(event) => {
+          if (event.key === "ArrowDown") {
+            event.preventDefault();
+            setOpen(true);
+            setActiveIndex((previous) =>
+              matches.length
+                ? Math.min(previous + 1, matches.length - 1)
+                : -1
+            );
+          } else if (event.key === "ArrowUp") {
+            event.preventDefault();
+            setOpen(true);
+            setActiveIndex((previous) =>
+              matches.length
+                ? Math.max(previous - 1, 0)
+                : -1
+            );
+          } else if (event.key === "Enter" && listVisible) {
+            event.preventDefault();
+
+            if (activeIndex >= 0 && matches[activeIndex]) {
+              chooseOwner(matches[activeIndex]);
+            } else if (matches.length === 1) {
+              chooseOwner(matches[0]);
+            }
+          } else if (event.key === "Escape") {
+            if (listVisible) {
+              event.preventDefault();
+              event.stopPropagation();
+            }
+
+            setOpen(false);
+            setActiveIndex(-1);
+          }
+        }}
+      />
+
+      {listVisible && (
+        <div
+          ref={listRef}
+          id={`${inputId}-options`}
+          role="listbox"
+          aria-label="Matching owners"
+          className="pet-owner-options"
+          style={{
+            position: "absolute",
+            top: "calc(100% + 5px)",
+            left: 0,
+            right: 0,
+            zIndex: 30,
+            maxHeight: "200px",
+            overflowY: "auto",
+            overscrollBehavior: "contain",
+            background: "#ffffff",
+            border: "1px solid #d5e5e3",
+            borderRadius: "8px",
+            boxShadow: "0 8px 20px rgba(24, 56, 56, 0.12)",
+          }}
+        >
+          {matches.length ? (
+            matches.map((owner, index) => (
+              <div
+                key={owner.id}
+                id={`${inputId}-option-${index}`}
+                role="option"
+                data-option-index={index}
+                aria-selected={
+                  String(selectedId) === String(owner.id)
+                }
+                className="pet-owner-option"
+                onPointerDown={(event) => event.preventDefault()}
+                onMouseEnter={() => setActiveIndex(index)}
+                onClick={() => chooseOwner(owner)}
+                style={{
+                  padding: "11px 12px",
+                  cursor: "pointer",
+                  background:
+                    activeIndex === index ? "#e8f7f7" : "#ffffff",
+                  color: "#405656",
+                  fontSize: "14px",
+                  overflowWrap: "anywhere",
+                }}
+              >
+                <div>{getOwnerName(owner)}</div>
+
+                {owner.phone && (
+                  <div
+                    style={{
+                      marginTop: "3px",
+                      color: "#7b8d8d",
+                      fontSize: "11px",
+                    }}
+                  >
+                    {owner.phone}
+                  </div>
+                )}
+              </div>
+            ))
+          ) : (
+            <div
+              style={{
+                padding: "12px",
+                color: "#7b8d8d",
+                fontSize: "13px",
+              }}
+            >
+              No matching owners found.
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* AGE INPUTS */
+
+function PetAgeInputs({ data, onChange, disabled }) {
+  return (
+    <div className="form-field">
+      <label>Age</label>
+
+      <div
+        className="pet-age-inputs"
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+          gap: "8px",
+          minWidth: 0,
+        }}
+      >
+        {[
+          ["ageYears", "Years", 999],
+          ["ageMonths", "Months", 11],
+          ["ageDays", "Days", 31],
+        ].map(([name, label, max]) => (
+          <div key={name} style={{ minWidth: 0 }}>
+            <input
+              type="number"
+              name={name}
+              aria-label={`Age in ${label.toLowerCase()}`}
+              value={data[name] ?? ""}
+              onChange={onChange}
+              placeholder={label}
+              min={0}
+              max={max}
+              step={1}
+              disabled={disabled}
+              style={{
+                width: "100%",
+                minWidth: 0,
+                boxSizing: "border-box",
+              }}
+            />
+
+            <span
+              style={{
+                display: "block",
+                marginTop: "4px",
+                color: "#7b8d8d",
+                fontSize: "11px",
+              }}
+            >
+              {label}
+            </span>
+          </div>
+        ))}
+      </div>
+
+      <span className="pet-field-hint">
+        Leave Days empty to use the first day of the calculated
+        month. Enter Days, including 0, for a full date calculation.
+      </span>
+    </div>
+  );
+}
+
+/* PETS */
 
 function Pets() {
   const location = useLocation();
   const navigate = useNavigate();
 
-  const [pets, setPets] = useState([
-    {
-      id: 1,
-      name: "Bella",
-      owner: "Tala El Hajj",
-      species: "Dog",
-      breed: "Golden Retriever",
-      age: "4 years",
-      sex: "Female",
-      dateOfBirth: "2022-05-12",
-      color: "Golden",
-      colorHex: "#d4a017",
-      weight: "28",
-      microchipNumber: "MC-10001",
-      bloodType: "DEA 1.1+",
-      allergies: "None",
-      chronicConditions: "None",
-      notes: "Friendly and active.",
-      profilePhoto: "",
-      timeline: [
-        {
-          id: 1,
-          type: "Visit",
-          date: "2026-09-25",
-          title: "Routine checkup",
-          description: "General examination completed.",
-        },
-        {
-          id: 2,
-          type: "Vaccination",
-          date: "2026-08-10",
-          title: "Rabies vaccination",
-          description: "Rabies vaccine administered.",
-        },
-      ],
-    },
+  const [pets, setPets] = useState([]);
+  const [owners, setOwners] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
 
-    {
-      id: 2,
-      name: "Luna",
-      owner: "Fatima Abbas",
-      species: "Bird",
-      breed: "Lovebird",
-      age: "2 years",
-      sex: "Female",
-      dateOfBirth: "2024-03-18",
-      color: "Green",
-      colorHex: "#4f8a4f",
-      weight: "0.06",
-      microchipNumber: "",
-      bloodType: "",
-      allergies: "None",
-      chronicConditions: "None",
-      notes: "",
-      profilePhoto: "",
-      timeline: [
-        {
-          id: 1,
-          type: "Visit",
-          date: "2026-09-20",
-          title: "Routine checkup",
-          description: "Pet is healthy.",
-        },
-      ],
-    },
-  ]);
+  const savingRef = useRef(false);
+  const photoReadingRef = useRef({
+    add: false,
+    edit: false,
+  });
+
+  const tableScrollRef = useRef(null);
+
+  const [addPhotoLoading, setAddPhotoLoading] = useState(false);
+  const [editPhotoLoading, setEditPhotoLoading] = useState(false);
 
   const [search, setSearch] = useState("");
   const [speciesFilter, setSpeciesFilter] = useState("all");
@@ -359,66 +683,151 @@ function Pets() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [petToDelete, setPetToDelete] = useState(null);
 
-  const getEmptyPet = () => ({
-    name: "",
-    owner: "",
-    species: "",
-    breed: "",
-    age: "",
-    dateOfBirth: "",
-    estimatedDOB: false,
-    sex: "",
-    color: "",
-    colorHex: "#55b7b2",
-    weight: "",
-    microchipNumber: "",
-    bloodType: "",
-    allergies: "",
-    chronicConditions: "",
-    notes: "",
-    profilePhoto: "",
-    timeline: [],
-  });
+  const [newPet, setNewPet] = useState(getEmptyPet);
 
-  const [newPet, setNewPet] = useState(getEmptyPet());
+  useEffect(() => {
+    const controller = new AbortController();
+    let disposed = false;
+
+    async function loadData() {
+      setIsLoading(true);
+      setLoadError("");
+
+      try {
+        const [savedPets, savedOwners] = await Promise.all([
+          getPets({ signal: controller.signal }),
+          getOwners({ signal: controller.signal }),
+        ]);
+
+        if (disposed) return;
+
+        setPets(savedPets);
+        setOwners(savedOwners);
+      } catch (error) {
+        if (disposed || error.name === "AbortError") return;
+
+        setLoadError(
+          error.message || "Unable to load pets. Please try again."
+        );
+      } finally {
+        if (!disposed) setIsLoading(false);
+      }
+    }
+
+    loadData();
+
+    return () => {
+      disposed = true;
+      controller.abort();
+    };
+  }, []);
+
+  // Horizontal trackpad gestures scroll naturally.
+  // A regular mouse wheel moves the table horizontally when it overflows.
+  useEffect(() => {
+    const element = tableScrollRef.current;
+    if (!element) return;
+
+    const handleWheel = (event) => {
+      if (event.ctrlKey || event.metaKey) return;
+
+      const maxScroll = element.scrollWidth - element.clientWidth;
+      if (maxScroll <= 1) return;
+
+      let delta =
+        Math.abs(event.deltaX) > Math.abs(event.deltaY)
+          ? event.deltaX
+          : event.deltaY;
+
+      if (event.deltaMode === 1) delta *= 16;
+      if (event.deltaMode === 2) delta *= element.clientWidth;
+
+      if (!delta) return;
+
+      const next = Math.max(
+        0,
+        Math.min(maxScroll, element.scrollLeft + delta)
+      );
+
+      if (Math.abs(next - element.scrollLeft) > 0.5) {
+        event.preventDefault();
+        element.scrollLeft = next;
+      }
+    };
+
+    element.addEventListener("wheel", handleWheel, {
+      passive: false,
+    });
+
+    return () =>
+      element.removeEventListener("wheel", handleWheel);
+  }, []);
+
+  const sortedOwners = useMemo(
+    () => [...owners].sort((a, b) =>
+      getOwnerName(a).localeCompare(getOwnerName(b))
+    ),
+    [owners]
+  );
 
   const newPetBreeds = useMemo(() => {
     if (!newPet.species) return [];
 
-    return [...(PET_BREEDS[newPet.species] || [])].sort((a, b) =>
-      a.localeCompare(b)
+    return [...(PET_BREEDS[newPet.species] || [])].sort(
+      (a, b) => a.localeCompare(b)
     );
   }, [newPet.species]);
 
   const editPetBreeds = useMemo(() => {
     if (!selectedPet?.species) return [];
 
-    return [...(PET_BREEDS[selectedPet.species] || [])].sort((a, b) =>
-      a.localeCompare(b)
+    return [...(PET_BREEDS[selectedPet.species] || [])].sort(
+      (a, b) => a.localeCompare(b)
     );
   }, [selectedPet?.species]);
 
   useEffect(() => {
-    if (!location.state?.openAddPet) return;
+    if (!location.state?.openAddPet || isLoading || loadError) {
+      return;
+    }
 
     const ownerFromPreviousStep = location.state?.owner;
 
-    let ownerName = "";
+    const requestedOwnerId =
+      location.state?.ownerId ??
+      (typeof ownerFromPreviousStep === "object"
+        ? ownerFromPreviousStep?.id
+        : null);
 
-    if (ownerFromPreviousStep) {
-      if (typeof ownerFromPreviousStep === "string") {
-        ownerName = ownerFromPreviousStep;
-      } else {
-        ownerName = `${ownerFromPreviousStep.firstName || ""} ${
-          ownerFromPreviousStep.lastName || ""
-        }`.trim();
-      }
+    let matchingOwner = owners.find(
+      (owner) =>
+        requestedOwnerId != null &&
+        String(owner.id) === String(requestedOwnerId)
+    );
+
+    if (!matchingOwner && requestedOwnerId == null) {
+      const requestedName =
+        typeof ownerFromPreviousStep === "string"
+          ? ownerFromPreviousStep.trim()
+          : ownerFromPreviousStep
+            ? getOwnerName(ownerFromPreviousStep)
+            : "";
+
+      const matches = owners.filter(
+        (owner) =>
+          requestedName &&
+          getOwnerName(owner).toLowerCase() ===
+            requestedName.toLowerCase()
+      );
+
+      if (matches.length === 1) matchingOwner = matches[0];
     }
 
-    setNewPet((previous) => ({
-      ...previous,
-      owner: ownerName,
-    }));
+    setNewPet({
+      ...getEmptyPet(),
+      ownerId: matchingOwner ? String(matchingOwner.id) : "",
+      owner: matchingOwner ? getOwnerName(matchingOwner) : "",
+    });
 
     setAddTab("basic");
     setShowAddModal(true);
@@ -427,7 +836,14 @@ function Pets() {
       replace: true,
       state: null,
     });
-  }, [location.state, location.pathname, navigate]);
+  }, [
+    location.state,
+    location.pathname,
+    navigate,
+    owners,
+    isLoading,
+    loadError,
+  ]);
 
   const filteredPets = pets.filter((pet) => {
     const searchText = search.trim().toLowerCase();
@@ -493,7 +909,6 @@ function Pets() {
   );
 
   const safeCurrentPage = Math.min(currentPage, totalPages);
-
   const indexOfLastPet = safeCurrentPage * itemsPerPage;
   const indexOfFirstPet = indexOfLastPet - itemsPerPage;
 
@@ -504,20 +919,10 @@ function Pets() {
 
   const handleExport = () => {
     const headers = [
-      "Pet Name",
-      "Owner",
-      "Species",
-      "Breed",
-      "Age",
-      "Sex",
-      "Date of Birth",
-      "Color",
-      "Weight",
-      "Microchip Number",
-      "Blood Type",
-      "Allergies",
-      "Chronic Conditions",
-      "Notes",
+      "Pet Name", "Owner", "Species", "Breed", "Age",
+      "Sex", "Date of Birth", "Color", "Weight",
+      "Microchip Number", "Blood Type", "Allergies",
+      "Chronic Conditions", "Notes",
     ];
 
     const rows = sortedPets.map((pet) => [
@@ -558,59 +963,147 @@ function Pets() {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-
     URL.revokeObjectURL(url);
   };
 
+  const beginSave = () => {
+    if (savingRef.current) return false;
+
+    savingRef.current = true;
+    setIsSaving(true);
+    return true;
+  };
+
+  const endSave = () => {
+    savingRef.current = false;
+    setIsSaving(false);
+  };
+
+  const notifyPetsUpdated = () => {
+    window.dispatchEvent(new Event("vetClinicPetsUpdated"));
+  };
+
   const handleOpenAdd = () => {
+    if (isLoading || loadError || savingRef.current) return;
+
     setNewPet(getEmptyPet());
     setAddTab("basic");
     setShowAddModal(true);
   };
 
   const handleCloseAdd = () => {
+    if (savingRef.current || photoReadingRef.current.add) return;
+
     setShowAddModal(false);
     setAddTab("basic");
     setNewPet(getEmptyPet());
   };
 
-  const handleNewPetChange = (e) => {
-    const { name, value } = e.target;
+  const changePetField = (previous, name, value) => {
+    if (name === "ownerId") {
+      const owner = owners.find(
+        (item) => String(item.id) === String(value)
+      );
+
+      return {
+        ...previous,
+        ownerId: value,
+        owner: owner ? getOwnerName(owner) : "",
+      };
+    }
 
     if (name === "species") {
-      setNewPet((previous) => ({
+      return {
         ...previous,
         species: value,
         breed: "",
-      }));
-      return;
+      };
     }
 
     if (name === "dateOfBirth") {
-      setNewPet((previous) => ({
+      return {
         ...previous,
         dateOfBirth: value,
+        ...getAgePartsFromDOB(value),
         age: calculateAgeFromDOB(value),
         estimatedDOB: false,
-      }));
-      return;
+      };
     }
 
-    if (name === "age") {
-      const estimatedDOB = estimatedDOBFromAge(value);
+    if (["ageYears", "ageMonths", "ageDays"].includes(name)) {
+      if (value !== "" && !/^\d+$/.test(value)) {
+        return previous;
+      }
 
-      setNewPet((previous) => ({
+      const parts = {
+        ageYears: previous.ageYears ?? "",
+        ageMonths: previous.ageMonths ?? "",
+        ageDays: previous.ageDays ?? "",
+        [name]: value,
+      };
+
+      const dateOfBirth = estimatedDOBFromAgeParts(parts);
+
+      return {
         ...previous,
-        age: value,
-        dateOfBirth: estimatedDOB,
-        estimatedDOB: Boolean(estimatedDOB),
-      }));
-      return;
+        ...parts,
+        age: formatAgeParts(parts),
+        dateOfBirth,
+        estimatedDOB: Boolean(dateOfBirth),
+      };
     }
 
-    setNewPet((previous) => ({
+    return {
       ...previous,
       [name]: value,
+    };
+  };
+
+  const handleNewPetChange = (e) => {
+    const { name, value } = e.target;
+
+    setNewPet((previous) =>
+      changePetField(previous, name, value)
+    );
+  };
+
+  const handleEditChange = (e) => {
+    const { name, value } = e.target;
+
+    setSelectedPet((previous) =>
+      previous ? changePetField(previous, name, value) : previous
+    );
+  };
+
+  const handleNewOwnerType = (value) => {
+    setNewPet((previous) => ({
+      ...previous,
+      owner: value,
+      ownerId: "",
+    }));
+  };
+
+  const handleNewOwnerSelect = (owner) => {
+    setNewPet((previous) => ({
+      ...previous,
+      ownerId: String(owner.id),
+      owner: getOwnerName(owner),
+    }));
+  };
+
+  const handleEditOwnerType = (value) => {
+    setSelectedPet((previous) => ({
+      ...previous,
+      owner: value,
+      ownerId: "",
+    }));
+  };
+
+  const handleEditOwnerSelect = (owner) => {
+    setSelectedPet((previous) => ({
+      ...previous,
+      ownerId: String(owner.id),
+      owner: getOwnerName(owner),
     }));
   };
 
@@ -633,87 +1126,172 @@ function Pets() {
     }));
   };
 
-  const handleNewPetPhoto = (e) => {
+  const readPhoto = (e, target) => {
     const file = e.target.files?.[0];
 
-    if (!file) return;
+    if (
+      !file ||
+      savingRef.current ||
+      photoReadingRef.current[target]
+    ) {
+      return;
+    }
+
+    if (!file.type.startsWith("image/")) {
+      window.alert("Please choose an image file.");
+      e.target.value = "";
+      return;
+    }
+
+    const isAdd = target === "add";
+    const setLoading = isAdd
+      ? setAddPhotoLoading
+      : setEditPhotoLoading;
+
+    photoReadingRef.current[target] = true;
+    setLoading(true);
 
     const reader = new FileReader();
 
     reader.onload = () => {
-      setNewPet((previous) => ({
-        ...previous,
-        profilePhoto: reader.result,
-      }));
+      if (typeof reader.result !== "string") return;
+
+      if (isAdd) {
+        setNewPet((previous) => ({
+          ...previous,
+          profilePhoto: reader.result,
+        }));
+      } else {
+        setSelectedPet((previous) =>
+          previous
+            ? { ...previous, profilePhoto: reader.result }
+            : previous
+        );
+      }
+    };
+
+    reader.onerror = () => {
+      window.alert("Unable to read this image. Please try again.");
+    };
+
+    reader.onloadend = () => {
+      photoReadingRef.current[target] = false;
+      setLoading(false);
     };
 
     reader.readAsDataURL(file);
   };
 
-  const handleEditPetPhoto = (e) => {
-    const file = e.target.files?.[0];
+  const handleNewPetPhoto = (e) => readPhoto(e, "add");
+  const handleEditPetPhoto = (e) => readPhoto(e, "edit");
 
-    if (!file) return;
+  const validatePetAge = (pet) => {
+    const limits = [
+      ["ageYears", 999],
+      ["ageMonths", 11],
+      ["ageDays", 31],
+    ];
 
-    const reader = new FileReader();
+    let hasAge = false;
 
-    reader.onload = () => {
-      setSelectedPet((previous) => ({
-        ...previous,
-        profilePhoto: reader.result,
-      }));
-    };
+    for (const [field, max] of limits) {
+      const value = pet[field];
 
-    reader.readAsDataURL(file);
+      if (value === "" || value == null) continue;
+
+      hasAge = true;
+      const number = Number(value);
+
+      if (
+        !Number.isInteger(number) ||
+        number < 0 ||
+        number > max
+      ) {
+        return "Enter a valid age: Years 0–999, Months 0–11 and Days 0–31.";
+      }
+    }
+
+    if (hasAge && !pet.dateOfBirth) {
+      return "Please enter a valid age.";
+    }
+
+    if (pet.dateOfBirth) {
+      const birth = parseCalendarDate(pet.dateOfBirth);
+
+      if (!birth || birth > getTodayDate()) {
+        return "Date of birth must be a valid date, today or earlier.";
+      }
+    }
+
+    return "";
   };
 
-  const handleAddPet = (e) => {
+  const handleAddPet = async (e) => {
     e.preventDefault();
+
+    if (photoReadingRef.current.add || savingRef.current) return;
 
     const action = e.nativeEvent.submitter?.value;
 
-    if (!newPet.name.trim()) {
+    const ownerExists = owners.some(
+      (owner) => String(owner.id) === String(newPet.ownerId)
+    );
+
+    if (
+      !newPet.name.trim() ||
+      !ownerExists ||
+      !newPet.species ||
+      !newPet.breed
+    ) {
       setAddTab("basic");
+      window.alert(
+        "Please enter the pet name and select an existing owner, species and breed."
+      );
       return;
     }
 
-    if (!newPet.owner.trim()) {
+    const ageError = validatePetAge(newPet);
+
+    if (ageError) {
       setAddTab("basic");
+      window.alert(ageError);
       return;
     }
 
-    if (!newPet.species || !newPet.breed) {
-      setAddTab("basic");
-      return;
-    }
+    if (!beginSave()) return;
 
-    const pet = {
-      id: Date.now(),
-      ...newPet,
-      colorHex: newPet.colorHex || getColorHex(newPet.color),
-      timeline: newPet.timeline || [],
-    };
-
-    setPets((previousPets) => [...previousPets, pet]);
-
-    setNewPet(getEmptyPet());
-    setAddTab("basic");
-    setShowAddModal(false);
-
-    if (action === "save-and-book-appointment") {
-      navigate("/appointments", {
-        state: {
-          openAddAppointment: true,
-          petId: pet.id,
-          pet,
-          ownerName: pet.owner,
-          owner: pet.owner,
-        },
+    try {
+      const pet = await createPet({
+        ...getPetPayload(newPet),
+        colorHex: newPet.colorHex || getColorHex(newPet.color),
       });
+
+      setPets((previousPets) => [...previousPets, pet]);
+
+      setNewPet(getEmptyPet());
+      setAddTab("basic");
+      setShowAddModal(false);
+      notifyPetsUpdated();
+
+      if (action === "save-and-book-appointment") {
+        navigate("/appointments", {
+          state: {
+            openAddAppointment: true,
+            petId: pet.id,
+            pet,
+            ownerId: pet.ownerId,
+            ownerName: pet.owner,
+            owner: pet.owner,
+          },
+        });
+      }
+    } catch (error) {
+      window.alert(error.message || "Unable to save the pet.");
+    } finally {
+      endSave();
     }
   };
 
-  /* View continues to the new PetProfile */
   const handleViewPet = (pet) => {
     navigate(`/pets/${pet.id}`, {
       state: { pet },
@@ -721,8 +1299,12 @@ function Pets() {
   };
 
   const handleOpenEdit = (pet) => {
+    if (savingRef.current) return;
+
     setSelectedPet({
       ...pet,
+      ...getEditableAgeParts(pet),
+      ownerId: String(pet.ownerId),
       colorHex: pet.colorHex || getColorHex(pet.color),
       estimatedDOB: pet.estimatedDOB || false,
     });
@@ -732,49 +1314,11 @@ function Pets() {
   };
 
   const handleCloseEdit = () => {
+    if (savingRef.current || photoReadingRef.current.edit) return;
+
     setShowEditModal(false);
     setSelectedPet(null);
     setEditTab("basic");
-  };
-
-  const handleEditChange = (e) => {
-    const { name, value } = e.target;
-
-    if (name === "species") {
-      setSelectedPet((previous) => ({
-        ...previous,
-        species: value,
-        breed: "",
-      }));
-      return;
-    }
-
-    if (name === "dateOfBirth") {
-      setSelectedPet((previous) => ({
-        ...previous,
-        dateOfBirth: value,
-        age: calculateAgeFromDOB(value),
-        estimatedDOB: false,
-      }));
-      return;
-    }
-
-    if (name === "age") {
-      const estimatedDOB = estimatedDOBFromAge(value);
-
-      setSelectedPet((previous) => ({
-        ...previous,
-        age: value,
-        dateOfBirth: estimatedDOB,
-        estimatedDOB: Boolean(estimatedDOB),
-      }));
-      return;
-    }
-
-    setSelectedPet((previous) => ({
-      ...previous,
-      [name]: value,
-    }));
   };
 
   const handleEditColorChange = (e) => {
@@ -796,39 +1340,100 @@ function Pets() {
     }));
   };
 
-  const handleUpdatePet = (e) => {
+  const handleUpdatePet = async (e) => {
     e.preventDefault();
 
-    if (!selectedPet) return;
+    if (
+      !selectedPet ||
+      savingRef.current ||
+      photoReadingRef.current.edit
+    ) {
+      return;
+    }
 
-    setPets((previousPets) =>
-      previousPets.map((pet) =>
-        pet.id === selectedPet.id ? selectedPet : pet
-      )
+    const ownerExists = owners.some(
+      (owner) =>
+        String(owner.id) === String(selectedPet.ownerId)
     );
 
-    handleCloseEdit();
+    if (
+      !selectedPet.name.trim() ||
+      !ownerExists ||
+      !selectedPet.species ||
+      !selectedPet.breed
+    ) {
+      setEditTab("basic");
+      window.alert(
+        "Please enter the pet name and select an existing owner, species and breed."
+      );
+      return;
+    }
+
+    const ageError = validatePetAge(selectedPet);
+
+    if (ageError) {
+      setEditTab("basic");
+      window.alert(ageError);
+      return;
+    }
+
+    if (!beginSave()) return;
+
+    try {
+      const savedPet = await updatePet(
+        selectedPet.id,
+        getPetPayload(selectedPet)
+      );
+
+      setPets((previousPets) =>
+        previousPets.map((pet) =>
+          pet.id === savedPet.id ? savedPet : pet
+        )
+      );
+
+      setShowEditModal(false);
+      setSelectedPet(null);
+      setEditTab("basic");
+      notifyPetsUpdated();
+    } catch (error) {
+      window.alert(error.message || "Unable to update the pet.");
+    } finally {
+      endSave();
+    }
   };
 
   const handleDeletePet = (pet) => {
+    if (savingRef.current) return;
+
     setPetToDelete(pet);
     setShowDeleteModal(true);
   };
 
   const cancelDeletePet = () => {
+    if (savingRef.current) return;
+
     setShowDeleteModal(false);
     setPetToDelete(null);
   };
 
-  const confirmDeletePet = () => {
-    if (!petToDelete) return;
+  const confirmDeletePet = async () => {
+    if (!petToDelete || !beginSave()) return;
 
-    setPets((previousPets) =>
-      previousPets.filter((pet) => pet.id !== petToDelete.id)
-    );
+    try {
+      await deletePet(petToDelete.id);
 
-    setShowDeleteModal(false);
-    setPetToDelete(null);
+      setPets((previousPets) =>
+        previousPets.filter((pet) => pet.id !== petToDelete.id)
+      );
+
+      setShowDeleteModal(false);
+      setPetToDelete(null);
+      notifyPetsUpdated();
+    } catch (error) {
+      window.alert(error.message || "Unable to delete the pet.");
+    } finally {
+      endSave();
+    }
   };
 
   const ModalTabs = ({ activeTab, onChange }) => (
@@ -877,14 +1482,301 @@ function Pets() {
         Photo & Notes
       </button>
     </div>
-  );  return (
+  );
+  const renderPetFields = (data, mode) => {
+    const isEdit = mode === "edit";
+    const activeTab = isEdit ? editTab : addTab;
+    const onChange = isEdit
+      ? handleEditChange
+      : handleNewPetChange;
+
+    const breeds = isEdit ? editPetBreeds : newPetBreeds;
+    const photoLoading = isEdit
+      ? editPhotoLoading
+      : addPhotoLoading;
+
+    return (
+      <>
+        {activeTab === "basic" && (
+          <div className="pet-tab-panel">
+            <div className="pet-form-grid">
+              <div className="form-field">
+                <label>Pet Name *</label>
+                <input
+                  type="text"
+                  name="name"
+                  value={data.name || ""}
+                  onChange={onChange}
+                  placeholder="Enter pet name"
+                  maxLength={100}
+                  required
+                />
+              </div>
+
+              <div className="form-field">
+                <label htmlFor={`${mode}-pet-owner`}>
+                  Owner Name *
+                </label>
+
+                <OwnerSearchInput
+                  inputId={`${mode}-pet-owner`}
+                  owners={sortedOwners}
+                  value={data.owner}
+                  selectedId={data.ownerId}
+                  onType={
+                    isEdit
+                      ? handleEditOwnerType
+                      : handleNewOwnerType
+                  }
+                  onSelect={
+                    isEdit
+                      ? handleEditOwnerSelect
+                      : handleNewOwnerSelect
+                  }
+                  disabled={isSaving}
+                />
+              </div>
+
+              <div className="form-field">
+                <label>Species *</label>
+                <select
+                  name="species"
+                  value={data.species || ""}
+                  onChange={onChange}
+                  required
+                >
+                  <option value="">Select species</option>
+                  {PET_SPECIES.map((species) => (
+                    <option key={species} value={species}>
+                      {species}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="form-field">
+                <label>Breed *</label>
+                <select
+                  name="breed"
+                  value={data.breed || ""}
+                  onChange={onChange}
+                  disabled={!data.species}
+                  required
+                >
+                  <option value="">
+                    {data.species
+                      ? "Select breed"
+                      : "Select species first"}
+                  </option>
+
+                  {breeds.map((breed) => (
+                    <option key={breed} value={breed}>
+                      {breed}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="form-field">
+                <label>Sex</label>
+                <select
+                  name="sex"
+                  value={data.sex || ""}
+                  onChange={onChange}
+                >
+                  <option value="">Select sex</option>
+                  <option value="Female">Female</option>
+                  <option value="Male">Male</option>
+                </select>
+              </div>
+
+              <div className="form-field">
+                <label>Weight (kg)</label>
+                <input
+                  type="number"
+                  name="weight"
+                  value={data.weight ?? ""}
+                  onChange={onChange}
+                  min="0"
+                  max="99999999.99"
+                  step="0.01"
+                  placeholder="Enter weight"
+                />
+              </div>
+
+              <div className="form-field">
+                <label>Date of Birth</label>
+                <input
+                  type="date"
+                  name="dateOfBirth"
+                  value={data.dateOfBirth || ""}
+                  onChange={onChange}
+                  max={formatCalendarDate(getTodayDate())}
+                  disabled={isSaving}
+                />
+
+                {data.estimatedDOB && (
+                  <span className="pet-field-hint">
+                    Estimated from age. You can replace it
+                    with the exact date.
+                  </span>
+                )}
+              </div>
+
+              <PetAgeInputs
+                data={data}
+                onChange={onChange}
+                disabled={isSaving}
+              />
+
+              <div className="form-field pet-full-field">
+                <label>Color</label>
+
+                <div className="pet-color-picker-row">
+                  <input
+                    className="pet-color-picker"
+                    type="color"
+                    value={data.colorHex || "#55b7b2"}
+                    onChange={
+                      isEdit
+                        ? handleEditColorChange
+                        : handleNewPetColorChange
+                    }
+                  />
+
+                  <input
+                    type="text"
+                    name="color"
+                    value={data.color || ""}
+                    onChange={
+                      isEdit
+                        ? handleEditColorNameChange
+                        : handleNewPetColorNameChange
+                    }
+                    placeholder="Example: Golden, Black & White, Cream"
+                    maxLength={100}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === "health" && (
+          <div className="pet-tab-panel">
+            <div className="pet-form-grid pet-health-grid">
+              <div className="form-field pet-full-field">
+                <label>Blood Type</label>
+                <input
+                  type="text"
+                  name="bloodType"
+                  value={data.bloodType || ""}
+                  onChange={onChange}
+                  placeholder="Enter blood type"
+                  maxLength={100}
+                />
+              </div>
+
+              <div className="form-field">
+                <label>Allergies</label>
+                <textarea
+                  name="allergies"
+                  value={data.allergies || ""}
+                  onChange={onChange}
+                  placeholder="Enter allergies"
+                  rows={5}
+                  maxLength={4000}
+                />
+              </div>
+
+              <div className="form-field">
+                <label>Chronic Conditions</label>
+                <textarea
+                  name="chronicConditions"
+                  value={data.chronicConditions || ""}
+                  onChange={onChange}
+                  placeholder="Enter chronic conditions"
+                  rows={5}
+                  maxLength={4000}
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === "identification" && (
+          <div className="pet-tab-panel">
+            <div className="pet-form-grid">
+              <div className="form-field pet-full-field">
+                <label>Microchip Number</label>
+                <input
+                  type="text"
+                  name="microchipNumber"
+                  value={data.microchipNumber || ""}
+                  onChange={onChange}
+                  placeholder="Enter microchip number"
+                  maxLength={100}
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === "photo" && (
+          <div className="pet-tab-panel">
+            <div className="pet-form-grid pet-photo-notes-grid">
+              <div className="form-field">
+                <label>Profile Photo</label>
+
+                <div className="pet-photo-box">
+                  {data.profilePhoto && (
+                    <img
+                      src={data.profilePhoto}
+                      alt="Pet preview"
+                    />
+                  )}
+
+                  <label className="pet-choose-image">
+                    Choose Image
+                    <input
+                      type="file"
+                      accept="image/*"
+                      aria-label="Choose Image"
+                      onChange={
+                        isEdit
+                          ? handleEditPetPhoto
+                          : handleNewPetPhoto
+                      }
+                      disabled={isSaving || photoLoading}
+                    />
+                  </label>
+                </div>
+              </div>
+
+              <div className="form-field">
+                <label>Notes</label>
+                <textarea
+                  name="notes"
+                  value={data.notes || ""}
+                  onChange={onChange}
+                  placeholder="Enter notes"
+                  rows={8}
+                  maxLength={4000}
+                />
+              </div>
+            </div>
+          </div>
+        )}
+      </>
+    );
+  };
+
+  return (
     <div className="dashboard-layout">
       <Sidebar />
 
-      <main className="dashboard-main">
-        {/* =================================================
-            HEADER — SAME LAYOUT AS MEDICAL RECORDS
-        ================================================= */}
+      <main className="dashboard-main pets-design-page">
+        {/* HEADER */}
 
         <div
           style={{
@@ -897,13 +1789,7 @@ function Pets() {
         >
           <div>
             <h1 style={{ margin: "0 0 5px" }}>Pets</h1>
-
-            <p
-              style={{
-                margin: 0,
-                color: "#718181",
-              }}
-            >
+            <p style={{ margin: 0, color: "#718181" }}>
               Manage registered pets
             </p>
           </div>
@@ -919,6 +1805,7 @@ function Pets() {
             <button
               type="button"
               onClick={handleExport}
+              disabled={isLoading || Boolean(loadError)}
               style={{
                 height: "42px",
                 padding: "0 18px",
@@ -941,6 +1828,9 @@ function Pets() {
             <button
               type="button"
               onClick={handleOpenAdd}
+              disabled={
+                isLoading || Boolean(loadError) || isSaving
+              }
               style={{
                 height: "42px",
                 padding: "0 18px",
@@ -960,9 +1850,7 @@ function Pets() {
           </div>
         </div>
 
-        {/* =================================================
-            SEARCH + FILTERS
-        ================================================= */}
+        {/* SEARCH + FILTERS */}
 
         <div
           style={{
@@ -1119,7 +2007,7 @@ function Pets() {
               <option value="name-desc">Name Z-A</option>
               <option value="owner-asc">Owner A-Z</option>
               <option value="owner-desc">Owner Z-A</option>
-              <option value="species-asc">Species A-Z</option>
+              <option value="species-asc">Species Z-A</option>
               <option value="species-desc">Species Z-A</option>
               <option value="age-low">Age Low-High</option>
               <option value="age-high">Age High-Low</option>
@@ -1127,11 +2015,15 @@ function Pets() {
           </div>
         </div>
 
-        {/* =================================================
-            TABLE
-        ================================================= */}
+        {/* TABLE */}
 
-        <div className="owners-table-container">
+        <div
+          ref={tableScrollRef}
+          className="owners-table-container pets-table-scroll"
+          tabIndex={0}
+          role="region"
+          aria-label="Pets table. Scroll horizontally to see all columns."
+        >
           <table className="owners-table">
             <thead>
               <tr>
@@ -1145,7 +2037,21 @@ function Pets() {
             </thead>
 
             <tbody>
-              {currentPets.length > 0 ? (
+              {isLoading || loadError ? (
+                <tr>
+                  <td
+                    colSpan={6}
+                    className="no-results"
+                    style={{
+                      textAlign: "center",
+                      padding: "35px",
+                      color: "#718181",
+                    }}
+                  >
+                    {isLoading ? "Loading pets..." : loadError}
+                  </td>
+                </tr>
+              ) : currentPets.length > 0 ? (
                 currentPets.map((pet) => (
                   <tr key={pet.id}>
                     <td>{pet.name}</td>
@@ -1169,6 +2075,7 @@ function Pets() {
                           type="button"
                           className="edit-button icon-button"
                           onClick={() => handleOpenEdit(pet)}
+                          disabled={isSaving}
                           title="Edit Pet"
                         >
                           <FaPen />
@@ -1178,6 +2085,7 @@ function Pets() {
                           type="button"
                           className="delete-button icon-button"
                           onClick={() => handleDeletePet(pet)}
+                          disabled={isSaving}
                           title="Delete Pet"
                         >
                           <FaTrash />
@@ -1189,7 +2097,7 @@ function Pets() {
               ) : (
                 <tr>
                   <td
-                    colSpan="6"
+                    colSpan={6}
                     className="no-results"
                     style={{
                       textAlign: "center",
@@ -1205,9 +2113,7 @@ function Pets() {
           </table>
         </div>
 
-        {/* =================================================
-            PAGINATION
-        ================================================= */}
+        {/* PAGINATION */}
 
         <div
           style={{
@@ -1271,6 +2177,7 @@ function Pets() {
                 )
               }
               disabled={safeCurrentPage === 1}
+              aria-label="Previous page"
               style={{
                 width: "34px",
                 height: "34px",
@@ -1284,7 +2191,9 @@ function Pets() {
                 fontSize: "18px",
                 lineHeight: 1,
                 cursor:
-                  safeCurrentPage === 1 ? "not-allowed" : "pointer",
+                  safeCurrentPage === 1
+                    ? "not-allowed"
+                    : "pointer",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
@@ -1295,6 +2204,7 @@ function Pets() {
 
             <button
               type="button"
+              aria-current="page"
               style={{
                 width: "34px",
                 height: "34px",
@@ -1322,6 +2232,7 @@ function Pets() {
                 )
               }
               disabled={safeCurrentPage === totalPages}
+              aria-label="Next page"
               style={{
                 width: "34px",
                 height: "34px",
@@ -1352,9 +2263,7 @@ function Pets() {
           </div>
         </div>
 
-        {/* =================================================
-            ADD PET MODAL
-        ================================================= */}
+        {/* ADD PET MODAL */}
 
         {showAddModal && (
           <div className="modal-overlay">
@@ -1369,274 +2278,23 @@ function Pets() {
                   type="button"
                   className="modal-close"
                   onClick={handleCloseAdd}
+                  disabled={isSaving || addPhotoLoading}
                 >
                   ×
                 </button>
               </div>
 
-              <ModalTabs activeTab={addTab} onChange={setAddTab} />
+              <ModalTabs
+                activeTab={addTab}
+                onChange={setAddTab}
+              />
 
-              <form className="pet-tab-form" onSubmit={handleAddPet}>
+              <form
+                className="pet-tab-form"
+                onSubmit={handleAddPet}
+              >
                 <div className="pet-tab-content">
-                  {addTab === "basic" && (
-                    <div className="pet-tab-panel">
-                      <div className="pet-form-grid">
-                        <div className="form-field">
-                          <label>Pet Name *</label>
-
-                          <input
-                            type="text"
-                            name="name"
-                            value={newPet.name}
-                            onChange={handleNewPetChange}
-                            placeholder="Enter pet name"
-                            required
-                          />
-                        </div>
-
-                        <div className="form-field">
-                          <label>Owner Name *</label>
-
-                          <input
-                            type="text"
-                            name="owner"
-                            value={newPet.owner}
-                            onChange={handleNewPetChange}
-                            placeholder="Enter owner name"
-                            required
-                          />
-                        </div>
-
-                        <div className="form-field">
-                          <label>Species *</label>
-
-                          <select
-                            name="species"
-                            value={newPet.species}
-                            onChange={handleNewPetChange}
-                            required
-                          >
-                            <option value="">Select species</option>
-
-                            {PET_SPECIES.map((species) => (
-                              <option key={species} value={species}>
-                                {species}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-
-                        <div className="form-field">
-                          <label>Breed *</label>
-
-                          <select
-                            name="breed"
-                            value={newPet.breed}
-                            onChange={handleNewPetChange}
-                            disabled={!newPet.species}
-                            required
-                          >
-                            <option value="">
-                              {newPet.species
-                                ? "Select breed"
-                                : "Select species first"}
-                            </option>
-
-                            {newPetBreeds.map((breed) => (
-                              <option key={breed} value={breed}>
-                                {breed}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-
-                        <div className="form-field">
-                          <label>Sex</label>
-
-                          <select
-                            name="sex"
-                            value={newPet.sex}
-                            onChange={handleNewPetChange}
-                          >
-                            <option value="">Select sex</option>
-                            <option value="Female">Female</option>
-                            <option value="Male">Male</option>
-                          </select>
-                        </div>
-
-                        <div className="form-field">
-                          <label>Weight (kg)</label>
-
-                          <input
-                            type="number"
-                            name="weight"
-                            value={newPet.weight}
-                            onChange={handleNewPetChange}
-                            min="0"
-                            step="0.01"
-                            placeholder="Enter weight"
-                          />
-                        </div>
-
-                        <div className="form-field">
-                          <label>Date of Birth</label>
-
-                          <input
-                            type="date"
-                            name="dateOfBirth"
-                            value={newPet.dateOfBirth}
-                            onChange={handleNewPetChange}
-                          />
-
-                          {newPet.estimatedDOB && (
-                            <span className="pet-field-hint">
-                              Estimated from age. You can replace it
-                              with the exact date.
-                            </span>
-                          )}
-                        </div>
-
-                        <div className="form-field">
-                          <label>Age</label>
-
-                          <input
-                            type="text"
-                            name="age"
-                            value={newPet.age}
-                            onChange={handleNewPetChange}
-                            placeholder="Example: 4 years"
-                          />
-
-                          <span className="pet-field-hint">
-                            Entering age automatically sets an
-                            estimated 01/01/YYYY birth date.
-                          </span>
-                        </div>
-
-                        <div className="form-field pet-full-field">
-                          <label>Color</label>
-
-                          <div className="pet-color-picker-row">
-                            <input
-                              className="pet-color-picker"
-                              type="color"
-                              value={newPet.colorHex}
-                              onChange={handleNewPetColorChange}
-                            />
-
-                            <input
-                              type="text"
-                              name="color"
-                              value={newPet.color}
-                              onChange={handleNewPetColorNameChange}
-                              placeholder="Example: Golden, Black & White, Cream"
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {addTab === "health" && (
-                    <div className="pet-tab-panel">
-                      <div className="pet-form-grid pet-health-grid">
-                        <div className="form-field pet-full-field">
-                          <label>Blood Type</label>
-
-                          <input
-                            type="text"
-                            name="bloodType"
-                            value={newPet.bloodType}
-                            onChange={handleNewPetChange}
-                            placeholder="Enter blood type"
-                          />
-                        </div>
-
-                        <div className="form-field">
-                          <label>Allergies</label>
-
-                          <textarea
-                            name="allergies"
-                            value={newPet.allergies}
-                            onChange={handleNewPetChange}
-                            placeholder="Enter allergies"
-                            rows="5"
-                          />
-                        </div>
-
-                        <div className="form-field">
-                          <label>Chronic Conditions</label>
-
-                          <textarea
-                            name="chronicConditions"
-                            value={newPet.chronicConditions}
-                            onChange={handleNewPetChange}
-                            placeholder="Enter chronic conditions"
-                            rows="5"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {addTab === "identification" && (
-                    <div className="pet-tab-panel">
-                      <div className="pet-form-grid">
-                        <div className="form-field pet-full-field">
-                          <label>Microchip Number</label>
-
-                          <input
-                            type="text"
-                            name="microchipNumber"
-                            value={newPet.microchipNumber}
-                            onChange={handleNewPetChange}
-                            placeholder="Enter microchip number"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {addTab === "photo" && (
-                    <div className="pet-tab-panel">
-                      <div className="pet-form-grid pet-photo-notes-grid">
-                        <div className="form-field">
-                          <label>Profile Photo</label>
-
-                          <div className="pet-photo-box">
-                            {newPet.profilePhoto && (
-                              <img
-                                src={newPet.profilePhoto}
-                                alt="Pet preview"
-                              />
-                            )}
-
-                            <label className="pet-choose-image">
-                              Choose Image
-                              <input
-                                type="file"
-                                accept="image/*"
-                                aria-label="Choose Image"
-                                onChange={handleNewPetPhoto}
-                              />
-                            </label>
-                          </div>
-                        </div>
-
-                        <div className="form-field">
-                          <label>Notes</label>
-
-                          <textarea
-                            name="notes"
-                            value={newPet.notes}
-                            onChange={handleNewPetChange}
-                            placeholder="Enter notes"
-                            rows="8"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  )}
+                  {renderPetFields(newPet, "add")}
                 </div>
 
                 <div className="pet-modal-footer">
@@ -1644,6 +2302,7 @@ function Pets() {
                     type="button"
                     className="modal-cancel-button"
                     onClick={handleCloseAdd}
+                    disabled={isSaving || addPhotoLoading}
                   >
                     Cancel
                   </button>
@@ -1652,6 +2311,7 @@ function Pets() {
                     type="submit"
                     className="save-button"
                     value="save"
+                    disabled={isSaving || addPhotoLoading}
                   >
                     Save Pet
                   </button>
@@ -1660,6 +2320,7 @@ function Pets() {
                     type="submit"
                     className="save-button"
                     value="save-and-book-appointment"
+                    disabled={isSaving || addPhotoLoading}
                   >
                     Save & Book Appointment
                   </button>
@@ -1669,9 +2330,7 @@ function Pets() {
           </div>
         )}
 
-        {/* =================================================
-            EDIT PET MODAL
-        ================================================= */}
+        {/* EDIT PET MODAL */}
 
         {showEditModal && selectedPet && (
           <div className="modal-overlay">
@@ -1686,277 +2345,23 @@ function Pets() {
                   type="button"
                   className="modal-close"
                   onClick={handleCloseEdit}
+                  disabled={isSaving || editPhotoLoading}
                 >
                   ×
                 </button>
               </div>
 
-              <ModalTabs activeTab={editTab} onChange={setEditTab} />
+              <ModalTabs
+                activeTab={editTab}
+                onChange={setEditTab}
+              />
 
               <form
                 className="pet-tab-form"
                 onSubmit={handleUpdatePet}
               >
                 <div className="pet-tab-content">
-                  {editTab === "basic" && (
-                    <div className="pet-tab-panel">
-                      <div className="pet-form-grid">
-                        <div className="form-field">
-                          <label>Pet Name *</label>
-
-                          <input
-                            type="text"
-                            name="name"
-                            value={selectedPet.name || ""}
-                            onChange={handleEditChange}
-                            required
-                          />
-                        </div>
-
-                        <div className="form-field">
-                          <label>Owner Name *</label>
-
-                          <input
-                            type="text"
-                            name="owner"
-                            value={selectedPet.owner || ""}
-                            onChange={handleEditChange}
-                            required
-                          />
-                        </div>
-
-                        <div className="form-field">
-                          <label>Species *</label>
-
-                          <select
-                            name="species"
-                            value={selectedPet.species || ""}
-                            onChange={handleEditChange}
-                            required
-                          >
-                            <option value="">Select species</option>
-
-                            {PET_SPECIES.map((species) => (
-                              <option key={species} value={species}>
-                                {species}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-
-                        <div className="form-field">
-                          <label>Breed *</label>
-
-                          <select
-                            name="breed"
-                            value={selectedPet.breed || ""}
-                            onChange={handleEditChange}
-                            disabled={!selectedPet.species}
-                            required
-                          >
-                            <option value="">
-                              {selectedPet.species
-                                ? "Select breed"
-                                : "Select species first"}
-                            </option>
-
-                            {editPetBreeds.map((breed) => (
-                              <option key={breed} value={breed}>
-                                {breed}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-
-                        <div className="form-field">
-                          <label>Sex</label>
-
-                          <select
-                            name="sex"
-                            value={selectedPet.sex || ""}
-                            onChange={handleEditChange}
-                          >
-                            <option value="">Select sex</option>
-                            <option value="Female">Female</option>
-                            <option value="Male">Male</option>
-                          </select>
-                        </div>
-
-                        <div className="form-field">
-                          <label>Weight (kg)</label>
-
-                          <input
-                            type="number"
-                            name="weight"
-                            value={selectedPet.weight || ""}
-                            onChange={handleEditChange}
-                            min="0"
-                            step="0.01"
-                          />
-                        </div>
-
-                        <div className="form-field">
-                          <label>Date of Birth</label>
-
-                          <input
-                            type="date"
-                            name="dateOfBirth"
-                            value={selectedPet.dateOfBirth || ""}
-                            onChange={handleEditChange}
-                          />
-
-                          {selectedPet.estimatedDOB && (
-                            <span className="pet-field-hint">
-                              Estimated from age. Change it if the
-                              exact birthday is known.
-                            </span>
-                          )}
-                        </div>
-
-                        <div className="form-field">
-                          <label>Age</label>
-
-                          <input
-                            type="text"
-                            name="age"
-                            value={selectedPet.age || ""}
-                            onChange={handleEditChange}
-                            placeholder="Example: 4 years"
-                          />
-
-                          <span className="pet-field-hint">
-                            Changing age automatically sets an
-                            estimated 01/01/YYYY birth date.
-                          </span>
-                        </div>
-
-                        <div className="form-field pet-full-field">
-                          <label>Color</label>
-
-                          <div className="pet-color-picker-row">
-                            <input
-                              className="pet-color-picker"
-                              type="color"
-                              value={
-                                selectedPet.colorHex || "#55b7b2"
-                              }
-                              onChange={handleEditColorChange}
-                            />
-
-                            <input
-                              type="text"
-                              value={selectedPet.color || ""}
-                              onChange={handleEditColorNameChange}
-                              placeholder="Example: Golden, Black & White, Cream"
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {editTab === "health" && (
-                    <div className="pet-tab-panel">
-                      <div className="pet-form-grid pet-health-grid">
-                        <div className="form-field pet-full-field">
-                          <label>Blood Type</label>
-
-                          <input
-                            type="text"
-                            name="bloodType"
-                            value={selectedPet.bloodType || ""}
-                            onChange={handleEditChange}
-                            placeholder="Enter blood type"
-                          />
-                        </div>
-
-                        <div className="form-field">
-                          <label>Allergies</label>
-
-                          <textarea
-                            name="allergies"
-                            value={selectedPet.allergies || ""}
-                            onChange={handleEditChange}
-                            placeholder="Enter allergies"
-                            rows="5"
-                          />
-                        </div>
-
-                        <div className="form-field">
-                          <label>Chronic Conditions</label>
-
-                          <textarea
-                            name="chronicConditions"
-                            value={
-                              selectedPet.chronicConditions || ""
-                            }
-                            onChange={handleEditChange}
-                            placeholder="Enter chronic conditions"
-                            rows="5"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {editTab === "identification" && (
-                    <div className="pet-tab-panel">
-                      <div className="pet-form-grid">
-                        <div className="form-field pet-full-field">
-                          <label>Microchip Number</label>
-
-                          <input
-                            type="text"
-                            name="microchipNumber"
-                            value={selectedPet.microchipNumber || ""}
-                            onChange={handleEditChange}
-                            placeholder="Enter microchip number"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {editTab === "photo" && (
-                    <div className="pet-tab-panel">
-                      <div className="pet-form-grid pet-photo-notes-grid">
-                        <div className="form-field">
-                          <label>Profile Photo</label>
-
-                          <div className="pet-photo-box">
-                            {selectedPet.profilePhoto && (
-                              <img
-                                src={selectedPet.profilePhoto}
-                                alt="Pet preview"
-                              />
-                            )}
-
-                            <label className="pet-choose-image">
-                              Choose Image
-                              <input
-                                type="file"
-                                accept="image/*"
-                                aria-label="Choose Image"
-                                onChange={handleEditPetPhoto}
-                              />
-                            </label>
-                          </div>
-                        </div>
-
-                        <div className="form-field">
-                          <label>Notes</label>
-
-                          <textarea
-                            name="notes"
-                            value={selectedPet.notes || ""}
-                            onChange={handleEditChange}
-                            placeholder="Enter notes"
-                            rows="8"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  )}
+                  {renderPetFields(selectedPet, "edit")}
                 </div>
 
                 <div className="pet-modal-footer">
@@ -1964,11 +2369,16 @@ function Pets() {
                     type="button"
                     className="modal-cancel-button"
                     onClick={handleCloseEdit}
+                    disabled={isSaving || editPhotoLoading}
                   >
                     Cancel
                   </button>
 
-                  <button type="submit" className="save-button">
+                  <button
+                    type="submit"
+                    className="save-button"
+                    disabled={isSaving || editPhotoLoading}
+                  >
                     Save Changes
                   </button>
                 </div>
@@ -1977,9 +2387,7 @@ function Pets() {
           </div>
         )}
 
-        {/* =================================================
-            DELETE PET MODAL
-        ================================================= */}
+        {/* DELETE PET MODAL */}
 
         {showDeleteModal && petToDelete && (
           <div className="modal-overlay">
@@ -1994,6 +2402,7 @@ function Pets() {
                   type="button"
                   className="modal-close"
                   onClick={cancelDeletePet}
+                  disabled={isSaving}
                 >
                   ×
                 </button>
@@ -2015,6 +2424,7 @@ function Pets() {
                   type="button"
                   className="modal-cancel-button"
                   onClick={cancelDeletePet}
+                  disabled={isSaving}
                 >
                   Cancel
                 </button>
@@ -2023,6 +2433,7 @@ function Pets() {
                   type="button"
                   className="pets-delete-confirm"
                   onClick={confirmDeletePet}
+                  disabled={isSaving}
                 >
                   <FaTrash />
                   Delete
@@ -2031,11 +2442,6 @@ function Pets() {
             </div>
           </div>
         )}
-
-        {/* =================================================
-            PET MODAL CSS
-            PAGE LAYOUT USES MEDICAL RECORDS CLASSES
-        ================================================= */}
 
         <style>{`
           .pet-delete-modal {
@@ -2059,58 +2465,73 @@ function Pets() {
             font-size: 13px;
           }
 
-          .owners-table-container {
-            width: 100%;
-            max-width: 100%;
-            box-sizing: border-box;
-            overflow: hidden;
+          html body #root main.pets-design-page {
+            min-width: 0 !important;
+            box-sizing: border-box !important;
           }
 
-          .owners-table {
-            width: 100%;
-            max-width: 100%;
-            table-layout: fixed;
+          html body #root .pets-design-page
+          .owners-table-container.pets-table-scroll {
+            display: block !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            min-width: 0 !important;
+            box-sizing: border-box !important;
+            overflow-x: auto !important;
+            overflow-y: hidden !important;
+            overscroll-behavior-x: contain;
+            -webkit-overflow-scrolling: touch;
+            touch-action: pan-x pan-y;
           }
 
-          .owners-table th,
-          .owners-table td {
+          html body #root .pets-design-page
+          .pets-table-scroll > .owners-table {
+            display: table !important;
+            width: 100% !important;
+            min-width: 900px !important;
+            max-width: none !important;
+            table-layout: fixed !important;
+          }
+
+          .pets-design-page .owners-table th,
+          .pets-design-page .owners-table td {
             box-sizing: border-box;
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
           }
 
-          .owners-table th:nth-child(1),
-          .owners-table td:nth-child(1) {
+          .pets-design-page .owners-table th:nth-child(1),
+          .pets-design-page .owners-table td:nth-child(1) {
             width: 15%;
           }
 
-          .owners-table th:nth-child(2),
-          .owners-table td:nth-child(2) {
+          .pets-design-page .owners-table th:nth-child(2),
+          .pets-design-page .owners-table td:nth-child(2) {
             width: 19%;
           }
 
-          .owners-table th:nth-child(3),
-          .owners-table td:nth-child(3) {
+          .pets-design-page .owners-table th:nth-child(3),
+          .pets-design-page .owners-table td:nth-child(3) {
             width: 13%;
           }
 
-          .owners-table th:nth-child(4),
-          .owners-table td:nth-child(4) {
+          .pets-design-page .owners-table th:nth-child(4),
+          .pets-design-page .owners-table td:nth-child(4) {
             width: 22%;
           }
 
-          .owners-table th:nth-child(5),
-          .owners-table td:nth-child(5) {
+          .pets-design-page .owners-table th:nth-child(5),
+          .pets-design-page .owners-table td:nth-child(5) {
             width: 12%;
           }
 
-          .owners-table th:nth-child(6),
-          .owners-table td:nth-child(6) {
+          .pets-design-page .owners-table th:nth-child(6),
+          .pets-design-page .owners-table td:nth-child(6) {
             width: 19%;
           }
 
-          .owners-table .table-actions {
+          .pets-design-page .owners-table .table-actions {
             display: flex;
             align-items: center;
             justify-content: flex-start;
@@ -2118,7 +2539,8 @@ function Pets() {
             overflow: visible;
           }
 
-          .owners-table .table-actions .icon-button {
+          .pets-design-page .owners-table
+          .table-actions .icon-button {
             flex: 0 0 auto;
           }
 
@@ -2128,10 +2550,6 @@ function Pets() {
     </div>
   );
 }
-
-/* =========================================================
-   PET MODAL CSS
-========================================================= */
 
 function getPetModalCSS() {
   return `
@@ -2143,12 +2561,9 @@ function getPetModalCSS() {
       overflow: hidden !important;
       background: #ffffff !important;
       border-radius: 16px !important;
-
       display: flex !important;
       flex-direction: column !important;
-
-      box-shadow:
-        0 24px 65px rgba(24, 56, 56, 0.22) !important;
+      box-shadow: 0 24px 65px rgba(24, 56, 56, 0.22) !important;
     }
 
     .pet-form-modal > .modal-header,
@@ -2158,13 +2573,10 @@ function getPetModalCSS() {
       margin: 0 !important;
       padding: 22px 30px !important;
       box-sizing: border-box !important;
-
       background: #55b7b2 !important;
       color: #ffffff !important;
-
       border: none !important;
       border-radius: 16px 16px 0 0 !important;
-
       display: flex !important;
       align-items: center !important;
       justify-content: space-between !important;
@@ -2175,7 +2587,6 @@ function getPetModalCSS() {
     .pet-delete-modal > .modal-header h2 {
       margin: 0 !important;
       color: #ffffff !important;
-
       font-size: 25px !important;
       line-height: 1.2 !important;
       font-weight: 800 !important;
@@ -2193,61 +2604,46 @@ function getPetModalCSS() {
       width: 42px !important;
       min-width: 42px !important;
       height: 42px !important;
-
       padding: 0 !important;
       margin: 0 !important;
-
       border: 0 !important;
       border-radius: 50% !important;
-
       background: #ffffff !important;
       color: #4f6b6b !important;
-
       font-size: 24px !important;
       line-height: 1 !important;
-
       display: flex !important;
       align-items: center !important;
       justify-content: center !important;
-
       cursor: pointer !important;
     }
 
     .pet-modal-tabs {
       flex: 0 0 auto;
-
       display: grid;
       grid-template-columns: repeat(4, 1fr);
       gap: 8px;
-
       padding: 16px 24px;
-
       background: #f7fbfb;
       border-bottom: 1px solid #e1ebeb;
     }
 
     .pet-form-modal .pet-modal-tabs .pet-modal-tab {
       min-height: 44px;
-
       border: 1px solid #dce7e7;
       border-radius: 9px;
-
       background: #ffffff !important;
       color: #617575 !important;
       -webkit-text-fill-color: currentColor !important;
       opacity: 1 !important;
-
       display: flex;
       align-items: center;
       justify-content: center;
       gap: 7px;
-
       padding: 8px 10px;
-
       font-family: inherit;
       font-size: 13px;
       font-weight: 700;
-
       cursor: pointer;
       transition: 0.18s ease;
     }
@@ -2277,9 +2673,7 @@ function getPetModalCSS() {
       color: #ffffff !important;
       -webkit-text-fill-color: #ffffff !important;
       opacity: 1 !important;
-
-      box-shadow:
-        0 4px 12px rgba(21, 159, 159, 0.18);
+      box-shadow: 0 4px 12px rgba(21, 159, 159, 0.18);
     }
 
     .pet-form-modal .pet-modal-tabs .pet-modal-tab.active svg {
@@ -2290,12 +2684,9 @@ function getPetModalCSS() {
     .pet-tab-form {
       min-height: 0 !important;
       flex: 1 1 auto !important;
-
       padding: 0 !important;
       margin: 0 !important;
-
       overflow: hidden !important;
-
       display: flex !important;
       flex-direction: column !important;
     }
@@ -2303,12 +2694,9 @@ function getPetModalCSS() {
     .pet-tab-content {
       flex: 1 1 auto;
       min-height: 0;
-
       overflow-y: auto;
       overflow-x: hidden;
-
       padding: 24px 30px;
-
       background: #ffffff;
       box-sizing: border-box;
     }
@@ -2333,16 +2721,13 @@ function getPetModalCSS() {
     .pet-form-grid {
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
-
       gap: 20px 24px;
-
       width: 100%;
     }
 
     .pet-form-grid .form-field {
       min-width: 0;
       margin: 0 !important;
-
       display: flex;
       flex-direction: column;
       gap: 7px;
@@ -2351,9 +2736,7 @@ function getPetModalCSS() {
     .pet-form-grid .form-field label {
       margin: 0 !important;
       padding: 0 !important;
-
       color: #3b4d4d;
-
       font-size: 13px;
       font-weight: 700;
       line-height: 1.35;
@@ -2365,16 +2748,12 @@ function getPetModalCSS() {
     .pet-form-grid textarea {
       width: 100% !important;
       box-sizing: border-box !important;
-
       border: 1px solid #d8e2e2 !important;
       border-radius: 8px !important;
-
       background: #ffffff !important;
       color: #2d3d3d !important;
-
       font-family: inherit !important;
       font-size: 14px !important;
-
       outline: none !important;
       transition: 0.15s ease !important;
     }
@@ -2384,7 +2763,6 @@ function getPetModalCSS() {
     .pet-form-grid select {
       min-height: 44px !important;
       height: 44px !important;
-
       padding: 0 12px !important;
     }
 
@@ -2398,9 +2776,7 @@ function getPetModalCSS() {
     .pet-form-grid select:focus,
     .pet-form-grid textarea:focus {
       border-color: #55b7b2 !important;
-
-      box-shadow:
-        0 0 0 3px rgba(85, 183, 178, 0.12) !important;
+      box-shadow: 0 0 0 3px rgba(85, 183, 178, 0.12) !important;
     }
 
     .pet-form-grid select:disabled {
@@ -2416,10 +2792,8 @@ function getPetModalCSS() {
     .pet-field-hint {
       display: block;
       color: #849393;
-
       font-size: 11px;
       line-height: 1.45;
-
       margin-top: 1px;
     }
 
@@ -2434,19 +2808,13 @@ function getPetModalCSS() {
       width: 58px !important;
       height: 44px !important;
       min-height: 44px !important;
-
       padding: 4px !important;
-
       border: 1px solid #d8e2e2 !important;
       border-radius: 8px !important;
-
       background: #ffffff !important;
-
       cursor: pointer;
       box-sizing: border-box;
     }
-
-    /* Health fields */
 
     .pet-form-modal .pet-health-grid {
       align-items: start;
@@ -2462,8 +2830,6 @@ function getPetModalCSS() {
       min-height: 130px !important;
       margin: 0 !important;
     }
-
-    /* Photo and Notes */
 
     .pet-form-modal .pet-photo-notes-grid {
       align-items: start;
@@ -2481,21 +2847,17 @@ function getPetModalCSS() {
       width: 100% !important;
       height: 190px !important;
       min-height: 190px !important;
-
       margin: 0 !important;
       padding: 12px !important;
       box-sizing: border-box !important;
-
       border: 1px solid #d8e2e2 !important;
       border-radius: 8px !important;
       background: #ffffff !important;
-
       display: flex !important;
       flex-direction: column !important;
       align-items: center !important;
       justify-content: center !important;
       gap: 10px !important;
-
       overflow: hidden;
     }
 
@@ -2510,32 +2872,25 @@ function getPetModalCSS() {
 
     .pet-form-modal .pet-photo-box .pet-choose-image {
       position: relative !important;
-
       display: inline-flex !important;
       align-items: center !important;
       justify-content: center !important;
-
       flex: 0 0 auto !important;
       width: auto !important;
       min-height: 36px !important;
       height: 36px !important;
-
       margin: 0 !important;
       padding: 0 16px !important;
       box-sizing: border-box !important;
-
       border: 1px solid #55b7b2 !important;
       border-radius: 6px !important;
-
       background: #ffffff !important;
       color: #159f9f !important;
       -webkit-text-fill-color: currentColor !important;
-
       font-family: inherit !important;
       font-size: 13px !important;
       font-weight: 700 !important;
       line-height: 1 !important;
-
       cursor: pointer !important;
       overflow: hidden !important;
     }
@@ -2546,23 +2901,19 @@ function getPetModalCSS() {
     }
 
     .pet-form-modal .pet-photo-box .pet-choose-image:focus-within {
-      box-shadow:
-        0 0 0 3px rgba(85, 183, 178, 0.12) !important;
+      box-shadow: 0 0 0 3px rgba(85, 183, 178, 0.12) !important;
     }
 
     .pet-form-modal .pet-choose-image input[type="file"] {
       position: absolute !important;
       inset: 0 !important;
-
       display: block !important;
       width: 100% !important;
       height: 100% !important;
       min-height: 0 !important;
-
       margin: 0 !important;
       padding: 0 !important;
       border: 0 !important;
-
       opacity: 0 !important;
       cursor: pointer !important;
       box-sizing: border-box !important;
@@ -2570,16 +2921,12 @@ function getPetModalCSS() {
 
     .pet-modal-footer {
       flex: 0 0 auto;
-
       padding: 16px 30px;
-
       border-top: 1px solid #e4ecec;
       background: #ffffff;
-
       display: flex;
       justify-content: flex-end;
       align-items: center;
-
       gap: 10px;
       flex-wrap: wrap;
       box-sizing: border-box;
@@ -2590,23 +2937,17 @@ function getPetModalCSS() {
     .pet-modal-footer .pets-delete-confirm {
       width: auto !important;
       min-width: 105px;
-
       min-height: 42px;
       height: 42px;
-
       padding: 0 17px !important;
       border-radius: 8px !important;
-
       display: inline-flex !important;
       align-items: center !important;
       justify-content: center !important;
-
       gap: 7px !important;
-
       font-family: inherit !important;
       font-size: 13px !important;
       font-weight: 700 !important;
-
       cursor: pointer !important;
     }
 
@@ -2642,27 +2983,34 @@ function getPetModalCSS() {
       border-color: #c53f3f !important;
     }
 
-    /* =====================================================
-       DELETE MODAL
-    ===================================================== */
-
     .pet-delete-modal {
       width: min(450px, calc(100vw - 32px)) !important;
       max-width: 450px !important;
-
       padding: 0 !important;
       overflow: hidden !important;
-
       background: #ffffff !important;
       border-radius: 16px !important;
-
-      box-shadow:
-        0 24px 65px rgba(24, 56, 56, 0.22) !important;
+      box-shadow: 0 24px 65px rgba(24, 56, 56, 0.22) !important;
     }
 
-    /* =====================================================
-       RESPONSIVE MODAL
-    ===================================================== */
+    .pet-form-modal .pet-owner-search {
+      width: 100%;
+      min-width: 0;
+    }
+
+    .pet-form-modal .pet-owner-options {
+      text-align: left;
+    }
+
+    .pet-form-modal .pet-owner-option {
+      -webkit-text-fill-color: currentColor !important;
+    }
+
+    .pet-form-modal .pet-age-inputs input {
+      min-width: 0 !important;
+      padding-left: 9px !important;
+      padding-right: 5px !important;
+    }
 
     @media (max-width: 720px) {
       .pet-modal-tabs {

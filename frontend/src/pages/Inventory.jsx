@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Sidebar from "../components/Sidebar";
 
 import {
@@ -13,136 +13,50 @@ import {
 
 import * as XLSX from "xlsx";
 
+import SupplierStockInvoice from "../components/SupplierStockInvoice";
+import { getCategories } from "../api/categoriesApi";
+
+import {
+  getProducts,
+  createProduct,
+  updateProduct,
+  deleteProduct,
+} from "../api/productsApi";
+
 function Inventory() {
-  // =====================================================
-  // STORAGE KEYS
-  // =====================================================
-
   const PRODUCTS_STORAGE_KEY = "vetClinicProducts";
-  const CATEGORIES_STORAGE_KEY = "vetClinicCategories";
 
-  // =====================================================
-  // DEFAULT PRODUCTS
-  //
-  // These are only initial sample products.
-  // After they are saved in localStorage, the Admin
-  // controls everything from Inventory -> Products.
-  // =====================================================
+  const [items, setItems] = useState([]);
+  const [categories, setCategories] = useState([]);
 
-  const defaultProducts = [
-    {
-      id: 1,
-      name: "Syringes",
-      category: "Pet Essentials",
-      description: "Disposable syringes for clinic and pet care use.",
-      quantity: 120,
-      minimumStock: 20,
-      purchasePrice: 0.25,
-      sellingPrice: 0.5,
-      expiryDate: "",
-      image: "",
-      showOnStore: true,
-      showOnPOS: true,
-      featured: false,
-    },
-    {
-      id: 2,
-      name: "Disposable Gloves",
-      category: "Pet Essentials",
-      description: "Disposable gloves for safe and hygienic pet care.",
-      quantity: 15,
-      minimumStock: 20,
-      purchasePrice: 5,
-      sellingPrice: 8,
-      expiryDate: "",
-      image: "",
-      showOnStore: false,
-      showOnPOS: true,
-      featured: false,
-    },
-    {
-      id: 3,
-      name: "Rabies Vaccine",
-      category: "Care",
-      description: "Rabies vaccine for veterinary use.",
-      quantity: 25,
-      minimumStock: 10,
-      purchasePrice: 12,
-      sellingPrice: 20,
-      expiryDate: "2026-10-25",
-      image: "",
-      showOnStore: false,
-      showOnPOS: true,
-      featured: false,
-    },
-  ];
+  const [isLoadingProducts, setIsLoadingProducts] = useState(true);
+  const [isLoadingCategories, setIsLoadingCategories] = useState(true);
+  const [productsError, setProductsError] = useState("");
+  const [categoriesError, setCategoriesError] = useState("");
+  const [isSavingProduct, setIsSavingProduct] = useState(false);
 
-  // =====================================================
-  // LOAD PRODUCTS
-  // =====================================================
+  const productsRef = useRef([]);
+  const savingProductRef = useRef(false);
 
-  const loadProducts = () => {
-    try {
-      const savedProducts =
-        localStorage.getItem(PRODUCTS_STORAGE_KEY);
+  const [search, setSearch] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("All");
+  const [statusFilter, setStatusFilter] = useState("All");
 
-      if (savedProducts) {
-        const parsedProducts =
-          JSON.parse(savedProducts);
+  const [rowsPerPage, setRowsPerPage] = useState(5);
+  const [currentPage, setCurrentPage] = useState(1);
 
-        if (Array.isArray(parsedProducts)) {
-          return parsedProducts;
-        }
-      }
-    } catch (error) {
-      console.error(
-        "Could not load products:",
-        error
-      );
-    }
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [showViewModal, setShowViewModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showInvoiceModal, setShowInvoiceModal] = useState(false);
 
-    localStorage.setItem(
-      PRODUCTS_STORAGE_KEY,
-      JSON.stringify(defaultProducts)
-    );
-
-    return defaultProducts;
-  };
-
-  // =====================================================
-  // PRODUCTS STATE
-  // =====================================================
-
-  const [items, setItems] = useState(loadProducts);
-
-  // =====================================================
-  // SAVE PRODUCTS
-  //
-  // Products.jsx + Home.jsx will read this same data.
-  // =====================================================
-
-  useEffect(() => {
-    localStorage.setItem(
-      PRODUCTS_STORAGE_KEY,
-      JSON.stringify(items)
-    );
-
-    window.dispatchEvent(
-      new CustomEvent(
-        "vetClinicProductsUpdated",
-        {
-          detail: items,
-        }
-      )
-    );
-  }, [items]);
-
-  // =====================================================
-  // EMPTY PRODUCT
-  // =====================================================
+  const [selectedItem, setSelectedItem] = useState(null);
+  const [itemToDelete, setItemToDelete] = useState(null);
 
   const getEmptyItem = () => ({
     name: "",
+    categoryId: "",
     category: "",
     description: "",
     quantity: "",
@@ -156,186 +70,122 @@ function Inventory() {
     featured: false,
   });
 
-  // =====================================================
-  // SEARCH + FILTERS
-  // =====================================================
+  const [newItem, setNewItem] = useState(getEmptyItem);
 
-  const [search, setSearch] = useState("");
+  const publishProducts = (products) => {
+    productsRef.current = products;
+    setItems(products);
 
-  const [categoryFilter, setCategoryFilter] =
-    useState("All");
+    // Compatibility cache for the current Store and POS.
+    // Product changes are saved through the API.
+    try {
+      localStorage.setItem(
+        PRODUCTS_STORAGE_KEY,
+        JSON.stringify(products)
+      );
+    } catch (error) {
+      console.error("Could not update product cache:", error);
+    }
 
-  const [statusFilter, setStatusFilter] =
-    useState("All");
-
-  // =====================================================
-  // PAGINATION
-  // =====================================================
-
-  const [rowsPerPage, setRowsPerPage] =
-    useState(5);
-
-  const [currentPage, setCurrentPage] =
-    useState(1);
-
-  // =====================================================
-  // MODALS
-  // =====================================================
-
-  const [showAddModal, setShowAddModal] =
-    useState(false);
-
-  const [showViewModal, setShowViewModal] =
-    useState(false);
-
-  const [showEditModal, setShowEditModal] =
-    useState(false);
-
-  const [showDeleteModal, setShowDeleteModal] =
-    useState(false);
-
-  const [selectedItem, setSelectedItem] =
-    useState(null);
-
-  const [itemToDelete, setItemToDelete] =
-    useState(null);
-
-  // =====================================================
-  // NEW PRODUCT
-  // =====================================================
-
-  const [newItem, setNewItem] =
-    useState(getEmptyItem());
-
-  // =====================================================
-  // DYNAMIC CATEGORIES
-  //
-  // Categories now come from Categories.jsx.
-  // Nothing is hardcoded here.
-  // =====================================================
-
-  const [categories, setCategories] =
-    useState([]);
+    window.dispatchEvent(
+      new CustomEvent("vetClinicProductsUpdated", {
+        detail: products,
+      })
+    );
+  };
 
   useEffect(() => {
-    const loadCategories = () => {
+    const controller = new AbortController();
+
+    const loadProducts = async () => {
       try {
-        const savedCategories =
-          localStorage.getItem(
-            CATEGORIES_STORAGE_KEY
-          );
-
-        if (!savedCategories) {
-          setCategories([]);
-          return;
-        }
-
-        const parsedCategories =
-          JSON.parse(savedCategories);
-
-        if (!Array.isArray(parsedCategories)) {
-          setCategories([]);
-          return;
-        }
-
-        const sortedCategories = [
-          ...parsedCategories,
-        ].sort((a, b) => {
-          const orderA =
-            Number(a.sortOrder) || 0;
-
-          const orderB =
-            Number(b.sortOrder) || 0;
-
-          if (orderA !== orderB) {
-            return orderA - orderB;
-          }
-
-          return String(
-            a.title || ""
-          ).localeCompare(
-            String(b.title || "")
-          );
+        const products = await getProducts({
+          signal: controller.signal,
         });
 
-        setCategories(sortedCategories);
-      } catch (error) {
-        console.error(
-          "Could not load categories:",
-          error
-        );
+        if (controller.signal.aborted) return;
 
-        setCategories([]);
+        publishProducts(products);
+        setProductsError("");
+      } catch (error) {
+        if (!controller.signal.aborted) {
+          setProductsError(
+            error.message || "Could not load products."
+          );
+        }
+      } finally {
+        if (!controller.signal.aborted) {
+          setIsLoadingProducts(false);
+        }
       }
     };
 
-    const handleCategoriesUpdated = (
-      event
-    ) => {
-      if (Array.isArray(event.detail)) {
-        const sortedCategories = [
-          ...event.detail,
-        ].sort((a, b) => {
-          const orderA =
-            Number(a.sortOrder) || 0;
+    loadProducts();
 
-          const orderB =
-            Number(b.sortOrder) || 0;
+    return () => controller.abort();
+  }, []);
 
-          if (orderA !== orderB) {
-            return orderA - orderB;
-          }
+  useEffect(() => {
+    let controller;
 
-          return String(
-            a.title || ""
-          ).localeCompare(
-            String(b.title || "")
+    const loadCategories = async () => {
+      controller?.abort();
+      controller = new AbortController();
+
+      const signal = controller.signal;
+
+      try {
+        const records = await getCategories({ signal });
+
+        if (signal.aborted) return;
+
+        setCategories(
+          [...records].sort(
+            (a, b) =>
+              a.sortOrder - b.sortOrder ||
+              a.title.localeCompare(b.title)
+          )
+        );
+
+        setCategoriesError("");
+      } catch (error) {
+        if (!signal.aborted) {
+          setCategories([]);
+          setCategoriesError(
+            error.message || "Could not load categories."
           );
-        });
-
-        setCategories(sortedCategories);
-
-        return;
+        }
+      } finally {
+        if (!signal.aborted) {
+          setIsLoadingCategories(false);
+        }
       }
-
-      loadCategories();
     };
 
     loadCategories();
 
-    window.addEventListener(
-      "vetClinicCategoriesUpdated",
-      handleCategoriesUpdated
-    );
+    window.addEventListener("focus", loadCategories);
 
     window.addEventListener(
-      "storage",
+      "vetClinicCategoriesUpdated",
       loadCategories
     );
 
     return () => {
-      window.removeEventListener(
-        "vetClinicCategoriesUpdated",
-        handleCategoriesUpdated
-      );
+      controller?.abort();
+
+      window.removeEventListener("focus", loadCategories);
 
       window.removeEventListener(
-        "storage",
+        "vetClinicCategoriesUpdated",
         loadCategories
       );
     };
   }, []);
 
-  // =====================================================
-  // AUTOMATIC STOCK STATUS
-  // =====================================================
-
   const getStockStatus = (item) => {
-    const quantity =
-      Number(item.quantity) || 0;
-
-    const minimumStock =
-      Number(item.minimumStock) || 0;
+    const quantity = Number(item.quantity) || 0;
+    const minimumStock = Number(item.minimumStock) || 0;
 
     if (quantity <= 0) {
       return "Out of Stock";
@@ -348,23 +198,9 @@ function Inventory() {
     return "In Stock";
   };
 
-  // =====================================================
-  // LOW STOCK
-  // =====================================================
-
-  const isLowStock = (item) => {
-    const quantity =
-      Number(item.quantity) || 0;
-
-    const minimumStock =
-      Number(item.minimumStock) || 0;
-
-    return quantity <= minimumStock;
-  };
-
-  // =====================================================
-  // EXPIRY HELPERS
-  // =====================================================
+  const isLowStock = (item) =>
+    (Number(item.quantity) || 0) <=
+    (Number(item.minimumStock) || 0);
 
   const getExpiryInfo = (expiryDate) => {
     if (!expiryDate) {
@@ -375,60 +211,39 @@ function Inventory() {
       };
     }
 
-    const expiry = new Date(
-      `${expiryDate}T23:59:59`
-    );
-
+    const expiry = new Date(`${expiryDate}T23:59:59`);
     const today = new Date();
 
     today.setHours(0, 0, 0, 0);
 
-    const difference =
-      expiry.getTime() -
-      today.getTime();
-
     const daysLeft = Math.ceil(
-      difference /
+      (expiry.getTime() - today.getTime()) /
         (1000 * 60 * 60 * 24)
     );
 
     return {
-      closeToExpiry:
-        daysLeft >= 0 &&
-        daysLeft <= 30,
-
+      closeToExpiry: daysLeft >= 0 && daysLeft <= 30,
       expired: daysLeft < 0,
-
       daysLeft,
     };
   };
 
   const isCloseToExpiry = (item) =>
-    getExpiryInfo(
-      item.expiryDate
-    ).closeToExpiry;
+    getExpiryInfo(item.expiryDate).closeToExpiry;
 
   const isExpired = (item) =>
-    getExpiryInfo(
-      item.expiryDate
-    ).expired;
+    getExpiryInfo(item.expiryDate).expired;
 
   const needsAttention = (item) =>
     isLowStock(item) ||
     isCloseToExpiry(item) ||
     isExpired(item);
 
-  // =====================================================
-  // FILTERED PRODUCTS
-  // =====================================================
-
   const filteredItems = useMemo(() => {
-    const searchText =
-      search.trim().toLowerCase();
+    const searchText = search.trim().toLowerCase();
 
     return items.filter((item) => {
-      const status =
-        getStockStatus(item);
+      const status = getStockStatus(item);
 
       const searchableValues = [
         item.name,
@@ -440,112 +255,57 @@ function Inventory() {
         item.sellingPrice,
         item.expiryDate,
         status,
-
-        item.showOnStore
-          ? "store yes"
-          : "store no",
-
-        item.showOnPOS
-          ? "pos yes"
-          : "pos no",
-
-        item.featured
-          ? "featured yes"
-          : "featured no",
+        item.showOnStore ? "store yes" : "store no",
+        item.showOnPOS ? "pos yes" : "pos no",
+        item.featured ? "featured yes" : "featured no",
       ];
 
       const matchesSearch =
         !searchText ||
-        searchableValues.some(
-          (value) =>
-            String(value ?? "")
-              .toLowerCase()
-              .includes(searchText)
+        searchableValues.some((value) =>
+          String(value ?? "")
+            .toLowerCase()
+            .includes(searchText)
         );
 
       const matchesCategory =
         categoryFilter === "All" ||
-        item.category ===
-          categoryFilter;
+        item.category === categoryFilter;
 
       const matchesStatus =
         statusFilter === "All" ||
         status === statusFilter;
 
-      return (
-        matchesSearch &&
-        matchesCategory &&
-        matchesStatus
-      );
+      return matchesSearch && matchesCategory && matchesStatus;
     });
-  }, [
-    items,
-    search,
-    categoryFilter,
-    statusFilter,
-  ]);
-
-  // =====================================================
-  // PAGINATION
-  // =====================================================
+  }, [items, search, categoryFilter, statusFilter]);
 
   const totalPages = Math.max(
     1,
-    Math.ceil(
-      filteredItems.length /
-        rowsPerPage
-    )
+    Math.ceil(filteredItems.length / rowsPerPage)
   );
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [
-    search,
-    categoryFilter,
-    statusFilter,
-    rowsPerPage,
-  ]);
+  }, [search, categoryFilter, statusFilter, rowsPerPage]);
 
   useEffect(() => {
-    if (
-      currentPage >
-      totalPages
-    ) {
-      setCurrentPage(
-        totalPages
-      );
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
     }
-  }, [
-    currentPage,
-    totalPages,
-  ]);
+  }, [currentPage, totalPages]);
 
-  const startIndex =
-    (currentPage - 1) *
-    rowsPerPage;
+  const startIndex = (currentPage - 1) * rowsPerPage;
 
-  const paginatedItems =
-    filteredItems.slice(
-      startIndex,
-      startIndex +
-        rowsPerPage
-    );
-
-  // =====================================================
-  // CLEAR FILTERS
-  // =====================================================
+  const paginatedItems = filteredItems.slice(
+    startIndex,
+    startIndex + rowsPerPage
+  );
 
   const clearFilters = () => {
     setSearch("");
-
-    setCategoryFilter(
-      "All"
-    );
-
-    setStatusFilter(
-      "All"
-    );
-
+    setCategoryFilter("All");
+    setStatusFilter("All");
     setCurrentPage(1);
   };
 
@@ -554,532 +314,344 @@ function Inventory() {
     categoryFilter !== "All" ||
     statusFilter !== "All";
 
-  // =====================================================
-  // INPUT CHANGE
-  // =====================================================
+  const handleNewItemChange = (event) => {
+    if (savingProductRef.current) return;
 
-  const handleNewItemChange = (
-    e
-  ) => {
-    const {
-      name,
-      value,
-      type,
-      checked,
-    } = e.target;
+    const { name, value, type, checked } = event.target;
 
-    setNewItem(
-      (previous) => ({
-        ...previous,
+    setNewItem((previous) => ({
+      ...previous,
+      [name]: type === "checkbox" ? checked : value,
+    }));
+  };
 
-        [name]:
-          type === "checkbox"
-            ? checked
-            : value,
-      })
+  const handleEditChange = (event) => {
+    if (savingProductRef.current) return;
+
+    const { name, value, type, checked } = event.target;
+
+    setSelectedItem((previous) =>
+      previous
+        ? {
+            ...previous,
+            [name]: type === "checkbox" ? checked : value,
+          }
+        : previous
     );
   };
 
-  const handleEditChange = (
-    e
-  ) => {
-    const {
-      name,
-      value,
-      type,
-      checked,
-    } = e.target;
+  const readImageFile = (file, setStateFunction) => {
+    if (!file || savingProductRef.current) return;
 
-    setSelectedItem(
-      (previous) => ({
-        ...previous,
-
-        [name]:
-          type === "checkbox"
-            ? checked
-            : value,
-      })
-    );
-  };
-
-  // =====================================================
-  // IMAGE HANDLING
-  //
-  // The uploaded image is saved with the product.
-  // Store Products and Product Details will use it.
-  // =====================================================
-
-  const readImageFile = (
-    file,
-    setStateFunction
-  ) => {
-    if (!file) return;
-
-    if (
-      !file.type.startsWith(
-        "image/"
-      )
-    ) {
-      alert(
-        "Please select an image file."
-      );
-
+    if (!file.type.startsWith("image/")) {
+      window.alert("Please select an image file.");
       return;
     }
 
-    const reader =
-      new FileReader();
+    const reader = new FileReader();
 
     reader.onload = () => {
-      setStateFunction(
-        (previous) => ({
-          ...previous,
-          image: reader.result,
-        })
+      if (
+        typeof reader.result !== "string" ||
+        savingProductRef.current
+      ) {
+        return;
+      }
+
+      const image = reader.result;
+
+      setStateFunction((previous) =>
+        previous ? { ...previous, image } : previous
       );
     };
 
     reader.onerror = () => {
-      alert(
-        "Could not read this image."
-      );
+      window.alert("Could not read this image.");
     };
 
     reader.readAsDataURL(file);
   };
 
-  const handleNewImageChange = (
-    e
-  ) => {
-    const file =
-      e.target.files?.[0];
-
-    readImageFile(
-      file,
-      setNewItem
-    );
-
-    e.target.value = "";
+  const handleNewImageChange = (event) => {
+    readImageFile(event.target.files?.[0], setNewItem);
+    event.target.value = "";
   };
 
-  const handleEditImageChange = (
-    e
-  ) => {
-    const file =
-      e.target.files?.[0];
-
-    readImageFile(
-      file,
-      setSelectedItem
-    );
-
-    e.target.value = "";
+  const handleEditImageChange = (event) => {
+    readImageFile(event.target.files?.[0], setSelectedItem);
+    event.target.value = "";
   };
 
   const removeNewImage = () => {
-    setNewItem(
-      (previous) => ({
-        ...previous,
-        image: "",
-      })
-    );
+    if (savingProductRef.current) return;
+
+    setNewItem((previous) => ({
+      ...previous,
+      image: "",
+    }));
   };
 
   const removeEditImage = () => {
-    setSelectedItem(
-      (previous) => ({
-        ...previous,
-        image: "",
-      })
+    if (savingProductRef.current) return;
+
+    setSelectedItem((previous) =>
+      previous ? { ...previous, image: "" } : previous
     );
   };
 
-  // =====================================================
-  // ADD PRODUCT
-  // =====================================================
+  const readWholeNumber = (value, label) => {
+    const number = Number(value);
 
-  const handleAddItem = (
-    e
-  ) => {
-    e.preventDefault();
+    if (
+      String(value ?? "").trim() === "" ||
+      !Number.isInteger(number) ||
+      number < 0 ||
+      number > 2147483647
+    ) {
+      throw new Error(
+        `${label} must be a non-negative whole number.`
+      );
+    }
 
-    const item = {
-      id: Date.now(),
+    return number;
+  };
 
-      ...newItem,
+  const readPrice = (value, label) => {
+    const number = Number(value);
 
-      name:
-        newItem.name.trim(),
+    if (
+      String(value ?? "").trim() === "" ||
+      !Number.isFinite(number) ||
+      number < 0
+    ) {
+      throw new Error(`Please enter a valid ${label}.`);
+    }
 
-      category:
-        newItem.category,
+    return number;
+  };
 
-      description:
-        newItem.description.trim(),
+  const buildProductPayload = (data) => {
+    const name = String(data.name || "").trim();
 
-      quantity:
-        Number(
-          newItem.quantity
-        ) || 0,
+    if (!name) {
+      throw new Error("Please enter a product name.");
+    }
 
-      minimumStock:
-        Number(
-          newItem.minimumStock
-        ) || 0,
+    const category = categories.find(
+      (item) =>
+        String(item.id) === String(data.categoryId)
+    );
 
-      purchasePrice:
-        Number(
-          newItem.purchasePrice
-        ) || 0,
+    if (!category) {
+      throw new Error("Please select a valid category.");
+    }
 
-      sellingPrice:
-        Number(
-          newItem.sellingPrice
-        ) || 0,
-
-      image:
-        newItem.image || "",
-
-      showOnStore:
-        Boolean(
-          newItem.showOnStore
-        ),
-
-      showOnPOS:
-        Boolean(
-          newItem.showOnPOS
-        ),
-
-      featured:
-        Boolean(
-          newItem.featured
-        ),
+    return {
+      name,
+      categoryId: category.id,
+      description: String(data.description || "").trim(),
+      quantity: readWholeNumber(data.quantity, "Quantity"),
+      minimumStock: readWholeNumber(
+        data.minimumStock,
+        "Minimum stock"
+      ),
+      purchasePrice: readPrice(
+        data.purchasePrice,
+        "purchase price"
+      ),
+      sellingPrice: readPrice(
+        data.sellingPrice,
+        "selling price"
+      ),
+      expiryDate: data.expiryDate || null,
+      image: data.image || "",
+      showOnStore: Boolean(data.showOnStore),
+      showOnPOS: Boolean(data.showOnPOS),
+      featured: Boolean(data.featured),
     };
-
-    setItems(
-      (previous) => [
-        ...previous,
-        item,
-      ]
-    );
-
-    setNewItem(
-      getEmptyItem()
-    );
-
-    setShowAddModal(
-      false
-    );
   };
 
-  // =====================================================
-  // VIEW
-  // =====================================================
+  const handleAddItem = async (event) => {
+    event.preventDefault();
 
-  const handleViewItem = (
-    item
-  ) => {
-    setSelectedItem(
-      item
-    );
-
-    setShowViewModal(
-      true
-    );
-  };
-
-  // =====================================================
-  // EDIT
-  // =====================================================
-
-  const handleOpenEdit = (
-    item
-  ) => {
-    setSelectedItem({
-      ...item,
-
-      description:
-        item.description ||
-        "",
-
-      featured:
-        Boolean(
-          item.featured
-        ),
-    });
-
-    setShowEditModal(
-      true
-    );
-  };
-
-  const handleUpdateItem = (
-    e
-  ) => {
-    e.preventDefault();
-
-    if (!selectedItem) {
+    if (
+      savingProductRef.current ||
+      isLoadingProducts ||
+      productsError ||
+      categoriesError
+    ) {
       return;
     }
 
-    const updatedItem = {
-      ...selectedItem,
+    savingProductRef.current = true;
+    setIsSavingProduct(true);
 
-      name:
-        selectedItem.name.trim(),
+    try {
+      const product = await createProduct(
+        buildProductPayload(newItem)
+      );
 
-      description:
-        (
-          selectedItem.description ||
-          ""
-        ).trim(),
+      publishProducts([
+        ...productsRef.current,
+        product,
+      ]);
 
-      quantity:
-        Number(
-          selectedItem.quantity
-        ) || 0,
-
-      minimumStock:
-        Number(
-          selectedItem.minimumStock
-        ) || 0,
-
-      purchasePrice:
-        Number(
-          selectedItem.purchasePrice
-        ) || 0,
-
-      sellingPrice:
-        Number(
-          selectedItem.sellingPrice
-        ) || 0,
-
-      image:
-        selectedItem.image ||
-        "",
-
-      showOnStore:
-        Boolean(
-          selectedItem.showOnStore
-        ),
-
-      showOnPOS:
-        Boolean(
-          selectedItem.showOnPOS
-        ),
-
-      featured:
-        Boolean(
-          selectedItem.featured
-        ),
-    };
-
-    setItems(
-      (previous) =>
-        previous.map(
-          (item) =>
-            item.id ===
-            updatedItem.id
-              ? updatedItem
-              : item
-        )
-    );
-
-    setShowEditModal(
-      false
-    );
-
-    setSelectedItem(
-      null
-    );
+      setNewItem(getEmptyItem());
+      setShowAddModal(false);
+    } catch (error) {
+      window.alert(error.message || "Could not add product.");
+    } finally {
+      savingProductRef.current = false;
+      setIsSavingProduct(false);
+    }
   };
 
-  // =====================================================
-  // DELETE
-  // =====================================================
+  const handleViewItem = (item) => {
+    if (savingProductRef.current) return;
 
-  const handleDeleteItem = (
-    item
-  ) => {
-    setItemToDelete(
-      item
-    );
-
-    setShowDeleteModal(
-      true
-    );
+    setSelectedItem({ ...item });
+    setShowViewModal(true);
   };
 
-  const closeDeleteModal =
-    () => {
-      setShowDeleteModal(
-        false
-      );
+  const handleOpenEdit = (item) => {
+    if (savingProductRef.current) return;
 
-      setItemToDelete(
-        null
-      );
-    };
+    setSelectedItem({
+      ...item,
+      description: item.description || "",
+      featured: Boolean(item.featured),
+    });
 
-  const confirmDeleteItem =
-    () => {
-      if (!itemToDelete) {
-        return;
-      }
+    setShowEditModal(true);
+  };
 
-      setItems(
-        (previous) =>
-          previous.filter(
-            (item) =>
-              item.id !==
-              itemToDelete.id
-          )
-      );
+  const handleUpdateItem = async (event) => {
+    event.preventDefault();
 
-      closeDeleteModal();
-    };
-
-  // =====================================================
-  // DATE FORMAT
-  // =====================================================
-
-  const formatDate = (
-    date
-  ) => {
-    if (!date) {
-      return "—";
+    if (
+      !selectedItem ||
+      savingProductRef.current ||
+      categoriesError
+    ) {
+      return;
     }
 
-    const [
-      year,
-      month,
-      day,
-    ] = date.split("-");
+    savingProductRef.current = true;
+    setIsSavingProduct(true);
+
+    try {
+      const product = await updateProduct(
+        selectedItem.id,
+        buildProductPayload(selectedItem)
+      );
+
+      publishProducts(
+        productsRef.current.map((item) =>
+          item.id === product.id ? product : item
+        )
+      );
+
+      setShowEditModal(false);
+      setSelectedItem(null);
+    } catch (error) {
+      window.alert(
+        error.message || "Could not update product."
+      );
+    } finally {
+      savingProductRef.current = false;
+      setIsSavingProduct(false);
+    }
+  };
+
+  const handleDeleteItem = (item) => {
+    if (savingProductRef.current) return;
+
+    setItemToDelete(item);
+    setShowDeleteModal(true);
+  };
+
+  const closeDeleteModal = () => {
+    if (savingProductRef.current) return;
+
+    setShowDeleteModal(false);
+    setItemToDelete(null);
+  };
+
+  const confirmDeleteItem = async () => {
+    if (!itemToDelete || savingProductRef.current) return;
+
+    savingProductRef.current = true;
+    setIsSavingProduct(true);
+
+    try {
+      const id = itemToDelete.id;
+
+      await deleteProduct(id);
+
+      publishProducts(
+        productsRef.current.filter((item) => item.id !== id)
+      );
+
+      setShowDeleteModal(false);
+      setItemToDelete(null);
+    } catch (error) {
+      window.alert(
+        error.message || "Could not delete product."
+      );
+    } finally {
+      savingProductRef.current = false;
+      setIsSavingProduct(false);
+    }
+  };
+
+  const formatDate = (date) => {
+    if (!date) return "—";
+
+    const [year, month, day] = date.split("-");
 
     return `${day}/${month}/${year}`;
   };
 
-  // =====================================================
-  // PRICE FORMAT
-  // =====================================================
+  const formatPrice = (price) => {
+    const number = Number(price);
 
-  const formatPrice = (
-    price
-  ) => {
-    const number =
-      Number(price);
-
-    if (
-      Number.isNaN(number)
-    ) {
-      return "$0.00";
-    }
-
-    return `$${number.toFixed(
-      2
-    )}`;
+    return Number.isNaN(number)
+      ? "$0.00"
+      : `$${number.toFixed(2)}`;
   };
 
-  // =====================================================
-  // STATUS CLASS
-  // =====================================================
-
-  const getStatusClass = (
-    status
-  ) => {
-    if (
-      status === "In Stock"
-    ) {
+  const getStatusClass = (status) => {
+    if (status === "In Stock") {
       return "status confirmed";
     }
 
-    if (
-      status === "Low Stock"
-    ) {
+    if (status === "Low Stock") {
       return "status pending";
     }
 
     return "status cancelled";
   };
 
-  // =====================================================
-  // EXPORT TO EXCEL
-  // =====================================================
-
   const exportToExcel = () => {
-    const excelData =
-      filteredItems.map(
-        (item) => ({
-          "Product Name":
-            item.name,
+    const excelData = filteredItems.map((item) => ({
+      "Product Name": item.name,
+      Category: item.category,
+      Description: item.description || "",
+      Quantity: item.quantity,
+      "Minimum Stock": item.minimumStock,
+      "Purchase Price": item.purchasePrice,
+      "Selling Price": item.sellingPrice,
+      "Expiry Date": formatDate(item.expiryDate),
+      Status: getStockStatus(item),
+      "Show on Store": item.showOnStore ? "Yes" : "No",
+      "Show on POS": item.showOnPOS ? "Yes" : "No",
+      Featured: item.featured ? "Yes" : "No",
+      "Low Stock": isLowStock(item) ? "Yes" : "No",
+      "Close to Expiry": isCloseToExpiry(item) ? "Yes" : "No",
+      Expired: isExpired(item) ? "Yes" : "No",
+    }));
 
-          Category:
-            item.category,
-
-          Description:
-            item.description ||
-            "",
-
-          Quantity:
-            item.quantity,
-
-          "Minimum Stock":
-            item.minimumStock,
-
-          "Purchase Price":
-            item.purchasePrice,
-
-          "Selling Price":
-            item.sellingPrice,
-
-          "Expiry Date":
-            formatDate(
-              item.expiryDate
-            ),
-
-          Status:
-            getStockStatus(
-              item
-            ),
-
-          "Show on Store":
-            item.showOnStore
-              ? "Yes"
-              : "No",
-
-          "Show on POS":
-            item.showOnPOS
-              ? "Yes"
-              : "No",
-
-          Featured:
-            item.featured
-              ? "Yes"
-              : "No",
-
-          "Low Stock":
-            isLowStock(item)
-              ? "Yes"
-              : "No",
-
-          "Close to Expiry":
-            isCloseToExpiry(
-              item
-            )
-              ? "Yes"
-              : "No",
-
-          Expired:
-            isExpired(item)
-              ? "Yes"
-              : "No",
-        })
-      );
-
-    const worksheet =
-      XLSX.utils.json_to_sheet(
-        excelData
-      );
+    const worksheet = XLSX.utils.json_to_sheet(excelData);
 
     worksheet["!cols"] = [
       { wch: 25 },
@@ -1099,8 +671,7 @@ function Inventory() {
       { wch: 12 },
     ];
 
-    const workbook =
-      XLSX.utils.book_new();
+    const workbook = XLSX.utils.book_new();
 
     XLSX.utils.book_append_sheet(
       workbook,
@@ -1114,27 +685,18 @@ function Inventory() {
     );
   };
 
-  // =====================================================
-  // PAGINATION STYLES
-  // =====================================================
-
   const paginationControlStyle = {
     width: "30px",
     minWidth: "30px",
     height: "30px",
     padding: "0",
-    border:
-      "1px solid #d9e1e7",
+    border: "1px solid #d9e1e7",
     borderRadius: "6px",
-    backgroundColor:
-      "#ffffff",
+    backgroundColor: "#ffffff",
     color: "#667085",
-    display:
-      "inline-flex",
-    alignItems:
-      "center",
-    justifyContent:
-      "center",
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
     fontSize: "16px",
     fontWeight: "600",
     lineHeight: "1",
@@ -1144,27 +706,16 @@ function Inventory() {
 
   const activePageStyle = {
     ...paginationControlStyle,
-
-    border:
-      "1px solid #159f9f",
-
-    backgroundColor:
-      "#159f9f",
-
+    border: "1px solid #159f9f",
+    backgroundColor: "#159f9f",
     color: "#ffffff",
-
     fontSize: "13px",
   };
 
   const normalPageStyle = {
     ...paginationControlStyle,
-
     fontSize: "13px",
   };
-
-  // =====================================================
-  // PRODUCT FORM
-  // =====================================================
 
   const renderItemForm = (
     data,
@@ -1175,139 +726,109 @@ function Inventory() {
     <>
       <div className="form-row">
         <div className="form-field">
-          <label>
-            Product Name
-          </label>
+          <label>Product Name</label>
 
           <input
             type="text"
             name="name"
             placeholder="Enter product name"
-            value={
-              data.name || ""
-            }
-            onChange={
-              onChange
-            }
+            value={data.name || ""}
+            onChange={onChange}
+            maxLength={200}
+            disabled={isSavingProduct}
             required
           />
         </div>
 
         <div className="form-field">
-          <label>
-            Category
-          </label>
+          <label>Category</label>
 
           <select
-            name="category"
-            value={
-              data.category ||
-              ""
-            }
-            onChange={
-              onChange
+            name="categoryId"
+            value={data.categoryId ?? ""}
+            onChange={onChange}
+            disabled={
+              isSavingProduct ||
+              isLoadingCategories ||
+              Boolean(categoriesError)
             }
             required
           >
             <option value="">
-              Select category
+              {isLoadingCategories
+                ? "Loading categories..."
+                : "Select category"}
             </option>
 
-            {categories.map(
-              (category) => (
-                <option
-                  key={
-                    category.id
-                  }
-                  value={
-                    category.title
-                  }
-                >
-                  {
-                    category.title
-                  }
-                </option>
-              )
-            )}
+            {categories.map((category) => (
+              <option
+                key={category.id}
+                value={category.id}
+              >
+                {category.title}
+              </option>
+            ))}
           </select>
         </div>
       </div>
 
-      {/* DESCRIPTION */}
-
       <div className="form-field">
-        <label>
-          Product Description
-        </label>
+        <label>Product Description</label>
 
         <textarea
           name="description"
           placeholder="Enter product description shown on the store"
-          value={
-            data.description ||
-            ""
-          }
-          onChange={
-            onChange
-          }
+          value={data.description || ""}
+          onChange={onChange}
           rows="4"
+          maxLength={4000}
+          disabled={isSavingProduct}
           style={{
             width: "100%",
             minHeight: "100px",
             resize: "vertical",
             padding: "12px",
-            border:
-              "1px solid #d0d5dd",
-            borderRadius:
-              "8px",
-            fontFamily:
-              "inherit",
-            fontSize:
-              "14px",
+            border: "1px solid #d0d5dd",
+            borderRadius: "8px",
+            fontFamily: "inherit",
+            fontSize: "14px",
             outline: "none",
-            boxSizing:
-              "border-box",
+            boxSizing: "border-box",
           }}
         />
       </div>
 
       <div className="form-row">
         <div className="form-field">
-          <label>
-            Quantity
-          </label>
+          <label>Quantity</label>
 
           <input
             type="number"
             name="quantity"
             min="0"
+            max="2147483647"
+            step="1"
             placeholder="0"
-            value={
-              data.quantity
-            }
-            onChange={
-              onChange
-            }
+            value={data.quantity}
+            onChange={onChange}
+            disabled={isSavingProduct}
             required
           />
         </div>
 
         <div className="form-field">
-          <label>
-            Minimum Stock
-          </label>
+          <label>Minimum Stock</label>
 
           <input
             type="number"
             name="minimumStock"
             min="0"
+            max="2147483647"
+            step="1"
             placeholder="0"
-            value={
-              data.minimumStock
-            }
-            onChange={
-              onChange
-            }
+            value={data.minimumStock}
+            onChange={onChange}
+            disabled={isSavingProduct}
             required
           />
         </div>
@@ -1315,9 +836,7 @@ function Inventory() {
 
       <div className="form-row">
         <div className="form-field">
-          <label>
-            Purchase Price
-          </label>
+          <label>Purchase Price</label>
 
           <input
             type="number"
@@ -1325,20 +844,15 @@ function Inventory() {
             min="0"
             step="0.01"
             placeholder="0.00"
-            value={
-              data.purchasePrice
-            }
-            onChange={
-              onChange
-            }
+            value={data.purchasePrice}
+            onChange={onChange}
+            disabled={isSavingProduct}
             required
           />
         </div>
 
         <div className="form-field">
-          <label>
-            Selling Price
-          </label>
+          <label>Selling Price</label>
 
           <input
             type="number"
@@ -1346,12 +860,9 @@ function Inventory() {
             min="0"
             step="0.01"
             placeholder="0.00"
-            value={
-              data.sellingPrice
-            }
-            onChange={
-              onChange
-            }
+            value={data.sellingPrice}
+            onChange={onChange}
+            disabled={isSavingProduct}
             required
           />
         </div>
@@ -1359,34 +870,25 @@ function Inventory() {
 
       <div className="form-row">
         <div className="form-field">
-          <label>
-            Expiry Date
-          </label>
+          <label>Expiry Date</label>
 
           <input
             type="date"
             name="expiryDate"
-            value={
-              data.expiryDate ||
-              ""
-            }
-            onChange={
-              onChange
-            }
+            value={data.expiryDate || ""}
+            onChange={onChange}
+            disabled={isSavingProduct}
           />
         </div>
 
         <div className="form-field">
-          <label>
-            Product Image
-          </label>
+          <label>Product Image</label>
 
           <input
             type="file"
             accept="image/*"
-            onChange={
-              onImageChange
-            }
+            onChange={onImageChange}
+            disabled={isSavingProduct}
           />
         </div>
       </div>
@@ -1395,22 +897,16 @@ function Inventory() {
         <div className="inventory-image-preview-section">
           <div className="inventory-image-preview-wrapper">
             <img
-              src={
-                data.image
-              }
-              alt={
-                data.name ||
-                "Product"
-              }
+              src={data.image}
+              alt={data.name || "Product"}
               className="inventory-image-preview"
             />
 
             <button
               type="button"
               className="inventory-remove-image"
-              onClick={
-                removeImage
-              }
+              onClick={removeImage}
+              disabled={isSavingProduct}
             >
               <FaTimes />
             </button>
@@ -1418,1250 +914,960 @@ function Inventory() {
         </div>
       )}
 
-      {/* STORE / POS / FEATURED */}
-
       <div className="inventory-visibility-section">
         <label className="inventory-checkbox-row">
           <input
             type="checkbox"
             name="showOnStore"
-            checked={
-              Boolean(
-                data.showOnStore
-              )
-            }
-            onChange={
-              onChange
-            }
+            checked={Boolean(data.showOnStore)}
+            onChange={onChange}
+            disabled={isSavingProduct}
           />
 
-          <span>
-            Show on Store
-          </span>
+          <span>Show on Store</span>
         </label>
 
         <label className="inventory-checkbox-row">
           <input
             type="checkbox"
             name="showOnPOS"
-            checked={
-              Boolean(
-                data.showOnPOS
-              )
-            }
-            onChange={
-              onChange
-            }
+            checked={Boolean(data.showOnPOS)}
+            onChange={onChange}
+            disabled={isSavingProduct}
           />
 
-          <span>
-            Show on POS
-          </span>
+          <span>Show on POS</span>
         </label>
 
         <label className="inventory-checkbox-row">
           <input
             type="checkbox"
             name="featured"
-            checked={
-              Boolean(
-                data.featured
-              )
-            }
-            onChange={
-              onChange
-            }
+            checked={Boolean(data.featured)}
+            onChange={onChange}
+            disabled={isSavingProduct}
           />
 
-          <span>
-            Featured Product
-          </span>
+          <span>Featured Product</span>
         </label>
       </div>
     </>
-  );  // =====================================================
-  // MAIN PAGE
-  // =====================================================
-
-  return (
-    <div className="page">
+  );  return (
+    <div className="dashboard-layout page">
       <Sidebar />
 
-      <main className="main">
-      <style>{`
-  /* =====================================================
-     MAIN LAYOUT - FIXED SIDEBAR OVERLAP
-  ===================================================== */
-
-  .page {
-    min-height: 100vh;
-    background: #f5fafa;
-  }
-
-  .main {
-    margin-left: 280px;
-    width: calc(100% - 280px);
-    min-height: 100vh;
-    padding: 30px;
-    box-sizing: border-box;
-    overflow-x: hidden;
-  }
-
-  /* =====================================================
-     PRODUCTS PAGE HEADER
-  ===================================================== */
-
-  .inventory-page-header {
-    width: 100%;
-    box-sizing: border-box;
-
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 20px;
-
-    margin-bottom: 24px;
-  }
-
-  .inventory-title {
-    min-width: 0;
-  }
-
-  .inventory-title h1 {
-    margin: 0 0 6px;
-    color: #344054;
-    font-size: 28px;
-    font-weight: 700;
-  }
-
-  .inventory-title p {
-    margin: 0;
-    color: #667085;
-    font-size: 14px;
-    line-height: 1.5;
-  }
-
-  .inventory-header-actions {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    flex-wrap: wrap;
-    flex-shrink: 0;
-  }
-
-  .inventory-export-button,
-  .inventory-add-button {
-    height: 42px;
-    padding: 0 16px;
-    border-radius: 8px;
-    font-size: 13px;
-    font-weight: 700;
-    cursor: pointer;
-
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-
-    transition: 0.2s ease;
-  }
-
-  .inventory-export-button {
-    border: 1px solid #159f9f;
-    background: white;
-    color: #159f9f;
-  }
-
-  .inventory-export-button:hover {
-    background: #f0fbfb;
-  }
-
-  .inventory-add-button {
-    border: 1px solid #159f9f;
-    background: #159f9f;
-    color: white;
-  }
-
-  .inventory-add-button:hover {
-    background: #118b8b;
-  }
-
-  /* =====================================================
-     FILTERS
-  ===================================================== */
-
-  .inventory-filters {
-    width: 100%;
-    box-sizing: border-box;
-
-    display: grid;
-    grid-template-columns:
-      minmax(250px, 1fr)
-      minmax(160px, 190px)
-      minmax(160px, 190px)
-      auto;
-
-    gap: 12px;
-    align-items: center;
-
-    padding: 18px;
-    margin-bottom: 20px;
-
-    background: white;
-    border: 1px solid #e4e7ec;
-    border-radius: 12px;
-  }
-
-  .inventory-search-box {
-    position: relative;
-    width: 100%;
-    min-width: 0;
-  }
-
-  .inventory-search-icon {
-    position: absolute;
-    left: 14px;
-    top: 50%;
-    transform: translateY(-50%);
-
-    color: #98a2b3;
-    font-size: 14px;
-
-    pointer-events: none;
-  }
-
-  .inventory-search-box input {
-    width: 100%;
-    height: 42px;
-
-    padding: 0 40px;
-
-    box-sizing: border-box;
-
-    border: 1px solid #d0d5dd;
-    border-radius: 8px;
-
-    background: white;
-    color: #344054;
-
-    outline: none;
-  }
-
-  .inventory-search-box input:focus,
-  .inventory-filter-select:focus {
-    border-color: #159f9f;
-    box-shadow: 0 0 0 3px rgba(21, 159, 159, 0.08);
-  }
-
-  .inventory-clear-search {
-    position: absolute;
-    right: 12px;
-    top: 50%;
-    transform: translateY(-50%);
-
-    width: 25px;
-    height: 25px;
-
-    border: none;
-    background: transparent;
-    color: #98a2b3;
-
-    cursor: pointer;
-
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-
-  .inventory-filter-select {
-    width: 100%;
-    height: 42px;
-
-    padding: 0 12px;
-
-    box-sizing: border-box;
-
-    border: 1px solid #d0d5dd;
-    border-radius: 8px;
-
-    background: white;
-    color: #475467;
-
-    outline: none;
-  }
-
-  .inventory-clear-filters {
-    height: 42px;
-    padding: 0 15px;
-
-    border: 1px solid #d0d5dd;
-    border-radius: 8px;
-
-    background: white;
-    color: #475467;
-
-    font-size: 13px;
-    font-weight: 700;
-
-    cursor: pointer;
-    white-space: nowrap;
-  }
-
-  .inventory-clear-filters:hover {
-    background: #f8fafc;
-  }
-
-  /* =====================================================
-     TABLE
-  ===================================================== */
-
-  .inventory-table-container {
-    width: 100%;
-    max-width: 100%;
-    box-sizing: border-box;
-
-    overflow: hidden;
-
-    background: white;
-    border: 1px solid #e4e7ec;
-    border-radius: 12px;
-  }
-
-  .inventory-table-scroll {
-    width: 100%;
-    max-width: 100%;
-    overflow-x: auto;
-    overflow-y: hidden;
-  }
-
-  .inventory-table {
-    width: 100%;
-    min-width: 1250px;
-    border-collapse: collapse;
-  }
-
-  .inventory-table thead {
-    background: #f8fafc;
-  }
-
-  .inventory-table th {
-    padding: 13px 15px;
-
-    color: #667085;
-
-    font-size: 12px;
-    font-weight: 700;
-
-    text-align: left;
-    white-space: nowrap;
-
-    border-bottom: 1px solid #e4e7ec;
-  }
-
-  .inventory-table td {
-    padding: 14px 15px;
-
-    color: #475467;
-
-    font-size: 13px;
-
-    border-bottom: 1px solid #eef2f2;
-    vertical-align: middle;
-  }
-
-  .inventory-table tbody tr:last-child td {
-    border-bottom: none;
-  }
-
-  .inventory-table tbody tr:hover {
-    background: #fcfefe;
-  }
-
-  /* =====================================================
-     PRODUCT CELL
-  ===================================================== */
-
-  .inventory-item-cell {
-    display: flex;
-    align-items: center;
-    gap: 11px;
-
-    min-width: 190px;
-  }
-
-  .inventory-table-image {
-    width: 45px;
-    height: 45px;
-    flex-shrink: 0;
-
-    border-radius: 8px;
-    object-fit: cover;
-
-    border: 1px solid #e4e7ec;
-    background: #f8fafc;
-  }
-
-  .inventory-table-image-placeholder {
-    width: 45px;
-    height: 45px;
-    flex-shrink: 0;
-
-    border-radius: 8px;
-    border: 1px dashed #c9d7d6;
-
-    background: #f7fbfb;
-    color: #98a2b3;
-
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-
-  .inventory-item-cell strong {
-    color: #344054;
-    font-size: 13px;
-    font-weight: 700;
-  }
-
-  .inventory-item-name-row {
-    display: flex;
-    align-items: center;
-    gap: 7px;
-  }
-
-  /* =====================================================
-     ATTENTION
-  ===================================================== */
-
-  .inventory-alert-dot {
-    width: 8px;
-    height: 8px;
-    min-width: 8px;
-
-    display: inline-block;
-
-    border-radius: 50%;
-    background: #f04438;
-
-    box-shadow: 0 0 0 3px rgba(240, 68, 56, 0.1);
-  }
-
-  .inventory-alert-dot.large {
-    width: 10px;
-    height: 10px;
-    min-width: 10px;
-    margin-top: 5px;
-  }
-
-  /* =====================================================
-     STATUS
-  ===================================================== */
-
-  .status {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-
-    padding: 5px 10px;
-
-    border-radius: 999px;
-
-    font-size: 11px;
-    font-weight: 700;
-
-    white-space: nowrap;
-  }
-
-  .status.confirmed {
-    background: #ecfdf3;
-    color: #027a48;
-  }
-
-  .status.pending {
-    background: #fffaeb;
-    color: #b54708;
-  }
-
-  .status.cancelled {
-    background: #fef3f2;
-    color: #b42318;
-  }
-
-  .inventory-visibility-badge {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-
-    min-width: 42px;
-
-    padding: 5px 9px;
-
-    border-radius: 999px;
-
-    font-size: 11px;
-    font-weight: 700;
-  }
-
-  .inventory-visibility-badge.yes {
-    background: #ecfdf3;
-    color: #027a48;
-  }
-
-  .inventory-visibility-badge.no {
-    background: #f2f4f7;
-    color: #667085;
-  }
-
-  .inventory-featured-badge {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-
-    padding: 5px 9px;
-
-    border-radius: 999px;
-
-    font-size: 11px;
-    font-weight: 700;
-
-    background: #eff8ff;
-    color: #175cd3;
-  }
-
-  /* =====================================================
-     ACTION BUTTONS
-  ===================================================== */
-
-  .inventory-action-buttons {
-    display: flex;
-    align-items: center;
-    gap: 7px;
-  }
-
-  .inventory-action-buttons button {
-    width: 35px;
-    height: 35px;
-
-    padding: 0;
-
-    border-radius: 7px;
-
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    cursor: pointer;
-
-    transition: 0.2s ease;
-
-    font-size: 13px;
-  }
-
-  .inventory-view-button {
-    border: 1px solid #b8e3e1;
-    background: #effafa;
-    color: #159f9f;
-  }
-
-  .inventory-edit-button {
-    border: 1px solid #c9d8f7;
-    background: #f2f6ff;
-    color: #3b6edc;
-  }
-
-  .inventory-delete-button {
-    border: 1px solid #f4c7c3;
-    background: #fff4f3;
-    color: #d92d20;
-  }
-
-  .inventory-action-buttons button:hover {
-    transform: translateY(-1px);
-  }
-
-  /* =====================================================
-     EMPTY STATE
-  ===================================================== */
-
-  .inventory-empty-state {
-    padding: 50px !important;
-    text-align: center !important;
-    color: #98a2b3 !important;
-  }
-
-  /* =====================================================
-     PAGINATION
-  ===================================================== */
-
-  .inventory-pagination {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-
-    gap: 20px;
-
-    padding: 15px 18px;
-
-    border-top: 1px solid #e4e7ec;
-  }
-
-  .inventory-pagination-left {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-
-    color: #667085;
-    font-size: 12px;
-  }
-
-  .inventory-pagination-left select {
-    height: 32px;
-
-    padding: 0 8px;
-
-    border: 1px solid #d0d5dd;
-    border-radius: 6px;
-
-    background: white;
-    color: #475467;
-  }
-
-  .inventory-pagination-right {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  }
-
-  .inventory-pagination-button:disabled {
-    opacity: 0.45;
-  }
-
-  /* =====================================================
-     MODALS
-  ===================================================== */
-
-  .modal-overlay {
-    position: fixed;
-    inset: 0;
-    z-index: 9999;
-
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    padding: 25px;
-
-    background: rgba(16, 24, 40, 0.48);
-
-    overflow-y: auto;
-  }
-
-  .modal-container {
-    width: min(720px, 96vw);
-    max-height: 92vh;
-
-    overflow-y: auto;
-
-    background: white;
-
-    border-radius: 14px;
-
-    box-shadow: 0 24px 60px rgba(16, 24, 40, 0.28);
-  }
-
-  .modal-header {
-    min-height: 85px;
-
-    padding: 20px 25px;
-
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-
-    gap: 20px;
-
-    background: #55b8b4;
-  }
-
-  .modal-header h2 {
-    margin: 0 0 5px;
-
-    color: white;
-
-    font-size: 22px;
-    font-weight: 700;
-  }
-
-  .modal-header p {
-    margin: 0;
-
-    color: rgba(255, 255, 255, 0.9);
-
-    font-size: 13px;
-  }
-
-  .modal-close {
-    width: 35px;
-    height: 35px;
-    min-width: 35px;
-
-    padding: 0;
-
-    border: none;
-    border-radius: 50%;
-
-    background: white;
-    color: #52706e;
-
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    font-size: 20px;
-    line-height: 1;
-
-    cursor: pointer;
-  }
-
-  .modal-container form {
-    padding: 25px;
-  }
-
-  /* =====================================================
-     FORM
-  ===================================================== */
-
-  .form-row {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-
-    gap: 17px;
-
-    margin-bottom: 17px;
-  }
-
-  .form-field {
-    width: 100%;
-    margin-bottom: 17px;
-  }
-
-  .form-row .form-field {
-    margin-bottom: 0;
-  }
-
-  .form-field label {
-    display: block;
-
-    margin-bottom: 7px;
-
-    color: #344054;
-
-    font-size: 12px;
-    font-weight: 700;
-  }
-
-  .form-field input,
-  .form-field select {
-    width: 100%;
-    height: 42px;
-
-    padding: 0 12px;
-
-    box-sizing: border-box;
-
-    border: 1px solid #d0d5dd;
-    border-radius: 8px;
-
-    background: white;
-    color: #344054;
-
-    font-family: inherit;
-    font-size: 13px;
-
-    outline: none;
-  }
-
-  .form-field textarea {
-    width: 100%;
-    box-sizing: border-box;
-  }
-
-  .form-field input:focus,
-  .form-field select:focus,
-  .form-field textarea:focus {
-    border-color: #159f9f !important;
-    box-shadow: 0 0 0 3px rgba(21, 159, 159, 0.08);
-  }
-
-  /* =====================================================
-     IMAGE
-  ===================================================== */
-
-  .inventory-image-preview-section {
-    margin-bottom: 20px;
-  }
-
-  .inventory-image-preview-wrapper {
-    position: relative;
-
-    width: 120px;
-    height: 120px;
-  }
-
-  .inventory-image-preview {
-    width: 120px;
-    height: 120px;
-
-    border-radius: 10px;
-
-    object-fit: cover;
-
-    border: 1px solid #e4e7ec;
-  }
-
-  .inventory-remove-image {
-    position: absolute;
-    top: -8px;
-    right: -8px;
-
-    width: 27px;
-    height: 27px;
-
-    padding: 0;
-
-    border: none;
-    border-radius: 50%;
-
-    background: #d92d20;
-    color: white;
-
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    cursor: pointer;
-  }
-
-  /* =====================================================
-     VISIBILITY
-  ===================================================== */
-
-  .inventory-visibility-section {
-    display: flex;
-    flex-wrap: wrap;
-
-    gap: 12px;
-
-    padding: 15px;
-
-    margin-top: 5px;
-
-    border: 1px solid #e4e7ec;
-    border-radius: 10px;
-
-    background: #f9fbfb;
-  }
-
-  .inventory-checkbox-row {
-    display: flex;
-    align-items: center;
-
-    gap: 8px;
-
-    padding: 9px 12px;
-
-    border: 1px solid #e4e7ec;
-    border-radius: 8px;
-
-    background: white;
-
-    color: #475467;
-
-    font-size: 13px;
-    font-weight: 600;
-
-    cursor: pointer;
-  }
-
-  .inventory-checkbox-row input {
-    width: 16px;
-    height: 16px;
-
-    accent-color: #159f9f;
-
-    cursor: pointer;
-  }
-
-  /* =====================================================
-     FORM ACTIONS
-  ===================================================== */
-
-  .form-actions {
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-
-    gap: 10px;
-
-    margin-top: 23px;
-    padding-top: 20px;
-
-    border-top: 1px solid #eef2f2;
-  }
-
-  .modal-cancel-button,
-  .save-button {
-    min-width: 110px;
-    height: 42px;
-
-    padding: 0 16px;
-
-    border-radius: 7px;
-
-    font-size: 13px;
-    font-weight: 700;
-
-    cursor: pointer;
-  }
-
-  .modal-cancel-button {
-    border: 1px solid #d0d5dd;
-    background: white;
-    color: #475467;
-  }
-
-  .save-button {
-    border: 1px solid #159f9f;
-    background: #159f9f;
-    color: white;
-  }
-
-  /* =====================================================
-     VIEW PRODUCT
-  ===================================================== */
-
-  .inventory-view-body {
-    padding: 25px;
-  }
-
-  .inventory-view-image-wrapper {
-    padding: 25px 25px 10px;
-
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-
-  .inventory-view-image {
-    width: 170px;
-    height: 170px;
-
-    object-fit: cover;
-
-    border-radius: 13px;
-
-    border: 1px solid #e4e7ec;
-  }
-
-  .inventory-view-placeholder {
-    width: 170px;
-    height: 170px;
-
-    border: 1px dashed #b8cfcd;
-    border-radius: 13px;
-
-    background: #f7fbfb;
-    color: #98a2b3;
-
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-
-    gap: 9px;
-  }
-
-  .inventory-view-placeholder svg {
-    font-size: 32px;
-  }
-
-  .inventory-warning-box {
-    margin: 15px 25px;
-
-    padding: 13px 15px;
-
-    display: flex;
-    align-items: flex-start;
-
-    gap: 11px;
-
-    border: 1px solid #fedf89;
-    border-radius: 8px;
-
-    background: #fffaeb;
-    color: #93370d;
-
-    font-size: 12px;
-    line-height: 1.6;
-  }
-
-  .detail-row {
-    margin: 0 25px;
-
-    padding: 13px 0;
-
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-
-    gap: 25px;
-
-    border-bottom: 1px solid #eef2f2;
-  }
-
-  .detail-row > span {
-    color: #667085;
-    font-size: 13px;
-  }
-
-  .detail-row > strong {
-    max-width: 65%;
-
-    color: #344054;
-
-    font-size: 13px;
-    font-weight: 700;
-
-    text-align: right;
-    line-height: 1.5;
-
-    overflow-wrap: anywhere;
-  }
-
-  .inventory-description-value {
-    white-space: pre-wrap;
-  }
-
-  .inventory-modal-edit {
-    min-width: 110px;
-    height: 42px;
-
-    padding: 0 16px;
-
-    border: 1px solid #159f9f;
-    border-radius: 7px;
-
-    background: #159f9f;
-    color: white;
-
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-
-    gap: 7px;
-
-    font-size: 13px;
-    font-weight: 700;
-
-    cursor: pointer;
-  }
-
-  /* =====================================================
-     DELETE MODAL
-  ===================================================== */
-
-  .inventory-delete-overlay {
-    position: fixed;
-    inset: 0;
-    z-index: 10000;
-
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    padding: 20px;
-
-    background: rgba(16, 24, 40, 0.48);
-  }
-
-  .inventory-delete-dialog {
-    width: min(420px, 95vw);
-
-    padding: 30px;
-
-    box-sizing: border-box;
-
-    border-radius: 14px;
-
-    background: white;
-
-    text-align: center;
-
-    box-shadow: 0 24px 60px rgba(16, 24, 40, 0.28);
-  }
-
-  .inventory-delete-icon {
-    width: 55px;
-    height: 55px;
-
-    margin: 0 auto 16px;
-
-    border-radius: 50%;
-
-    background: #fef3f2;
-    color: #d92d20;
-
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    font-size: 21px;
-  }
-
-  .inventory-delete-dialog h3 {
-    margin: 0 0 10px;
-
-    color: #344054;
-
-    font-size: 20px;
-  }
-
-  .inventory-delete-dialog p {
-    margin: 0;
-
-    color: #667085;
-
-    font-size: 13px;
-    line-height: 1.6;
-  }
-
-  .inventory-delete-dialog p strong {
-    color: #344054;
-  }
-
-  .inventory-delete-actions {
-    display: flex;
-    justify-content: center;
-
-    gap: 10px;
-
-    margin-top: 24px;
-  }
-
-  .inventory-delete-cancel,
-  .inventory-delete-confirm {
-    min-width: 105px;
-    height: 40px;
-
-    border-radius: 7px;
-
-    font-size: 13px;
-    font-weight: 700;
-
-    cursor: pointer;
-  }
-
-  .inventory-delete-cancel {
-    border: 1px solid #d0d5dd;
-    background: white;
-    color: #475467;
-  }
-
-  .inventory-delete-confirm {
-    border: 1px solid #d92d20;
-    background: #d92d20;
-    color: white;
-  }
-
-  /* =====================================================
-     RESPONSIVE
-  ===================================================== */
-
-  @media (max-width: 1200px) {
-    .inventory-filters {
-      grid-template-columns: 1fr 170px 170px;
-    }
-
-    .inventory-clear-filters {
-      grid-column: 1 / -1;
-      justify-self: start;
-    }
-  }
-
-  @media (max-width: 900px) {
-    .main {
-      margin-left: 0;
-      width: 100%;
-      padding: 20px;
-    }
-
-    .inventory-filters {
-      grid-template-columns: 1fr 1fr;
-    }
-  }
-
-  @media (max-width: 700px) {
-    .main {
-      padding: 16px;
-    }
-
-    .inventory-page-header {
-      flex-direction: column;
-    }
-
-    .inventory-header-actions {
-      width: 100%;
-    }
-
-    .inventory-export-button,
-    .inventory-add-button {
-      flex: 1;
-    }
-
-    .inventory-filters {
-      grid-template-columns: 1fr;
-    }
-
-    .inventory-clear-filters {
-      width: 100%;
-    }
-
-    .form-row {
-      grid-template-columns: 1fr;
-    }
-
-    .modal-overlay {
-      padding: 10px;
-    }
-
-    .modal-header {
-      padding: 18px;
-    }
-
-    .modal-container form {
-      padding: 18px;
-    }
-
-    .inventory-pagination {
-      flex-direction: column;
-      align-items: flex-start;
-    }
-
-    .detail-row {
-      flex-direction: column;
-      gap: 5px;
-    }
-
-    .detail-row > strong {
-      max-width: 100%;
-      text-align: left;
-    }
-  }
-`}</style>
-
-        {/* =====================================================
-            PAGE HEADER
-        ===================================================== */}
+      <main className="dashboard-main main">
+        <style>{`
+          .page {
+            min-height: 100vh;
+            background: #f5fafa;
+          }
+
+          .main {
+            margin-left: 280px;
+            width: calc(100% - 280px);
+            min-height: 100vh;
+            padding: 30px;
+            box-sizing: border-box;
+            overflow-x: hidden;
+          }
+
+          .inventory-page-header {
+            width: 100%;
+            box-sizing: border-box;
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 20px;
+            margin-bottom: 24px;
+          }
+
+          .inventory-title {
+            min-width: 0;
+          }
+
+          .inventory-title h1 {
+            margin: 0 0 6px;
+            color: #344054;
+            font-size: 28px;
+            font-weight: 700;
+          }
+
+          .inventory-title p {
+            margin: 0;
+            color: #667085;
+            font-size: 14px;
+            line-height: 1.5;
+          }
+
+          .inventory-header-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+            flex-shrink: 0;
+          }
+
+          .inventory-export-button,
+          .inventory-add-button {
+            height: 42px;
+            padding: 0 16px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: .2s ease;
+          }
+
+          .inventory-export-button {
+            border: 1px solid #159f9f;
+            background: white;
+            color: #159f9f;
+          }
+
+          .inventory-export-button:hover {
+            background: #f0fbfb;
+          }
+
+          .inventory-add-button {
+            border: 1px solid #159f9f;
+            background: #159f9f;
+            color: white;
+          }
+
+          .inventory-add-button:hover {
+            background: #118b8b;
+          }
+
+          .inventory-filters {
+            width: 100%;
+            box-sizing: border-box;
+            display: grid;
+            grid-template-columns:
+              minmax(250px, 1fr)
+              minmax(160px, 190px)
+              minmax(160px, 190px)
+              auto;
+            gap: 12px;
+            align-items: center;
+            padding: 18px;
+            margin-bottom: 20px;
+            background: white;
+            border: 1px solid #e4e7ec;
+            border-radius: 12px;
+          }
+
+          .inventory-search-box {
+            position: relative;
+            width: 100%;
+            min-width: 0;
+          }
+
+          .inventory-search-icon {
+            position: absolute;
+            left: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #98a2b3;
+            font-size: 14px;
+            pointer-events: none;
+          }
+
+          .inventory-search-box input {
+            width: 100%;
+            height: 42px;
+            padding: 0 40px;
+            box-sizing: border-box;
+            border: 1px solid #d0d5dd;
+            border-radius: 8px;
+            background: white;
+            color: #344054;
+            outline: none;
+          }
+
+          .inventory-search-box input:focus,
+          .inventory-filter-select:focus {
+            border-color: #159f9f;
+            box-shadow: 0 0 0 3px rgba(21,159,159,.08);
+          }
+
+          .inventory-clear-search {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 25px;
+            height: 25px;
+            border: none;
+            background: transparent;
+            color: #98a2b3;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+          }
+
+          .inventory-filter-select {
+            width: 100%;
+            height: 42px;
+            padding: 0 12px;
+            box-sizing: border-box;
+            border: 1px solid #d0d5dd;
+            border-radius: 8px;
+            background: white;
+            color: #475467;
+            outline: none;
+          }
+
+          .inventory-clear-filters {
+            height: 42px;
+            padding: 0 15px;
+            border: 1px solid #d0d5dd;
+            border-radius: 8px;
+            background: white;
+            color: #475467;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+            white-space: nowrap;
+          }
+
+          .inventory-clear-filters:hover {
+            background: #f8fafc;
+          }
+
+          .inventory-table-container {
+            width: 100%;
+            max-width: 100%;
+            box-sizing: border-box;
+            overflow: hidden;
+            background: white;
+            border: 1px solid #e4e7ec;
+            border-radius: 12px;
+          }
+
+          .inventory-table-scroll {
+            width: 100%;
+            max-width: 100%;
+            overflow-x: auto;
+            overflow-y: hidden;
+          }
+
+          .inventory-table {
+            width: 100%;
+            min-width: 1250px;
+            border-collapse: collapse;
+          }
+
+          .inventory-table thead {
+            background: #f8fafc;
+          }
+
+          .inventory-table th {
+            padding: 13px 15px;
+            color: #667085;
+            font-size: 12px;
+            font-weight: 700;
+            text-align: left;
+            white-space: nowrap;
+            border-bottom: 1px solid #e4e7ec;
+          }
+
+          .inventory-table td {
+            padding: 14px 15px;
+            color: #475467;
+            font-size: 13px;
+            border-bottom: 1px solid #eef2f2;
+            vertical-align: middle;
+          }
+
+          .inventory-table tbody tr:last-child td {
+            border-bottom: none;
+          }
+
+          .inventory-table tbody tr:hover {
+            background: #fcfefe;
+          }
+
+          .inventory-item-cell {
+            display: flex;
+            align-items: center;
+            gap: 11px;
+            min-width: 190px;
+          }
+
+          .inventory-table-image {
+            width: 45px;
+            height: 45px;
+            flex-shrink: 0;
+            border-radius: 8px;
+            object-fit: cover;
+            border: 1px solid #e4e7ec;
+            background: #f8fafc;
+          }
+
+          .inventory-table-image-placeholder {
+            width: 45px;
+            height: 45px;
+            flex-shrink: 0;
+            border-radius: 8px;
+            border: 1px dashed #c9d7d6;
+            background: #f7fbfb;
+            color: #98a2b3;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+          }
+
+          .inventory-item-cell strong {
+            color: #344054;
+            font-size: 13px;
+            font-weight: 700;
+          }
+
+          .inventory-item-name-row {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+          }
+
+          .inventory-alert-dot {
+            width: 8px;
+            height: 8px;
+            min-width: 8px;
+            display: inline-block;
+            border-radius: 50%;
+            background: #f04438;
+            box-shadow: 0 0 0 3px rgba(240,68,56,.1);
+          }
+
+          .inventory-alert-dot.large {
+            width: 10px;
+            height: 10px;
+            min-width: 10px;
+            margin-top: 5px;
+          }
+
+          .status {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 5px 10px;
+            border-radius: 999px;
+            font-size: 11px;
+            font-weight: 700;
+            white-space: nowrap;
+          }
+
+          .status.confirmed {
+            background: #ecfdf3;
+            color: #027a48;
+          }
+
+          .status.pending {
+            background: #fffaeb;
+            color: #b54708;
+          }
+
+          .status.cancelled {
+            background: #fef3f2;
+            color: #b42318;
+          }
+
+          .inventory-visibility-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 42px;
+            padding: 5px 9px;
+            border-radius: 999px;
+            font-size: 11px;
+            font-weight: 700;
+          }
+
+          .inventory-visibility-badge.yes {
+            background: #ecfdf3;
+            color: #027a48;
+          }
+
+          .inventory-visibility-badge.no {
+            background: #f2f4f7;
+            color: #667085;
+          }
+
+          .inventory-featured-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 5px 9px;
+            border-radius: 999px;
+            font-size: 11px;
+            font-weight: 700;
+            background: #eff8ff;
+            color: #175cd3;
+          }
+
+          .inventory-action-buttons {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+          }
+
+          .inventory-action-buttons button {
+            width: 35px;
+            height: 35px;
+            padding: 0;
+            border-radius: 7px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: .2s ease;
+            font-size: 13px;
+          }
+
+          .inventory-view-button {
+            border: 1px solid #b8e3e1;
+            background: #effafa;
+            color: #159f9f;
+          }
+
+          .inventory-edit-button {
+            border: 1px solid #c9d8f7;
+            background: #f2f6ff;
+            color: #3b6edc;
+          }
+
+          .inventory-delete-button {
+            border: 1px solid #f4c7c3;
+            background: #fff4f3;
+            color: #d92d20;
+          }
+
+          .inventory-action-buttons button:hover {
+            transform: translateY(-1px);
+          }
+
+          .inventory-empty-state {
+            padding: 50px !important;
+            text-align: center !important;
+            color: #98a2b3 !important;
+          }
+
+          .inventory-pagination {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 20px;
+            padding: 15px 18px;
+            border-top: 1px solid #e4e7ec;
+          }
+
+          .inventory-pagination-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: #667085;
+            font-size: 12px;
+          }
+
+          .inventory-pagination-left select {
+            height: 32px;
+            padding: 0 8px;
+            border: 1px solid #d0d5dd;
+            border-radius: 6px;
+            background: white;
+            color: #475467;
+          }
+
+          .inventory-pagination-right {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+          }
+
+          .inventory-pagination-button:disabled {
+            opacity: .45;
+          }
+
+          .modal-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 9999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 25px;
+            background: rgba(16,24,40,.48);
+            overflow-y: auto;
+          }
+
+          .modal-container {
+            width: min(720px, 96vw);
+            max-height: 92vh;
+            overflow-y: auto;
+            background: white;
+            border-radius: 14px;
+            box-shadow: 0 24px 60px rgba(16,24,40,.28);
+          }
+
+          .modal-header {
+            min-height: 85px;
+            padding: 20px 25px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 20px;
+            background: #55b8b4;
+          }
+
+          .modal-header h2 {
+            margin: 0 0 5px;
+            color: white;
+            font-size: 22px;
+            font-weight: 700;
+          }
+
+          .modal-header p {
+            margin: 0;
+            color: rgba(255,255,255,.9);
+            font-size: 13px;
+          }
+
+          .modal-close {
+            width: 35px;
+            height: 35px;
+            min-width: 35px;
+            padding: 0;
+            border: none;
+            border-radius: 50%;
+            background: white;
+            color: #52706e;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            line-height: 1;
+            cursor: pointer;
+          }
+
+          .modal-container form {
+            padding: 25px;
+          }
+
+          .form-row {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 17px;
+            margin-bottom: 17px;
+          }
+
+          .form-field {
+            width: 100%;
+            margin-bottom: 17px;
+          }
+
+          .form-row .form-field {
+            margin-bottom: 0;
+          }
+
+          .form-field label {
+            display: block;
+            margin-bottom: 7px;
+            color: #344054;
+            font-size: 12px;
+            font-weight: 700;
+          }
+
+          .form-field input,
+          .form-field select {
+            width: 100%;
+            height: 42px;
+            padding: 0 12px;
+            box-sizing: border-box;
+            border: 1px solid #d0d5dd;
+            border-radius: 8px;
+            background: white;
+            color: #344054;
+            font-family: inherit;
+            font-size: 13px;
+            outline: none;
+          }
+
+          .form-field textarea {
+            width: 100%;
+            box-sizing: border-box;
+          }
+
+          .form-field input:focus,
+          .form-field select:focus,
+          .form-field textarea:focus {
+            border-color: #159f9f !important;
+            box-shadow: 0 0 0 3px rgba(21,159,159,.08);
+          }
+
+          .inventory-image-preview-section {
+            margin-bottom: 20px;
+          }
+
+          .inventory-image-preview-wrapper {
+            position: relative;
+            width: 120px;
+            height: 120px;
+          }
+
+          .inventory-image-preview {
+            width: 120px;
+            height: 120px;
+            border-radius: 10px;
+            object-fit: cover;
+            border: 1px solid #e4e7ec;
+          }
+
+          .inventory-remove-image {
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            width: 27px;
+            height: 27px;
+            padding: 0;
+            border: none;
+            border-radius: 50%;
+            background: #d92d20;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+          }
+
+          .inventory-visibility-section {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            padding: 15px;
+            margin-top: 5px;
+            border: 1px solid #e4e7ec;
+            border-radius: 10px;
+            background: #f9fbfb;
+          }
+
+          .inventory-checkbox-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 9px 12px;
+            border: 1px solid #e4e7ec;
+            border-radius: 8px;
+            background: white;
+            color: #475467;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+          }
+
+          .inventory-checkbox-row input {
+            width: 16px;
+            height: 16px;
+            accent-color: #159f9f;
+            cursor: pointer;
+          }
+
+          .form-actions {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 23px;
+            padding-top: 20px;
+            border-top: 1px solid #eef2f2;
+          }
+
+          .modal-cancel-button,
+          .save-button {
+            min-width: 110px;
+            height: 42px;
+            padding: 0 16px;
+            border-radius: 7px;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+          }
+
+          .modal-cancel-button {
+            border: 1px solid #d0d5dd;
+            background: white;
+            color: #475467;
+          }
+
+          .save-button {
+            border: 1px solid #159f9f;
+            background: #159f9f;
+            color: white;
+          }
+
+          .inventory-view-body {
+            padding: 25px;
+          }
+
+          .inventory-view-image-wrapper {
+            padding: 25px 25px 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+          }
+
+          .inventory-view-image {
+            width: 170px;
+            height: 170px;
+            object-fit: cover;
+            border-radius: 13px;
+            border: 1px solid #e4e7ec;
+          }
+
+          .inventory-view-placeholder {
+            width: 170px;
+            height: 170px;
+            border: 1px dashed #b8cfcd;
+            border-radius: 13px;
+            background: #f7fbfb;
+            color: #98a2b3;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 9px;
+          }
+
+          .inventory-view-placeholder svg {
+            font-size: 32px;
+          }
+
+          .inventory-warning-box {
+            margin: 15px 25px;
+            padding: 13px 15px;
+            display: flex;
+            align-items: flex-start;
+            gap: 11px;
+            border: 1px solid #fedf89;
+            border-radius: 8px;
+            background: #fffaeb;
+            color: #93370d;
+            font-size: 12px;
+            line-height: 1.6;
+          }
+
+          .detail-row {
+            margin: 0 25px;
+            padding: 13px 0;
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 25px;
+            border-bottom: 1px solid #eef2f2;
+          }
+
+          .detail-row > span {
+            color: #667085;
+            font-size: 13px;
+          }
+
+          .detail-row > strong {
+            max-width: 65%;
+            color: #344054;
+            font-size: 13px;
+            font-weight: 700;
+            text-align: right;
+            line-height: 1.5;
+            overflow-wrap: anywhere;
+          }
+
+          .inventory-description-value {
+            white-space: pre-wrap;
+          }
+
+          .inventory-modal-edit {
+            min-width: 110px;
+            height: 42px;
+            padding: 0 16px;
+            border: 1px solid #159f9f;
+            border-radius: 7px;
+            background: #159f9f;
+            color: white;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 7px;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+          }
+
+          .inventory-delete-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 10000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            background: rgba(16,24,40,.48);
+          }
+
+          .inventory-delete-dialog {
+            width: min(420px, 95vw);
+            padding: 30px;
+            box-sizing: border-box;
+            border-radius: 14px;
+            background: white;
+            text-align: center;
+            box-shadow: 0 24px 60px rgba(16,24,40,.28);
+          }
+
+          .inventory-delete-icon {
+            width: 55px;
+            height: 55px;
+            margin: 0 auto 16px;
+            border-radius: 50%;
+            background: #fef3f2;
+            color: #d92d20;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 21px;
+          }
+
+          .inventory-delete-dialog h3 {
+            margin: 0 0 10px;
+            color: #344054;
+            font-size: 20px;
+          }
+
+          .inventory-delete-dialog p {
+            margin: 0;
+            color: #667085;
+            font-size: 13px;
+            line-height: 1.6;
+          }
+
+          .inventory-delete-dialog p strong {
+            color: #344054;
+          }
+
+          .inventory-delete-actions {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 24px;
+          }
+
+          .inventory-delete-cancel,
+          .inventory-delete-confirm {
+            min-width: 105px;
+            height: 40px;
+            border-radius: 7px;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+          }
+
+          .inventory-delete-cancel {
+            border: 1px solid #d0d5dd;
+            background: white;
+            color: #475467;
+          }
+
+          .inventory-delete-confirm {
+            border: 1px solid #d92d20;
+            background: #d92d20;
+            color: white;
+          }
+
+          @media (max-width: 1200px) {
+            .inventory-filters {
+              grid-template-columns: 1fr 170px 170px;
+            }
+
+            .inventory-clear-filters {
+              grid-column: 1 / -1;
+              justify-self: start;
+            }
+          }
+
+          @media (max-width: 900px) {
+            .main {
+              margin-left: 0;
+              width: 100%;
+              padding: 20px;
+            }
+
+            .inventory-filters {
+              grid-template-columns: 1fr 1fr;
+            }
+          }
+
+          @media (max-width: 700px) {
+            .main {
+              padding: 16px;
+            }
+
+            .inventory-page-header {
+              flex-direction: column;
+            }
+
+            .inventory-header-actions {
+              width: 100%;
+            }
+
+            .inventory-export-button,
+            .inventory-add-button {
+              flex: 1;
+            }
+
+            .inventory-filters {
+              grid-template-columns: 1fr;
+            }
+
+            .inventory-clear-filters {
+              width: 100%;
+            }
+
+            .form-row {
+              grid-template-columns: 1fr;
+            }
+
+            .modal-overlay {
+              padding: 10px;
+            }
+
+            .modal-header {
+              padding: 18px;
+            }
+
+            .modal-container form {
+              padding: 18px;
+            }
+
+            .inventory-pagination {
+              flex-direction: column;
+              align-items: flex-start;
+            }
+
+            .detail-row {
+              flex-direction: column;
+              gap: 5px;
+            }
+
+            .detail-row > strong {
+              max-width: 100%;
+              text-align: left;
+            }
+          }
+        `}</style>
 
         <div className="inventory-page-header">
           <div className="inventory-title">
@@ -2678,15 +1884,44 @@ function Inventory() {
               type="button"
               className="inventory-export-button"
               onClick={exportToExcel}
+              disabled={
+                isLoadingProducts ||
+                Boolean(productsError) ||
+                isSavingProduct
+              }
             >
               <FaFileExcel />
               Export
             </button>
 
             <button
+  type="button"
+  className="add-button"
+  onClick={() => setShowInvoiceModal(true)}
+  disabled={
+    isLoadingProducts ||
+    isLoadingCategories ||
+    Boolean(productsError) ||
+    Boolean(categoriesError) ||
+    isSavingProduct
+  }
+>
+  + Add Invoice
+</button>
+
+            <button
               type="button"
               className="inventory-add-button"
+              disabled={
+                isLoadingProducts ||
+                isLoadingCategories ||
+                Boolean(productsError) ||
+                Boolean(categoriesError) ||
+                isSavingProduct
+              }
               onClick={() => {
+                if (savingProductRef.current) return;
+
                 setNewItem(getEmptyItem());
                 setShowAddModal(true);
               }}
@@ -2696,9 +1931,11 @@ function Inventory() {
           </div>
         </div>
 
-        {/* =====================================================
-            FILTERS
-        ===================================================== */}
+        {categoriesError && (
+          <p role="alert" style={{ color: "#b42318" }}>
+            {categoriesError}
+          </p>
+        )}
 
         <div className="inventory-filters">
           <div className="inventory-search-box">
@@ -2708,7 +1945,7 @@ function Inventory() {
               type="text"
               placeholder="Search products..."
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(event) => setSearch(event.target.value)}
             />
 
             {search && (
@@ -2716,6 +1953,7 @@ function Inventory() {
                 type="button"
                 className="inventory-clear-search"
                 onClick={() => setSearch("")}
+                aria-label="Clear search"
               >
                 <FaTimes />
               </button>
@@ -2725,8 +1963,8 @@ function Inventory() {
           <select
             className="inventory-filter-select"
             value={categoryFilter}
-            onChange={(e) =>
-              setCategoryFilter(e.target.value)
+            onChange={(event) =>
+              setCategoryFilter(event.target.value)
             }
           >
             <option value="All">All Categories</option>
@@ -2744,16 +1982,14 @@ function Inventory() {
           <select
             className="inventory-filter-select"
             value={statusFilter}
-            onChange={(e) =>
-              setStatusFilter(e.target.value)
+            onChange={(event) =>
+              setStatusFilter(event.target.value)
             }
           >
             <option value="All">All Status</option>
             <option value="In Stock">In Stock</option>
             <option value="Low Stock">Low Stock</option>
-            <option value="Out of Stock">
-              Out of Stock
-            </option>
+            <option value="Out of Stock">Out of Stock</option>
           </select>
 
           {hasActiveFilters && (
@@ -2766,10 +2002,6 @@ function Inventory() {
             </button>
           )}
         </div>
-
-        {/* =====================================================
-            PRODUCTS TABLE
-        ===================================================== */}
 
         <div className="inventory-table-container">
           <div className="inventory-table-scroll">
@@ -2792,7 +2024,25 @@ function Inventory() {
               </thead>
 
               <tbody>
-                {paginatedItems.length > 0 ? (
+                {isLoadingProducts ? (
+                  <tr>
+                    <td
+                      colSpan="12"
+                      className="inventory-empty-state"
+                    >
+                      Loading products...
+                    </td>
+                  </tr>
+                ) : productsError ? (
+                  <tr>
+                    <td
+                      colSpan="12"
+                      className="inventory-empty-state"
+                    >
+                      <span role="alert">{productsError}</span>
+                    </td>
+                  </tr>
+                ) : paginatedItems.length > 0 ? (
                   paginatedItems.map((item) => {
                     const status = getStockStatus(item);
 
@@ -2826,9 +2076,7 @@ function Inventory() {
                         </td>
 
                         <td>{item.category || "—"}</td>
-
                         <td>{item.quantity}</td>
-
                         <td>{item.minimumStock}</td>
 
                         <td>
@@ -2839,9 +2087,7 @@ function Inventory() {
                           {formatPrice(item.sellingPrice)}
                         </td>
 
-                        <td>
-                          {formatDate(item.expiryDate)}
-                        </td>
+                        <td>{formatDate(item.expiryDate)}</td>
 
                         <td>
                           <span
@@ -2874,9 +2120,7 @@ function Inventory() {
                         </td>
 
                         <td>
-                          <span
-                            className={getStatusClass(status)}
-                          >
+                          <span className={getStatusClass(status)}>
                             {status}
                           </span>
                         </td>
@@ -2887,9 +2131,8 @@ function Inventory() {
                               type="button"
                               className="inventory-view-button"
                               title="View"
-                              onClick={() =>
-                                handleViewItem(item)
-                              }
+                              disabled={isSavingProduct}
+                              onClick={() => handleViewItem(item)}
                             >
                               <FaEye />
                             </button>
@@ -2898,9 +2141,12 @@ function Inventory() {
                               type="button"
                               className="inventory-edit-button"
                               title="Edit"
-                              onClick={() =>
-                                handleOpenEdit(item)
+                              disabled={
+                                isSavingProduct ||
+                                isLoadingCategories ||
+                                Boolean(categoriesError)
                               }
+                              onClick={() => handleOpenEdit(item)}
                             >
                               <FaPen />
                             </button>
@@ -2909,9 +2155,8 @@ function Inventory() {
                               type="button"
                               className="inventory-delete-button"
                               title="Delete"
-                              onClick={() =>
-                                handleDeleteItem(item)
-                              }
+                              disabled={isSavingProduct}
+                              onClick={() => handleDeleteItem(item)}
                             >
                               <FaTrash />
                             </button>
@@ -2934,18 +2179,14 @@ function Inventory() {
             </table>
           </div>
 
-          {/* =====================================================
-              PAGINATION
-          ===================================================== */}
-
           <div className="inventory-pagination">
             <div className="inventory-pagination-left">
               <span>Rows per page:</span>
 
               <select
                 value={rowsPerPage}
-                onChange={(e) =>
-                  setRowsPerPage(Number(e.target.value))
+                onChange={(event) =>
+                  setRowsPerPage(Number(event.target.value))
                 }
               >
                 <option value={5}>5</option>
@@ -3029,15 +2270,14 @@ function Inventory() {
         </div>
       </main>
 
-      {/* =====================================================
-          ADD PRODUCT
-      ===================================================== */}
-
       {showAddModal && (
         <div
           className="modal-overlay"
-          onMouseDown={(e) => {
-            if (e.target === e.currentTarget) {
+          onMouseDown={(event) => {
+            if (
+              event.target === event.currentTarget &&
+              !savingProductRef.current
+            ) {
               setShowAddModal(false);
               setNewItem(getEmptyItem());
             }
@@ -3047,6 +2287,7 @@ function Inventory() {
             <div className="modal-header">
               <div>
                 <h2>Add Product</h2>
+
                 <p>
                   Add product information, image, category and
                   store visibility.
@@ -3056,7 +2297,10 @@ function Inventory() {
               <button
                 type="button"
                 className="modal-close"
+                disabled={isSavingProduct}
                 onClick={() => {
+                  if (savingProductRef.current) return;
+
                   setShowAddModal(false);
                   setNewItem(getEmptyItem());
                 }}
@@ -3077,7 +2321,10 @@ function Inventory() {
                 <button
                   type="button"
                   className="modal-cancel-button"
+                  disabled={isSavingProduct}
                   onClick={() => {
+                    if (savingProductRef.current) return;
+
                     setShowAddModal(false);
                     setNewItem(getEmptyItem());
                   }}
@@ -3088,8 +2335,13 @@ function Inventory() {
                 <button
                   type="submit"
                   className="save-button"
+                  disabled={
+                    isSavingProduct ||
+                    isLoadingCategories ||
+                    Boolean(categoriesError)
+                  }
                 >
-                  Add Product
+                  {isSavingProduct ? "Saving..." : "Add Product"}
                 </button>
               </div>
             </form>
@@ -3097,15 +2349,14 @@ function Inventory() {
         </div>
       )}
 
-      {/* =====================================================
-          VIEW PRODUCT
-      ===================================================== */}
-
       {showViewModal && selectedItem && (
         <div
           className="modal-overlay"
-          onMouseDown={(e) => {
-            if (e.target === e.currentTarget) {
+          onMouseDown={(event) => {
+            if (
+              event.target === event.currentTarget &&
+              !savingProductRef.current
+            ) {
               setShowViewModal(false);
               setSelectedItem(null);
             }
@@ -3115,16 +2366,16 @@ function Inventory() {
             <div className="modal-header">
               <div>
                 <h2>Product Details</h2>
-
-                <p>
-                  View product and store information.
-                </p>
+                <p>View product and store information.</p>
               </div>
 
               <button
                 type="button"
                 className="modal-close"
+                disabled={isSavingProduct}
                 onClick={() => {
+                  if (savingProductRef.current) return;
+
                   setShowViewModal(false);
                   setSelectedItem(null);
                 }}
@@ -3157,8 +2408,7 @@ function Inventory() {
                     <div>
                       <strong>Low stock:</strong>{" "}
                       Quantity is {selectedItem.quantity} and
-                      minimum stock is{" "}
-                      {selectedItem.minimumStock}.
+                      minimum stock is {selectedItem.minimumStock}.
                     </div>
                   )}
 
@@ -3176,9 +2426,8 @@ function Inventory() {
                         <strong>Close to expiry:</strong>{" "}
                         This product expires in{" "}
                         {
-                          getExpiryInfo(
-                            selectedItem.expiryDate
-                          ).daysLeft
+                          getExpiryInfo(selectedItem.expiryDate)
+                            .daysLeft
                         }{" "}
                         day(s).
                       </div>
@@ -3217,7 +2466,6 @@ function Inventory() {
 
             <div className="detail-row">
               <span>Purchase Price</span>
-
               <strong>
                 {formatPrice(selectedItem.purchasePrice)}
               </strong>
@@ -3225,7 +2473,6 @@ function Inventory() {
 
             <div className="detail-row">
               <span>Selling Price</span>
-
               <strong>
                 {formatPrice(selectedItem.sellingPrice)}
               </strong>
@@ -3233,10 +2480,7 @@ function Inventory() {
 
             <div className="detail-row">
               <span>Expiry Date</span>
-
-              <strong>
-                {formatDate(selectedItem.expiryDate)}
-              </strong>
+              <strong>{formatDate(selectedItem.expiryDate)}</strong>
             </div>
 
             <div className="detail-row">
@@ -3269,10 +2513,7 @@ function Inventory() {
 
             <div className="detail-row">
               <span>Featured Product</span>
-
-              <strong>
-                {selectedItem.featured ? "Yes" : "No"}
-              </strong>
+              <strong>{selectedItem.featured ? "Yes" : "No"}</strong>
             </div>
 
             <div className="detail-row">
@@ -3300,7 +2541,10 @@ function Inventory() {
               <button
                 type="button"
                 className="modal-cancel-button"
+                disabled={isSavingProduct}
                 onClick={() => {
+                  if (savingProductRef.current) return;
+
                   setShowViewModal(false);
                   setSelectedItem(null);
                 }}
@@ -3311,19 +2555,16 @@ function Inventory() {
               <button
                 type="button"
                 className="inventory-modal-edit"
+                disabled={
+                  isSavingProduct ||
+                  isLoadingCategories ||
+                  Boolean(categoriesError)
+                }
                 onClick={() => {
+                  if (savingProductRef.current) return;
+
                   setShowViewModal(false);
-
-                  setSelectedItem((previous) => ({
-                    ...previous,
-                    description:
-                      previous?.description || "",
-                    featured: Boolean(
-                      previous?.featured
-                    ),
-                  }));
-
-                  setShowEditModal(true);
+                  handleOpenEdit(selectedItem);
                 }}
               >
                 <FaPen />
@@ -3334,15 +2575,14 @@ function Inventory() {
         </div>
       )}
 
-      {/* =====================================================
-          EDIT PRODUCT
-      ===================================================== */}
-
       {showEditModal && selectedItem && (
         <div
           className="modal-overlay"
-          onMouseDown={(e) => {
-            if (e.target === e.currentTarget) {
+          onMouseDown={(event) => {
+            if (
+              event.target === event.currentTarget &&
+              !savingProductRef.current
+            ) {
               setShowEditModal(false);
               setSelectedItem(null);
             }
@@ -3362,7 +2602,10 @@ function Inventory() {
               <button
                 type="button"
                 className="modal-close"
+                disabled={isSavingProduct}
                 onClick={() => {
+                  if (savingProductRef.current) return;
+
                   setShowEditModal(false);
                   setSelectedItem(null);
                 }}
@@ -3383,7 +2626,10 @@ function Inventory() {
                 <button
                   type="button"
                   className="modal-cancel-button"
+                  disabled={isSavingProduct}
                   onClick={() => {
+                    if (savingProductRef.current) return;
+
                     setShowEditModal(false);
                     setSelectedItem(null);
                   }}
@@ -3394,8 +2640,13 @@ function Inventory() {
                 <button
                   type="submit"
                   className="save-button"
+                  disabled={
+                    isSavingProduct ||
+                    isLoadingCategories ||
+                    Boolean(categoriesError)
+                  }
                 >
-                  Save Changes
+                  {isSavingProduct ? "Saving..." : "Save Changes"}
                 </button>
               </div>
             </form>
@@ -3403,15 +2654,11 @@ function Inventory() {
         </div>
       )}
 
-      {/* =====================================================
-          DELETE PRODUCT
-      ===================================================== */}
-
       {showDeleteModal && itemToDelete && (
         <div
           className="inventory-delete-overlay"
-          onMouseDown={(e) => {
-            if (e.target === e.currentTarget) {
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) {
               closeDeleteModal();
             }
           }}
@@ -3440,6 +2687,7 @@ function Inventory() {
                 type="button"
                 className="inventory-delete-cancel"
                 onClick={closeDeleteModal}
+                disabled={isSavingProduct}
               >
                 Cancel
               </button>
@@ -3448,13 +2696,26 @@ function Inventory() {
                 type="button"
                 className="inventory-delete-confirm"
                 onClick={confirmDeleteItem}
+                disabled={isSavingProduct}
               >
-                Delete Product
+                {isSavingProduct ? "Deleting..." : "Delete Product"}
               </button>
             </div>
           </div>
         </div>
       )}
+
+{showInvoiceModal && (
+  <SupplierStockInvoice
+    products={items}
+    categories={categories}
+    onClose={() => setShowInvoiceModal(false)}
+    onSaved={(updatedProducts) => {
+      publishProducts(updatedProducts);
+      setShowInvoiceModal(false);
+    }}
+  />
+)}
     </div>
   );
 }

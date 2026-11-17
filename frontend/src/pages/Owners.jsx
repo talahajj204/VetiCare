@@ -1,6 +1,16 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
+
+import {
+  getOwners,
+  createOwner,
+  updateOwner,
+  deleteOwner,
+} from "../api/ownersApi";
+
+import { getClinicOptions } from "../data/clinicOptionsApi";
+
 import {
   FaEye,
   FaPen,
@@ -11,120 +21,187 @@ import {
   FaFileExport,
 } from "react-icons/fa";
 
-const OWNERS_KEY = "vetClinicOwners";
+export function readOwners(options) {
+  return getOwners(options);
+}
 
-const DEFAULT_OWNERS = [
-  {
-    id: 1,
-    firstName: "Tala",
-    lastName: "El Hajj",
-    email: "talaelhajj4@gmail.com",
-    phone: "03 123 456",
-    address: "Beirut",
-    emergencyContact: "70 111 222",
-    notes: "Prefers morning appointments.",
-    status: "active",
-    pets: [
-      {
-        id: 1,
-        name: "Bella",
-        species: "Dog",
-        breed: "Golden Retriever",
-        age: "4 years",
-      },
-    ],
-    history: [
-      {
-        id: 1,
-        date: "25/09/2026",
-        description: "Bella - Medical record added",
-      },
-      {
-        id: 2,
-        date: "20/09/2026",
-        description: "Bella - Routine appointment",
-      },
-    ],
-  },
-  {
-    id: 2,
-    firstName: "Fatima",
-    lastName: "Abbas",
-    email: "fatima@gmail.com",
-    phone: "70 456 789",
-    address: "Dahye",
-    emergencyContact: "71 222 333",
-    notes: "",
-    status: "active",
-    pets: [
-      {
-        id: 2,
-        name: "Luna",
-        species: "Cat",
-        breed: "Persian",
-        age: "3 years",
-      },
-    ],
-    history: [
-      {
-        id: 1,
-        date: "20/09/2026",
-        description: "Luna - Routine checkup",
-      },
-    ],
-  },
-  {
-    id: 3,
-    firstName: "Karen",
-    lastName: "N",
-    email: "karen@email.com",
-    phone: "71 555 222",
-    address: "Tripoli",
-    emergencyContact: "03 444 555",
-    notes: "",
-    status: "inactive",
-    pets: [],
-    history: [],
-  },
-];
+const statusKey = (value) =>
+  String(value || "").trim().toLowerCase();
 
-export function readOwners() {
-  try {
-    const saved = localStorage.getItem(OWNERS_KEY);
+async function readOwnerStatuses(signal) {
+  const records = await getClinicOptions({
+    listKey: "petOwners",
+    signal,
+  });
 
-    if (saved === null) return DEFAULT_OWNERS;
-
-    const parsed = JSON.parse(saved);
-    return Array.isArray(parsed) ? parsed : DEFAULT_OWNERS;
-  } catch {
-    return DEFAULT_OWNERS;
+  if (
+    !Array.isArray(records) ||
+    records.some(
+      (record) =>
+        typeof record.listKey !== "string" ||
+        typeof record.value !== "string" ||
+        typeof record.isActive !== "boolean" ||
+        !Number.isInteger(record.sortOrder)
+    )
+  ) {
+    throw new Error(
+      "The server returned invalid owner statuses."
+    );
   }
+
+  const seen = new Set();
+
+  return records
+    .filter(
+      (record) =>
+        record.listKey === "petOwners" &&
+        record.isActive
+    )
+    .sort(
+      (a, b) =>
+        a.sortOrder - b.sortOrder ||
+        a.value.localeCompare(b.value)
+    )
+    .map((record) => record.value.trim())
+    .filter((value) => {
+      const key = statusKey(value);
+
+      if (!key || seen.has(key)) return false;
+
+      seen.add(key);
+      return true;
+    });
 }
 
 function Owners() {
   const navigate = useNavigate();
 
-  const [owners, setOwners] = useState(readOwners);
+  const [owners, setOwners] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+  const savingRef = useRef(false);
+
+  const [ownerStatuses, setOwnerStatuses] = useState([]);
+  const [statusesLoading, setStatusesLoading] =
+    useState(true);
+  const [statusesError, setStatusesError] = useState("");
 
   useEffect(() => {
-    const refresh = () => setOwners(readOwners());
+    let controller;
+    let disposed = false;
 
-    window.addEventListener("vetClinicOwnersUpdated", refresh);
-    window.addEventListener("storage", refresh);
+    const refresh = async () => {
+      controller?.abort();
+      controller = new AbortController();
+      const currentController = controller;
+
+      setIsLoading(true);
+      setLoadError("");
+
+      try {
+        const data = await getOwners({
+          signal: currentController.signal,
+        });
+
+        if (!disposed && !currentController.signal.aborted) {
+          setOwners(data);
+        }
+      } catch (error) {
+        if (!disposed && !currentController.signal.aborted) {
+          setLoadError(error.message);
+        }
+      } finally {
+        if (!disposed && !currentController.signal.aborted) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    refresh();
+
+    window.addEventListener(
+      "vetClinicOwnersUpdated",
+      refresh
+    );
 
     return () => {
-      window.removeEventListener("vetClinicOwnersUpdated", refresh);
-      window.removeEventListener("storage", refresh);
+      disposed = true;
+      controller?.abort();
+
+      window.removeEventListener(
+        "vetClinicOwnersUpdated",
+        refresh
+      );
     };
   }, []);
 
   useEffect(() => {
-    try {
-      localStorage.setItem(OWNERS_KEY, JSON.stringify(owners));
-    } catch (error) {
-      console.error("Could not save owners:", error);
-    }
-  }, [owners]);
+    let controller;
+    let disposed = false;
+
+    const refreshStatuses = async () => {
+      controller?.abort();
+      controller = new AbortController();
+      const currentController = controller;
+
+      setStatusesLoading(true);
+
+      try {
+        const values = await readOwnerStatuses(
+          currentController.signal
+        );
+
+        if (
+          !disposed &&
+          !currentController.signal.aborted
+        ) {
+          setOwnerStatuses(values);
+          setStatusesError("");
+        }
+      } catch (error) {
+        if (
+          !disposed &&
+          !currentController.signal.aborted
+        ) {
+          setOwnerStatuses([]);
+          setStatusesError(
+            error.message ||
+              "Unable to load owner statuses."
+          );
+        }
+      } finally {
+        if (
+          !disposed &&
+          !currentController.signal.aborted
+        ) {
+          setStatusesLoading(false);
+        }
+      }
+    };
+
+    refreshStatuses();
+
+    window.addEventListener(
+      "clinicOptionsUpdated",
+      refreshStatuses
+    );
+    window.addEventListener("focus", refreshStatuses);
+
+    return () => {
+      disposed = true;
+      controller?.abort();
+
+      window.removeEventListener(
+        "clinicOptionsUpdated",
+        refreshStatuses
+      );
+      window.removeEventListener(
+        "focus",
+        refreshStatuses
+      );
+    };
+  }, []);
 
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -137,8 +214,10 @@ function Owners() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedOwner, setSelectedOwner] = useState(null);
 
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [ownerToDelete, setOwnerToDelete] = useState(null);
+  const [showDeleteModal, setShowDeleteModal] =
+    useState(false);
+  const [ownerToDelete, setOwnerToDelete] =
+    useState(null);
 
   const emptyOwner = {
     firstName: "",
@@ -148,10 +227,21 @@ function Owners() {
     address: "",
     emergencyContact: "",
     notes: "",
-    status: "active",
+    status: "",
   };
 
   const [newOwner, setNewOwner] = useState(emptyOwner);
+
+  const filterStatuses = [
+    ...ownerStatuses,
+    ...owners.map((owner) => owner.status),
+  ].filter(
+    (value, index, values) =>
+      value &&
+      values.findIndex(
+        (item) => statusKey(item) === statusKey(value)
+      ) === index
+  );
 
   const filteredOwners = owners.filter((owner) => {
     const searchText = search.trim().toLowerCase();
@@ -165,7 +255,8 @@ function Owners() {
       owner.status.toLowerCase().includes(searchText);
 
     const matchesStatus =
-      statusFilter === "all" || owner.status === statusFilter;
+      statusFilter === "all" ||
+      statusKey(owner.status) === statusKey(statusFilter);
 
     return matchesSearch && matchesStatus;
   });
@@ -174,8 +265,13 @@ function Owners() {
     const nameA = `${a.firstName} ${a.lastName}`.toLowerCase();
     const nameB = `${b.firstName} ${b.lastName}`.toLowerCase();
 
-    if (sortBy === "name-asc") return nameA.localeCompare(nameB);
-    if (sortBy === "name-desc") return nameB.localeCompare(nameA);
+    if (sortBy === "name-asc") {
+      return nameA.localeCompare(nameB);
+    }
+
+    if (sortBy === "name-desc") {
+      return nameB.localeCompare(nameA);
+    }
 
     if (sortBy === "address-asc") {
       return a.address.localeCompare(b.address);
@@ -186,11 +282,17 @@ function Owners() {
     }
 
     if (sortBy === "active") {
-      return a.status === "active" ? -1 : 1;
+      return (
+        Number(statusKey(b.status) === "active") -
+        Number(statusKey(a.status) === "active")
+      );
     }
 
     if (sortBy === "inactive") {
-      return a.status === "inactive" ? -1 : 1;
+      return (
+        Number(statusKey(b.status) === "inactive") -
+        Number(statusKey(a.status) === "inactive")
+      );
     }
 
     return a.id - b.id;
@@ -263,6 +365,72 @@ function Owners() {
     URL.revokeObjectURL(url);
   };
 
+  const beginSave = () => {
+    if (savingRef.current) return false;
+
+    savingRef.current = true;
+    setIsSaving(true);
+    return true;
+  };
+
+  const endSave = () => {
+    savingRef.current = false;
+    setIsSaving(false);
+  };
+
+  const handleOpenAdd = () => {
+    if (savingRef.current) return;
+
+    if (statusesLoading) {
+      window.alert(
+        "Owner statuses are loading. Please try again."
+      );
+      return;
+    }
+
+    if (statusesError) {
+      window.alert(statusesError);
+      return;
+    }
+
+    const defaultStatus =
+      ownerStatuses.find(
+        (value) => statusKey(value) === "active"
+      ) ||
+      ownerStatuses[0] ||
+      "";
+
+    setNewOwner({
+      ...emptyOwner,
+      status: defaultStatus,
+    });
+
+    setShowAddModal(true);
+  };
+
+  const validateOwnerStatus = async (
+    owner,
+    original = null
+  ) => {
+    const values = await readOwnerStatuses();
+
+    setOwnerStatuses(values);
+    setStatusesError("");
+
+    const allowed =
+      values.includes(owner.status) ||
+      (
+        original &&
+        original.status === owner.status
+      );
+
+    if (!owner.status || !allowed) {
+      throw new Error(
+        "Choose an owner status saved in Settings → Pet Owners."
+      );
+    }
+  };
+
   const handleNewOwnerChange = (e) => {
     const { name, value } = e.target;
 
@@ -272,39 +440,44 @@ function Owners() {
     });
   };
 
-  const handleAddOwner = (e) => {
+  const handleAddOwner = async (e) => {
     e.preventDefault();
 
     const action = e.nativeEvent.submitter?.value;
 
-    const owner = {
-      id: Date.now(),
-      ...newOwner,
-      status: "active",
-      pets: [],
-      history: [],
-    };
+    if (!beginSave()) return;
 
-    setOwners((previousOwners) => [...previousOwners, owner]);
-    setNewOwner(emptyOwner);
-    setShowAddModal(false);
+    try {
+      await validateOwnerStatus(newOwner);
 
-    if (action === "save-and-add-pet") {
-      navigate("/pets", {
-        state: {
-          openAddPet: true,
-          ownerId: owner.id,
-          owner,
-        },
-      });
+      const owner = await createOwner(newOwner);
+
+      setOwners((previousOwners) => [
+        ...previousOwners,
+        owner,
+      ]);
+      setNewOwner(emptyOwner);
+      setShowAddModal(false);
+
+      if (action === "save-and-add-pet") {
+        navigate("/pets", {
+          state: {
+            openAddPet: true,
+            ownerId: owner.id,
+            owner,
+          },
+        });
+      }
+    } catch (error) {
+      window.alert(error.message);
+    } finally {
+      endSave();
     }
   };
 
   const handleViewOwner = (owner) => {
     navigate(`/owners/${owner.id}`, {
-      state: {
-        owner,
-      },
+      state: { owner },
     });
   };
 
@@ -322,36 +495,96 @@ function Owners() {
     });
   };
 
-  const handleUpdateOwner = (e) => {
+  const handleUpdateOwner = async (e) => {
     e.preventDefault();
 
-    setOwners(
-      owners.map((owner) =>
-        owner.id === selectedOwner.id ? selectedOwner : owner
-      )
-    );
+    if (!selectedOwner || !beginSave()) return;
 
-    setShowEditModal(false);
-    setSelectedOwner(null);
+    try {
+      const original = owners.find(
+        (owner) => owner.id === selectedOwner.id
+      );
+
+      await validateOwnerStatus(selectedOwner, original);
+
+      const updated = await updateOwner(
+        selectedOwner.id,
+        selectedOwner
+      );
+
+      setOwners((previousOwners) =>
+        previousOwners.map((owner) =>
+          owner.id === updated.id ? updated : owner
+        )
+      );
+
+      setShowEditModal(false);
+      setSelectedOwner(null);
+    } catch (error) {
+      window.alert(error.message);
+    } finally {
+      endSave();
+    }
   };
 
-  const handleToggleStatus = (id) => {
-    setOwners(
-      owners.map((owner) =>
-        owner.id === id
-          ? {
-              ...owner,
-              status:
-                owner.status === "active" ? "inactive" : "active",
-            }
-          : owner
-      )
-    );
+  const handleToggleStatus = async (id) => {
+    const owner = owners.find((item) => item.id === id);
+
+    if (!owner || !beginSave()) return;
+
+    try {
+      const currentStatus = statusKey(owner.status);
+
+      if (
+        currentStatus !== "active" &&
+        currentStatus !== "inactive"
+      ) {
+        window.alert(
+          "Use Edit Owner to change this status."
+        );
+        return;
+      }
+
+      const values = await readOwnerStatuses();
+
+      setOwnerStatuses(values);
+      setStatusesError("");
+
+      const targetKey =
+        currentStatus === "active" ? "inactive" : "active";
+
+      const targetStatus = values.find(
+        (value) => statusKey(value) === targetKey
+      );
+
+      if (!targetStatus) {
+        throw new Error(
+          `Add "${targetKey === "active" ? "Active" : "Inactive"}" in Settings → Pet Owners before switching to it.`
+        );
+      }
+
+      const updated = await updateOwner(id, {
+        ...owner,
+        status: targetStatus,
+      });
+
+      setOwners((previousOwners) =>
+        previousOwners.map((item) =>
+          item.id === updated.id ? updated : item
+        )
+      );
+    } catch (error) {
+      window.alert(error.message);
+    } finally {
+      endSave();
+    }
   };
 
   const handleDelete = (owner) => {
-    if (owner.status === "active") {
-      alert("You must set this owner as Inactive before deleting.");
+    if (statusKey(owner.status) === "active") {
+      alert(
+        "You must set this owner as Inactive before deleting."
+      );
       return;
     }
 
@@ -359,27 +592,89 @@ function Owners() {
     setShowDeleteModal(true);
   };
 
-  const confirmDelete = () => {
-    if (!ownerToDelete) return;
+  const confirmDelete = async () => {
+    if (!ownerToDelete || !beginSave()) return;
 
-    setOwners(
-      owners.filter((owner) => owner.id !== ownerToDelete.id)
-    );
+    try {
+      await deleteOwner(ownerToDelete.id);
 
-    setShowDeleteModal(false);
-    setOwnerToDelete(null);
+      setOwners((previousOwners) =>
+        previousOwners.filter(
+          (owner) => owner.id !== ownerToDelete.id
+        )
+      );
 
-    if (currentOwners.length === 1 && safeCurrentPage > 1) {
-      setCurrentPage(safeCurrentPage - 1);
+      setShowDeleteModal(false);
+      setOwnerToDelete(null);
+
+      if (currentOwners.length === 1 && safeCurrentPage > 1) {
+        setCurrentPage(safeCurrentPage - 1);
+      }
+    } catch (error) {
+      window.alert(error.message);
+    } finally {
+      endSave();
     }
   };
 
   const cancelDelete = () => {
+    if (savingRef.current) return;
+
     setShowDeleteModal(false);
     setOwnerToDelete(null);
   };
 
-  return (
+  const renderOwnerStatus = (data, isEdit = false) => {
+    const original = isEdit
+      ? owners.find((owner) => owner.id === data.id)
+      : null;
+
+    return (
+      <div className="form-field">
+        <label>Owner Status</label>
+
+        <select
+          name="status"
+          value={data.status}
+          onChange={
+            isEdit
+              ? handleEditChange
+              : handleNewOwnerChange
+          }
+          disabled={isSaving || statusesLoading}
+          required
+        >
+          <option value="">Select status</option>
+
+          {ownerStatuses.map((status) => (
+            <option key={status} value={status}>
+              {status}
+            </option>
+          ))}
+
+          {original?.status &&
+            !ownerStatuses.includes(original.status) && (
+              <option value={original.status}>
+                {original.status} (saved value)
+              </option>
+            )}
+        </select>
+
+        {(statusesLoading ||
+          statusesError ||
+          ownerStatuses.length === 0) && (
+          <small
+            style={{ color: "#7c8f94", lineHeight: 1.5 }}
+          >
+            {statusesLoading
+              ? "Loading owner statuses..."
+              : statusesError ||
+                "Add statuses in Settings → Option List → Pet Owners, then click Save Settings."}
+          </small>
+        )}
+      </div>
+    );
+  };  return (
     <div className="dashboard-layout">
       <Sidebar />
 
@@ -549,796 +844,827 @@ function Owners() {
               padding: 0 !important;
             }
           }
-        `}</style>        <div className="page-header owners-fixed-header">
-        <div className="owners-fixed-title">
-          <h1>Pet Owners</h1>
-          <p>Manage pet owner information</p>
-        </div>
+        `}</style>
 
-        <div className="owners-fixed-actions">
-          <button
-            type="button"
-            className="owners-fixed-export"
-            onClick={handleExport}
-          >
-            <FaFileExport />
-            Export
-          </button>
+        <div className="page-header owners-fixed-header">
+          <div className="owners-fixed-title">
+            <h1>Pet Owners</h1>
+            <p>Manage pet owner information</p>
+          </div>
 
-          <button
-            type="button"
-            className="owners-fixed-add"
-            onClick={() => setShowAddModal(true)}
-          >
-            + Add Owner
-          </button>
-        </div>
-      </div>
-
-      <div
-        className="owners-fixed-toolbar"
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: "10px",
-          width: "100%",
-          marginBottom: "22px",
-          flexWrap: "wrap",
-        }}
-      >
-        <div
-          style={{
-            position: "relative",
-            flex: "1 1 280px",
-            minWidth: "240px",
-          }}
-        >
-          <FaSearch
-            style={{
-              position: "absolute",
-              left: "15px",
-              top: "50%",
-              transform: "translateY(-50%)",
-              color: "#7f9997",
-              fontSize: "15px",
-              pointerEvents: "none",
-              zIndex: 2,
-            }}
-          />
-
-          <input
-            type="text"
-            placeholder="Search owners..."
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              setCurrentPage(1);
-            }}
-            style={{
-              width: "100%",
-              height: "44px",
-              padding: "0 42px",
-              border: "1px solid #d5e5e3",
-              borderRadius: "8px",
-              outline: "none",
-              boxSizing: "border-box",
-              background: "#fff",
-            }}
-          />
-
-          {(search ||
-            statusFilter !== "all" ||
-            sortBy !== "default") && (
+          <div className="owners-fixed-actions">
             <button
               type="button"
-              onClick={handleClearFilters}
-              title="Clear filters"
-              style={{
-                position: "absolute",
-                right: "8px",
-                top: "50%",
-                transform: "translateY(-50%)",
-                width: "28px",
-                minWidth: "28px",
-                height: "28px",
-                padding: 0,
-                margin: 0,
-                border: "none",
-                borderRadius: "50%",
-                background: "transparent",
-                color: "#78908e",
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
+              className="owners-fixed-export"
+              onClick={handleExport}
+              disabled={isLoading || Boolean(loadError)}
             >
-              <FaTimes />
+              <FaFileExport />
+              Export
             </button>
-          )}
+
+            <button
+              type="button"
+              className="owners-fixed-add"
+              onClick={handleOpenAdd}
+              disabled={
+                isLoading || isSaving || Boolean(loadError)
+              }
+            >
+              + Add Owner
+            </button>
+          </div>
         </div>
 
-        <select
-          value={statusFilter}
-          onChange={(e) => {
-            setStatusFilter(e.target.value);
-            setCurrentPage(1);
-          }}
-          style={{
-            width: "145px",
-            height: "44px",
-            padding: "0 12px",
-            border: "1px solid #d5e5e3",
-            borderRadius: "8px",
-            background: "#fff",
-            outline: "none",
-            cursor: "pointer",
-          }}
-        >
-          <option value="all">All Status</option>
-          <option value="active">Active</option>
-          <option value="inactive">Inactive</option>
-        </select>
-
         <div
-          style={{
-            position: "relative",
-            width: "180px",
-          }}
-        >
-          <FaSortAmountDown
-            style={{
-              position: "absolute",
-              left: "13px",
-              top: "50%",
-              transform: "translateY(-50%)",
-              color: "#319c97",
-              pointerEvents: "none",
-            }}
-          />
-
-          <select
-            value={sortBy}
-            onChange={(e) => {
-              setSortBy(e.target.value);
-              setCurrentPage(1);
-            }}
-            style={{
-              width: "100%",
-              height: "44px",
-              padding: "0 12px 0 38px",
-              border: "1px solid #d5e5e3",
-              borderRadius: "8px",
-              background: "#fff",
-              outline: "none",
-              cursor: "pointer",
-            }}
-          >
-            <option value="default">Sort By</option>
-            <option value="name-asc">Name A-Z</option>
-            <option value="name-desc">Name Z-A</option>
-            <option value="address-asc">Address A-Z</option>
-            <option value="address-desc">Address Z-A</option>
-            <option value="active">Active First</option>
-            <option value="inactive">Inactive First</option>
-          </select>
-        </div>
-      </div>
-
-      <div className="owners-table-container">
-        <table className="owners-table">
-          <thead>
-            <tr>
-              <th>Name</th>
-              <th>Email</th>
-              <th>Phone</th>
-              <th>Address</th>
-              <th>Status</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-
-          <tbody>
-            {currentOwners.length > 0 ? (
-              currentOwners.map((owner) => (
-                <tr key={owner.id}>
-                  <td>
-                    {owner.firstName} {owner.lastName}
-                  </td>
-                  <td>{owner.email}</td>
-                  <td>{owner.phone}</td>
-                  <td>{owner.address}</td>
-
-                  <td>
-                    <button
-                      type="button"
-                      className={`owner-status-button ${
-                        owner.status === "active"
-                          ? "owner-status-active"
-                          : "owner-status-inactive"
-                      }`}
-                      onClick={() => handleToggleStatus(owner.id)}
-                    >
-                      <span className="status-dot"></span>
-                      {owner.status === "active"
-                        ? "Active"
-                        : "Inactive"}
-                    </button>
-                  </td>
-
-                  <td>
-                    <div className="table-actions">
-                      <button
-                        type="button"
-                        className="view-button icon-button"
-                        onClick={() => handleViewOwner(owner)}
-                        title="View Owner Profile"
-                      >
-                        <FaEye />
-                      </button>
-
-                      <button
-                        type="button"
-                        className="edit-button icon-button"
-                        onClick={() => handleOpenEdit(owner)}
-                        title="Edit"
-                      >
-                        <FaPen />
-                      </button>
-
-                      {owner.status === "inactive" && (
-                        <button
-                          type="button"
-                          className="delete-button icon-button"
-                          onClick={() => handleDelete(owner)}
-                          title="Delete"
-                        >
-                          <FaTrash />
-                        </button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))
-            ) : (
-              <tr>
-                <td colSpan="6" className="no-results">
-                  No owners found
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
-
-      <div
-        style={{
-          width: "100%",
-          marginTop: "20px",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: "20px",
-        }}
-      >
-        <div
+          className="owners-fixed-toolbar"
           style={{
             display: "flex",
             alignItems: "center",
             gap: "10px",
-            whiteSpace: "nowrap",
+            width: "100%",
+            marginBottom: "22px",
+            flexWrap: "wrap",
           }}
         >
-          <span
+          <div
             style={{
-              fontSize: "14px",
-              color: "#52605f",
+              position: "relative",
+              flex: "1 1 280px",
+              minWidth: "240px",
             }}
           >
-            Rows per page:
-          </span>
+            <FaSearch
+              style={{
+                position: "absolute",
+                left: "15px",
+                top: "50%",
+                transform: "translateY(-50%)",
+                color: "#7f9997",
+                fontSize: "15px",
+                pointerEvents: "none",
+                zIndex: 2,
+              }}
+            />
+
+            <input
+              type="text"
+              placeholder="Search owners..."
+              value={search}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setCurrentPage(1);
+              }}
+              style={{
+                width: "100%",
+                height: "44px",
+                padding: "0 42px",
+                border: "1px solid #d5e5e3",
+                borderRadius: "8px",
+                outline: "none",
+                boxSizing: "border-box",
+                background: "#fff",
+              }}
+            />
+
+            {(search ||
+              statusFilter !== "all" ||
+              sortBy !== "default") && (
+              <button
+                type="button"
+                onClick={handleClearFilters}
+                title="Clear filters"
+                style={{
+                  position: "absolute",
+                  right: "8px",
+                  top: "50%",
+                  transform: "translateY(-50%)",
+                  width: "28px",
+                  minWidth: "28px",
+                  height: "28px",
+                  padding: 0,
+                  margin: 0,
+                  border: "none",
+                  borderRadius: "50%",
+                  background: "transparent",
+                  color: "#78908e",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <FaTimes />
+              </button>
+            )}
+          </div>
 
           <select
-            value={itemsPerPage}
+            value={statusFilter}
             onChange={(e) => {
-              setItemsPerPage(Number(e.target.value));
+              setStatusFilter(e.target.value);
               setCurrentPage(1);
             }}
             style={{
-              width: "75px",
-              height: "36px",
-              padding: "0 10px",
+              width: "145px",
+              height: "44px",
+              padding: "0 12px",
               border: "1px solid #d5e5e3",
-              borderRadius: "7px",
+              borderRadius: "8px",
               background: "#fff",
-              cursor: "pointer",
               outline: "none",
+              cursor: "pointer",
             }}
           >
-            <option value={5}>5</option>
-            <option value={10}>10</option>
-            <option value={20}>20</option>
-            <option value={50}>50</option>
+            <option value="all">All Status</option>
+
+            {filterStatuses.map((status) => (
+              <option key={status} value={status}>
+                {statusKey(status) === "active"
+                  ? "Active"
+                  : statusKey(status) === "inactive"
+                    ? "Inactive"
+                    : status}
+              </option>
+            ))}
           </select>
+
+          <div style={{ position: "relative", width: "180px" }}>
+            <FaSortAmountDown
+              style={{
+                position: "absolute",
+                left: "13px",
+                top: "50%",
+                transform: "translateY(-50%)",
+                color: "#319c97",
+                pointerEvents: "none",
+              }}
+            />
+
+            <select
+              value={sortBy}
+              onChange={(e) => {
+                setSortBy(e.target.value);
+                setCurrentPage(1);
+              }}
+              style={{
+                width: "100%",
+                height: "44px",
+                padding: "0 12px 0 38px",
+                border: "1px solid #d5e5e3",
+                borderRadius: "8px",
+                background: "#fff",
+                outline: "none",
+                cursor: "pointer",
+              }}
+            >
+              <option value="default">Sort By</option>
+              <option value="name-asc">Name A-Z</option>
+              <option value="name-desc">Name Z-A</option>
+              <option value="address-asc">Address A-Z</option>
+              <option value="address-desc">Address Z-A</option>
+              <option value="active">Active First</option>
+              <option value="inactive">Inactive First</option>
+            </select>
+          </div>
+        </div>
+
+        <div className="owners-table-container">
+          <table className="owners-table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Phone</th>
+                <th>Address</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {isLoading ? (
+                <tr>
+                  <td colSpan="6" className="no-results">
+                    Loading owners...
+                  </td>
+                </tr>
+              ) : loadError ? (
+                <tr>
+                  <td colSpan="6" className="no-results">
+                    <span role="alert">{loadError}</span>
+                  </td>
+                </tr>
+              ) : currentOwners.length > 0 ? (
+                currentOwners.map((owner) => (
+                  <tr key={owner.id}>
+                    <td>
+                      {owner.firstName} {owner.lastName}
+                    </td>
+                    <td>{owner.email}</td>
+                    <td>{owner.phone}</td>
+                    <td>{owner.address}</td>
+
+                    <td>
+                      <button
+                        type="button"
+                        className={`owner-status-button ${
+                          statusKey(owner.status) === "active"
+                            ? "owner-status-active"
+                            : "owner-status-inactive"
+                        }`}
+                        onClick={() =>
+                          handleToggleStatus(owner.id)
+                        }
+                        disabled={isSaving}
+                      >
+                        <span className="status-dot"></span>
+                        {statusKey(owner.status) === "active"
+                          ? "Active"
+                          : statusKey(owner.status) === "inactive"
+                            ? "Inactive"
+                            : owner.status}
+                      </button>
+                    </td>
+
+                    <td>
+                      <div className="table-actions">
+                        <button
+                          type="button"
+                          className="view-button icon-button"
+                          onClick={() => handleViewOwner(owner)}
+                          title="View Owner Profile"
+                        >
+                          <FaEye />
+                        </button>
+
+                        <button
+                          type="button"
+                          className="edit-button icon-button"
+                          onClick={() => handleOpenEdit(owner)}
+                          title="Edit"
+                          disabled={isSaving}
+                        >
+                          <FaPen />
+                        </button>
+
+                        {statusKey(owner.status) === "inactive" && (
+                          <button
+                            type="button"
+                            className="delete-button icon-button"
+                            onClick={() => handleDelete(owner)}
+                            title="Delete"
+                            disabled={isSaving}
+                          >
+                            <FaTrash />
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan="6" className="no-results">
+                    No owners found
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
         </div>
 
         <div
           style={{
+            width: "100%",
+            marginTop: "20px",
             display: "flex",
             alignItems: "center",
-            justifyContent: "flex-end",
-            gap: "6px",
-            whiteSpace: "nowrap",
+            justifyContent: "space-between",
+            gap: "20px",
           }}
         >
-          <button
-            type="button"
-            disabled={safeCurrentPage === 1}
-            onClick={() =>
-              setCurrentPage((page) => Math.max(page - 1, 1))
-            }
+          <div
             style={{
-              width: "34px",
-              minWidth: "34px",
-              height: "34px",
-              padding: 0,
-              margin: 0,
-              border: "1px solid #d5e5e3",
-              borderRadius: "7px",
-              background:
-                safeCurrentPage === 1 ? "#edf3f2" : "#fff",
-              color:
-                safeCurrentPage === 1 ? "#9aa8a7" : "#52605f",
-              cursor:
-                safeCurrentPage === 1
-                  ? "not-allowed"
-                  : "pointer",
               display: "flex",
               alignItems: "center",
-              justifyContent: "center",
-              fontSize: "18px",
-              fontWeight: "600",
-              lineHeight: 1,
+              gap: "10px",
+              whiteSpace: "nowrap",
             }}
           >
-            &lt;
-          </button>
+            <span style={{ fontSize: "14px", color: "#52605f" }}>
+              Rows per page:
+            </span>
 
-          {Array.from(
-            { length: totalPages },
-            (_, index) => index + 1
-          ).map((page) => (
+            <select
+              value={itemsPerPage}
+              onChange={(e) => {
+                setItemsPerPage(Number(e.target.value));
+                setCurrentPage(1);
+              }}
+              style={{
+                width: "75px",
+                height: "36px",
+                padding: "0 10px",
+                border: "1px solid #d5e5e3",
+                borderRadius: "7px",
+                background: "#fff",
+                cursor: "pointer",
+                outline: "none",
+              }}
+            >
+              <option value={5}>5</option>
+              <option value={10}>10</option>
+              <option value={20}>20</option>
+              <option value={50}>50</option>
+            </select>
+          </div>
+
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "flex-end",
+              gap: "6px",
+              whiteSpace: "nowrap",
+            }}
+          >
             <button
-              key={page}
               type="button"
-              onClick={() => setCurrentPage(page)}
+              disabled={safeCurrentPage === 1}
+              onClick={() =>
+                setCurrentPage((page) => Math.max(page - 1, 1))
+              }
               style={{
                 width: "34px",
                 minWidth: "34px",
                 height: "34px",
                 padding: 0,
                 margin: 0,
-                border:
-                  page === safeCurrentPage
-                    ? "1px solid #419c99"
-                    : "1px solid #d5e5e3",
+                border: "1px solid #d5e5e3",
                 borderRadius: "7px",
                 background:
-                  page === safeCurrentPage ? "#419c99" : "#fff",
+                  safeCurrentPage === 1 ? "#edf3f2" : "#fff",
                 color:
-                  page === safeCurrentPage ? "#fff" : "#52605f",
-                cursor: "pointer",
-                fontSize: "13px",
-                fontWeight: "600",
+                  safeCurrentPage === 1 ? "#9aa8a7" : "#52605f",
+                cursor:
+                  safeCurrentPage === 1
+                    ? "not-allowed"
+                    : "pointer",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
+                fontSize: "18px",
+                fontWeight: "600",
+                lineHeight: 1,
               }}
             >
-              {page}
+              &lt;
             </button>
-          ))}
 
-          <button
-            type="button"
-            disabled={safeCurrentPage === totalPages}
-            onClick={() =>
-              setCurrentPage((page) =>
-                Math.min(page + 1, totalPages)
-              )
-            }
-            style={{
-              width: "34px",
-              minWidth: "34px",
-              height: "34px",
-              padding: 0,
-              margin: 0,
-              border: "1px solid #d5e5e3",
-              borderRadius: "7px",
-              background:
-                safeCurrentPage === totalPages
-                  ? "#edf3f2"
-                  : "#fff",
-              color:
-                safeCurrentPage === totalPages
-                  ? "#9aa8a7"
-                  : "#52605f",
-              cursor:
-                safeCurrentPage === totalPages
-                  ? "not-allowed"
-                  : "pointer",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontSize: "18px",
-              fontWeight: "600",
-              lineHeight: 1,
-            }}
-          >
-            &gt;
-          </button>
-        </div>
-      </div>
-    </main>
-
-    {showAddModal && (
-      <div className="modal-overlay">
-        <div className="modal-container">
-          <div className="modal-header">
-            <div>
-              <h2>Add Owner</h2>
-              <p>Enter owner information</p>
-            </div>
-
-            <button
-              type="button"
-              className="modal-close"
-              onClick={() => setShowAddModal(false)}
-            >
-              ×
-            </button>
-          </div>
-
-          <form onSubmit={handleAddOwner}>
-            <div className="form-row">
-              <div className="form-field">
-                <label>First Name</label>
-                <input
-                  type="text"
-                  name="firstName"
-                  placeholder="Enter first name"
-                  value={newOwner.firstName}
-                  onChange={handleNewOwnerChange}
-                  required
-                />
-              </div>
-
-              <div className="form-field">
-                <label>Last Name</label>
-                <input
-                  type="text"
-                  name="lastName"
-                  placeholder="Enter last name"
-                  value={newOwner.lastName}
-                  onChange={handleNewOwnerChange}
-                  required
-                />
-              </div>
-            </div>
-
-            <div className="form-row">
-              <div className="form-field">
-                <label>Email</label>
-                <input
-                  type="email"
-                  name="email"
-                  placeholder="Enter email"
-                  value={newOwner.email}
-                  onChange={handleNewOwnerChange}
-                  required
-                />
-              </div>
-
-              <div className="form-field">
-                <label>Phone</label>
-                <input
-                  type="tel"
-                  name="phone"
-                  placeholder="Enter phone number"
-                  value={newOwner.phone}
-                  onChange={handleNewOwnerChange}
-                  required
-                />
-              </div>
-            </div>
-
-            <div className="form-field">
-              <label>Address</label>
-              <input
-                type="text"
-                name="address"
-                placeholder="Enter address"
-                value={newOwner.address}
-                onChange={handleNewOwnerChange}
-              />
-            </div>
-
-            <div className="form-field">
-              <label>Emergency Contact</label>
-              <input
-                type="text"
-                name="emergencyContact"
-                placeholder="Enter emergency contact"
-                value={newOwner.emergencyContact}
-                onChange={handleNewOwnerChange}
-              />
-            </div>
-
-            <div className="form-field">
-              <label>Notes</label>
-              <textarea
-                name="notes"
-                placeholder="Enter owner notes..."
-                value={newOwner.notes}
-                onChange={handleNewOwnerChange}
-                rows="3"
-              />
-            </div>
-
-            <div className="form-actions">
+            {Array.from(
+              { length: totalPages },
+              (_, index) => index + 1
+            ).map((page) => (
               <button
+                key={page}
                 type="button"
-                className="modal-cancel-button"
-                onClick={() => setShowAddModal(false)}
-              >
-                Cancel
-              </button>
-
-              <button
-                type="submit"
-                className="save-button"
-                value="save-owner"
-              >
-                Add Owner
-              </button>
-
-              <button
-                type="submit"
-                className="save-button"
-                value="save-and-add-pet"
+                onClick={() => setCurrentPage(page)}
                 style={{
-                  width: "auto",
-                  padding: "10px 18px",
-                  whiteSpace: "nowrap",
+                  width: "34px",
+                  minWidth: "34px",
+                  height: "34px",
+                  padding: 0,
+                  margin: 0,
+                  border:
+                    page === safeCurrentPage
+                      ? "1px solid #419c99"
+                      : "1px solid #d5e5e3",
+                  borderRadius: "7px",
+                  background:
+                    page === safeCurrentPage ? "#419c99" : "#fff",
+                  color:
+                    page === safeCurrentPage ? "#fff" : "#52605f",
+                  cursor: "pointer",
+                  fontSize: "13px",
+                  fontWeight: "600",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
                 }}
               >
-                Save & Add Pet
+                {page}
               </button>
-            </div>
-          </form>
-        </div>
-      </div>
-    )}
-
-    {showEditModal && selectedOwner && (
-      <div className="modal-overlay">
-        <div className="modal-container">
-          <div className="modal-header">
-            <div>
-              <h2>Edit Owner</h2>
-              <p>Update owner information</p>
-            </div>
+            ))}
 
             <button
               type="button"
-              className="modal-close"
-              onClick={() => {
-                setShowEditModal(false);
-                setSelectedOwner(null);
+              disabled={safeCurrentPage === totalPages}
+              onClick={() =>
+                setCurrentPage((page) =>
+                  Math.min(page + 1, totalPages)
+                )
+              }
+              style={{
+                width: "34px",
+                minWidth: "34px",
+                height: "34px",
+                padding: 0,
+                margin: 0,
+                border: "1px solid #d5e5e3",
+                borderRadius: "7px",
+                background:
+                  safeCurrentPage === totalPages
+                    ? "#edf3f2"
+                    : "#fff",
+                color:
+                  safeCurrentPage === totalPages
+                    ? "#9aa8a7"
+                    : "#52605f",
+                cursor:
+                  safeCurrentPage === totalPages
+                    ? "not-allowed"
+                    : "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: "18px",
+                fontWeight: "600",
+                lineHeight: 1,
               }}
             >
-              ×
+              &gt;
             </button>
           </div>
+        </div>
+      </main>
 
-          <form onSubmit={handleUpdateOwner}>
-            <div className="form-row">
-              <div className="form-field">
-                <label>First Name</label>
-                <input
-                  type="text"
-                  name="firstName"
-                  value={selectedOwner.firstName}
-                  onChange={handleEditChange}
-                  required
-                />
+      {showAddModal && (
+        <div className="modal-overlay">
+          <div className="modal-container">
+            <div className="modal-header">
+              <div>
+                <h2>Add Owner</h2>
+                <p>Enter owner information</p>
               </div>
 
-              <div className="form-field">
-                <label>Last Name</label>
-                <input
-                  type="text"
-                  name="lastName"
-                  value={selectedOwner.lastName}
-                  onChange={handleEditChange}
-                  required
-                />
-              </div>
-            </div>
-
-            <div className="form-row">
-              <div className="form-field">
-                <label>Email</label>
-                <input
-                  type="email"
-                  name="email"
-                  value={selectedOwner.email}
-                  onChange={handleEditChange}
-                  required
-                />
-              </div>
-
-              <div className="form-field">
-                <label>Phone</label>
-                <input
-                  type="tel"
-                  name="phone"
-                  value={selectedOwner.phone}
-                  onChange={handleEditChange}
-                  required
-                />
-              </div>
-            </div>
-
-            <div className="form-field">
-              <label>Address</label>
-              <input
-                type="text"
-                name="address"
-                value={selectedOwner.address || ""}
-                onChange={handleEditChange}
-              />
-            </div>
-
-            <div className="form-field">
-              <label>Emergency Contact</label>
-              <input
-                type="text"
-                name="emergencyContact"
-                value={selectedOwner.emergencyContact || ""}
-                onChange={handleEditChange}
-                placeholder="Enter emergency contact"
-              />
-            </div>
-
-            <div className="form-field">
-              <label>Notes</label>
-              <textarea
-                name="notes"
-                value={selectedOwner.notes || ""}
-                onChange={handleEditChange}
-                placeholder="Enter owner notes..."
-                rows="3"
-              />
-            </div>
-
-            <div className="form-field">
-              <label>Owner Status</label>
-              <select
-                name="status"
-                value={selectedOwner.status}
-                onChange={handleEditChange}
-              >
-                <option value="active">Active</option>
-                <option value="inactive">Inactive</option>
-              </select>
-            </div>
-
-            <div className="form-actions">
               <button
                 type="button"
-                className="modal-cancel-button"
+                className="modal-close"
+                onClick={() => setShowAddModal(false)}
+                disabled={isSaving}
+              >
+                ×
+              </button>
+            </div>
+
+            <form onSubmit={handleAddOwner}>
+              <div className="form-row">
+                <div className="form-field">
+                  <label>First Name</label>
+                  <input
+                    type="text"
+                    name="firstName"
+                    placeholder="Enter first name"
+                    value={newOwner.firstName}
+                    onChange={handleNewOwnerChange}
+                    required
+                  />
+                </div>
+
+                <div className="form-field">
+                  <label>Last Name</label>
+                  <input
+                    type="text"
+                    name="lastName"
+                    placeholder="Enter last name"
+                    value={newOwner.lastName}
+                    onChange={handleNewOwnerChange}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="form-row">
+                <div className="form-field">
+                  <label>Email</label>
+                  <input
+                    type="email"
+                    name="email"
+                    placeholder="Enter email"
+                    value={newOwner.email}
+                    onChange={handleNewOwnerChange}
+                    required
+                  />
+                </div>
+
+                <div className="form-field">
+                  <label>Phone</label>
+                  <input
+                    type="tel"
+                    name="phone"
+                    placeholder="Enter phone number"
+                    value={newOwner.phone}
+                    onChange={handleNewOwnerChange}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="form-field">
+                <label>Address</label>
+                <input
+                  type="text"
+                  name="address"
+                  placeholder="Enter address"
+                  value={newOwner.address}
+                  onChange={handleNewOwnerChange}
+                />
+              </div>
+
+              <div className="form-field">
+                <label>Emergency Contact</label>
+                <input
+                  type="text"
+                  name="emergencyContact"
+                  placeholder="Enter emergency contact"
+                  value={newOwner.emergencyContact}
+                  onChange={handleNewOwnerChange}
+                />
+              </div>
+
+              <div className="form-field">
+                <label>Notes</label>
+                <textarea
+                  name="notes"
+                  placeholder="Enter owner notes..."
+                  value={newOwner.notes}
+                  onChange={handleNewOwnerChange}
+                  rows="3"
+                />
+              </div>
+
+              {renderOwnerStatus(newOwner)}
+
+              <div className="form-actions">
+                <button
+                  type="button"
+                  className="modal-cancel-button"
+                  onClick={() => setShowAddModal(false)}
+                  disabled={isSaving}
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="submit"
+                  className="save-button"
+                  value="save-owner"
+                  disabled={
+                    isSaving ||
+                    statusesLoading ||
+                    Boolean(statusesError) ||
+                    ownerStatuses.length === 0
+                  }
+                >
+                  Add Owner
+                </button>
+
+                <button
+                  type="submit"
+                  className="save-button"
+                  value="save-and-add-pet"
+                  disabled={
+                    isSaving ||
+                    statusesLoading ||
+                    Boolean(statusesError) ||
+                    ownerStatuses.length === 0
+                  }
+                  style={{
+                    width: "auto",
+                    padding: "10px 18px",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  Save & Add Pet
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {showEditModal && selectedOwner && (
+        <div className="modal-overlay">
+          <div className="modal-container">
+            <div className="modal-header">
+              <div>
+                <h2>Edit Owner</h2>
+                <p>Update owner information</p>
+              </div>
+
+              <button
+                type="button"
+                className="modal-close"
                 onClick={() => {
                   setShowEditModal(false);
                   setSelectedOwner(null);
                 }}
+                disabled={isSaving}
+              >
+                ×
+              </button>
+            </div>
+
+            <form onSubmit={handleUpdateOwner}>
+              <div className="form-row">
+                <div className="form-field">
+                  <label>First Name</label>
+                  <input
+                    type="text"
+                    name="firstName"
+                    value={selectedOwner.firstName}
+                    onChange={handleEditChange}
+                    required
+                  />
+                </div>
+
+                <div className="form-field">
+                  <label>Last Name</label>
+                  <input
+                    type="text"
+                    name="lastName"
+                    value={selectedOwner.lastName}
+                    onChange={handleEditChange}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="form-row">
+                <div className="form-field">
+                  <label>Email</label>
+                  <input
+                    type="email"
+                    name="email"
+                    value={selectedOwner.email}
+                    onChange={handleEditChange}
+                    required
+                  />
+                </div>
+
+                <div className="form-field">
+                  <label>Phone</label>
+                  <input
+                    type="tel"
+                    name="phone"
+                    value={selectedOwner.phone}
+                    onChange={handleEditChange}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="form-field">
+                <label>Address</label>
+                <input
+                  type="text"
+                  name="address"
+                  value={selectedOwner.address || ""}
+                  onChange={handleEditChange}
+                />
+              </div>
+
+              <div className="form-field">
+                <label>Emergency Contact</label>
+                <input
+                  type="text"
+                  name="emergencyContact"
+                  value={selectedOwner.emergencyContact || ""}
+                  onChange={handleEditChange}
+                  placeholder="Enter emergency contact"
+                />
+              </div>
+
+              <div className="form-field">
+                <label>Notes</label>
+                <textarea
+                  name="notes"
+                  value={selectedOwner.notes || ""}
+                  onChange={handleEditChange}
+                  placeholder="Enter owner notes..."
+                  rows="3"
+                />
+              </div>
+
+              {renderOwnerStatus(selectedOwner, true)}
+
+              <div className="form-actions">
+                <button
+                  type="button"
+                  className="modal-cancel-button"
+                  onClick={() => {
+                    setShowEditModal(false);
+                    setSelectedOwner(null);
+                  }}
+                  disabled={isSaving}
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="submit"
+                  className="save-button"
+                  disabled={
+                    isSaving ||
+                    statusesLoading ||
+                    Boolean(statusesError)
+                  }
+                >
+                  Save Changes
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {showDeleteModal && ownerToDelete && (
+        <div className="modal-overlay">
+          <div
+            className="modal-container"
+            style={{ maxWidth: "420px" }}
+          >
+            <div className="modal-header">
+              <div>
+                <h2>Delete Owner</h2>
+                <p>This action cannot be undone</p>
+              </div>
+
+              <button
+                type="button"
+                className="modal-close"
+                onClick={cancelDelete}
+                disabled={isSaving}
+              >
+                ×
+              </button>
+            </div>
+
+            <div style={{ padding: "10px 0 5px" }}>
+              <p
+                style={{
+                  fontSize: "16px",
+                  color: "#333",
+                  marginBottom: "8px",
+                }}
+              >
+                Are you sure you want to delete this?
+              </p>
+
+              <p style={{ fontSize: "14px", color: "#718181" }}>
+                {ownerToDelete.firstName}{" "}
+                {ownerToDelete.lastName} will be permanently deleted.
+              </p>
+            </div>
+
+            <div className="form-actions">
+              <button
+                type="button"
+                className="modal-cancel-button"
+                onClick={cancelDelete}
+                disabled={isSaving}
               >
                 Cancel
               </button>
 
-              <button type="submit" className="save-button">
-                Save Changes
+              <button
+                type="button"
+                onClick={confirmDelete}
+                disabled={isSaving}
+                style={{
+                  width: "auto",
+                  padding: "10px 18px",
+                  border: "none",
+                  borderRadius: "8px",
+                  background: "#dc5555",
+                  color: "#fff",
+                  cursor: "pointer",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "7px",
+                }}
+              >
+                <FaTrash />
+                Delete
               </button>
             </div>
-          </form>
-        </div>
-      </div>
-    )}
-
-    {showDeleteModal && ownerToDelete && (
-      <div className="modal-overlay">
-        <div
-          className="modal-container"
-          style={{
-            maxWidth: "420px",
-          }}
-        >
-          <div className="modal-header">
-            <div>
-              <h2>Delete Owner</h2>
-              <p>This action cannot be undone</p>
-            </div>
-
-            <button
-              type="button"
-              className="modal-close"
-              onClick={cancelDelete}
-            >
-              ×
-            </button>
-          </div>
-
-          <div
-            style={{
-              padding: "10px 0 5px",
-            }}
-          >
-            <p
-              style={{
-                fontSize: "16px",
-                color: "#333",
-                marginBottom: "8px",
-              }}
-            >
-              Are you sure you want to delete this?
-            </p>
-
-            <p
-              style={{
-                fontSize: "14px",
-                color: "#718181",
-              }}
-            >
-              {ownerToDelete.firstName}{" "}
-              {ownerToDelete.lastName} will be permanently deleted.
-            </p>
-          </div>
-
-          <div className="form-actions">
-            <button
-              type="button"
-              className="modal-cancel-button"
-              onClick={cancelDelete}
-            >
-              Cancel
-            </button>
-
-            <button
-              type="button"
-              onClick={confirmDelete}
-              style={{
-                width: "auto",
-                padding: "10px 18px",
-                border: "none",
-                borderRadius: "8px",
-                background: "#dc5555",
-                color: "#fff",
-                cursor: "pointer",
-                display: "inline-flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: "7px",
-              }}
-            >
-              <FaTrash />
-              Delete
-            </button>
           </div>
         </div>
-      </div>
-    )}
-  </div>
-);
+      )}
+    </div>
+  );
 }
 
 export default Owners;
