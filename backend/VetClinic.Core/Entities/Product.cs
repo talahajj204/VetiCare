@@ -34,5 +34,7 @@ public class Product
 
     public bool Featured { get; set; }
 
+    public bool IsArchived { get; set; }
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }

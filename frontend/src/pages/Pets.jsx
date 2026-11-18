@@ -2394,8 +2394,8 @@ function Pets() {
             <div className="modal-container pet-delete-modal">
               <div className="modal-header">
                 <div>
-                  <h2>Delete Pet</h2>
-                  <p>This action cannot be undone</p>
+                  <h2>Archive Pet</h2>
+                  <p>Linked records will be kept</p>
                 </div>
 
                 <button
@@ -2415,7 +2415,7 @@ function Pets() {
                 </p>
 
                 <span>
-                  The pet profile will be permanently deleted.
+                  The pet profile will be archived.
                 </span>
               </div>
 

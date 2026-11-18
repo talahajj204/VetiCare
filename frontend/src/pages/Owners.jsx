@@ -1597,8 +1597,8 @@ function Owners() {
           >
             <div className="modal-header">
               <div>
-                <h2>Delete Owner</h2>
-                <p>This action cannot be undone</p>
+                <h2>Archive Owner</h2>
+                <p>Linked records will be kept</p>
               </div>
 
               <button
@@ -1624,7 +1624,7 @@ function Owners() {
 
               <p style={{ fontSize: "14px", color: "#718181" }}>
                 {ownerToDelete.firstName}{" "}
-                {ownerToDelete.lastName} will be permanently deleted.
+                {ownerToDelete.lastName} will be archived.
               </p>
             </div>
 

@@ -17,6 +17,7 @@ import {
 } from "react-icons/fa";
 
 import {
+  FaStore,
   FaHouse,
   FaUsers,
   FaPaw,
@@ -124,6 +125,11 @@ export default function Sidebar() {
   const location = useLocation();
   const session = useOutletContext();
   const user = session?.user;
+  const storeClinicId = Number(user?.clinicId);
+  const storeUrl =
+    Number.isSafeInteger(storeClinicId) && storeClinicId > 0
+      ? `/store/${storeClinicId}`
+      : null;
 
   const scrollRef = useRef(null);
   const logoutInProgress = useRef(false);
@@ -693,6 +699,21 @@ export default function Sidebar() {
         </div>
 
         <div className="sidebar-footer">
+          {storeUrl && (
+            <a
+              className="sidebar-logout sidebar-store-link"
+              href={storeUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={closeMobile}
+              title="View Store (opens in a new tab)"
+              aria-label="View Store (opens in a new tab)"
+            >
+              <FaStore className="sidebar-icon" />
+              <span className="sidebar-text">View Store</span>
+            </a>
+          )}
+
           <button
             type="button"
             className="sidebar-logout"

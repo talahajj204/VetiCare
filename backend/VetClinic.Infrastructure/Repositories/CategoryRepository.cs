@@ -18,7 +18,9 @@ public class CategoryRepository : ICategoryRepository
     {
         return await _context.Categories
             .AsNoTracking()
-            .Where(category => category.ClinicId == clinicId)
+            .Where(category =>
+                category.ClinicId == clinicId &&
+                !category.IsArchived)
             .OrderBy(category => category.SortOrder)
             .ThenBy(category => category.Title)
             .ToListAsync();
@@ -31,7 +33,8 @@ public class CategoryRepository : ICategoryRepository
         return await _context.Categories
             .FirstOrDefaultAsync(category =>
                 category.Id == id &&
-                category.ClinicId == clinicId);
+                category.ClinicId == clinicId &&
+                !category.IsArchived);
     }
 
     public async Task<bool> ExistsAsync(
@@ -54,7 +57,7 @@ public class CategoryRepository : ICategoryRepository
 
     public void Remove(Category category)
     {
-        _context.Categories.Remove(category);
+        category.IsArchived = true;
     }
 
     public async Task SaveChangesAsync()
@@ -75,7 +78,9 @@ public class CategoryRepository : ICategoryRepository
 
         var categories = await _context.Categories
             .AsTracking()
-            .Where(category => category.ClinicId == clinicId)
+            .Where(category =>
+                category.ClinicId == clinicId &&
+                !category.IsArchived)
             .OrderBy(category => category.Id)
             .ToListAsync();
 

@@ -1876,7 +1876,7 @@ function Vaccinations() {
                         key={`existing-${item.id}`}
                         value={item.status}
                       >
-                        {item.status} (saved value)
+                        {item.status} 
                       </option>
                     ))}
                 </select>

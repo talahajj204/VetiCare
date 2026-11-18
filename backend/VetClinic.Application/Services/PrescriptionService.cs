@@ -181,7 +181,7 @@ public class PrescriptionService : IPrescriptionService
     {
         prescription.PetId = dto.PetId;
         prescription.Date = dto.Date!.Value;
-        prescription.Veterinarian = dto.Veterinarian.Trim();
+        prescription.Veterinarian = dto.Veterinarian?.Trim() ?? string.Empty;
         prescription.Medication = dto.Medication.Trim();
         prescription.Dosage = dto.Dosage.Trim();
         prescription.Instructions =

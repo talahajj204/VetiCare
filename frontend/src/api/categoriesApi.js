@@ -32,6 +32,7 @@ async function request(path = "", options = {}) {
 
       message =
         errors ||
+        problem.message ||
         problem.detail ||
         problem.title ||
         message;

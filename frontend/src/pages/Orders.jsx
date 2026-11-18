@@ -531,32 +531,6 @@ function Orders() {
     <div className="orders-page" style={ordersTheme}>
       <style>{styles}</style>
 
-      <header className="orders-header">
-        <div
-          className="orders-logo"
-          onClick={() => navigate(storeBasePath)}
-        >
-          {branding.logo && (
-            <img
-              src={branding.logo}
-              alt={branding.name || "Store logo"}
-              className="orders-brand-image"
-            />
-          )}
-
-          <span>{branding.name}</span>
-        </div>
-
-        <button
-          type="button"
-          className="orders-store-button"
-          onClick={() => navigate(storeBasePath)}
-        >
-          <FaShoppingBag />
-          Store
-        </button>
-      </header>
-
       <main className="orders-container">
         <button
           type="button"

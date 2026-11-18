@@ -10,9 +10,8 @@ public class CreatePrescriptionDto
     [Required(ErrorMessage = "Please select a date.")]
     public DateOnly? Date { get; set; }
 
-    [Required]
     [MaxLength(200)]
-    public string Veterinarian { get; set; } = string.Empty;
+    public string? Veterinarian { get; set; }
 
     [Required]
     [MaxLength(200)]

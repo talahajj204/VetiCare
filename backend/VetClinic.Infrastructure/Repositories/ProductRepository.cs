@@ -20,7 +20,9 @@ public class ProductRepository : IProductRepository
         return await _context.Products
             .AsNoTracking()
             .Include(product => product.Category)
-            .Where(product => product.ClinicId == clinicId)
+            .Where(product =>
+                product.ClinicId == clinicId &&
+                !product.IsArchived)
             .OrderBy(product => product.Name)
             .ThenBy(product => product.Id)
             .ToListAsync();
@@ -34,7 +36,8 @@ public class ProductRepository : IProductRepository
             .Include(product => product.Category)
             .FirstOrDefaultAsync(product =>
                 product.Id == id &&
-                product.ClinicId == clinicId);
+                product.ClinicId == clinicId &&
+                !product.IsArchived);
     }
 
     public async Task<bool> ExistsAsync(

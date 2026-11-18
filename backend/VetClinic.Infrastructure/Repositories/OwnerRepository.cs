@@ -18,7 +18,7 @@ public class OwnerRepository : IOwnerRepository
     {
         return await _context.Owners
             .AsNoTracking()
-            .Where(owner => owner.ClinicId == clinicId)
+            .Where(owner => owner.ClinicId == clinicId && !owner.IsArchived)
             .OrderBy(owner => owner.LastName)
             .ThenBy(owner => owner.FirstName)
             .ToListAsync();
@@ -31,7 +31,8 @@ public class OwnerRepository : IOwnerRepository
         return await _context.Owners
             .SingleOrDefaultAsync(owner =>
                 owner.Id == id &&
-                owner.ClinicId == clinicId);
+                owner.ClinicId == clinicId &&
+                !owner.IsArchived);
     }
 
     public async Task<Owner> AddAsync(Owner owner)
@@ -50,7 +51,7 @@ public class OwnerRepository : IOwnerRepository
 
     public async Task DeleteAsync(Owner owner)
     {
-        _context.Owners.Remove(owner);
+        owner.IsArchived = true;
 
         await _context.SaveChangesAsync();
     }

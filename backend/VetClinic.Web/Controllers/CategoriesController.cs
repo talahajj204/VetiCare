@@ -168,6 +168,32 @@ public class CategoriesController : ControllerBase
 
         try
         {
+            var categoryExists = await _context.Categories
+                .AnyAsync(category =>
+                    category.Id == id &&
+                    category.ClinicId == clinicId.Value &&
+                    !category.IsArchived);
+
+            if (!categoryExists)
+            {
+                return NotFound();
+            }
+
+            var products = await _context.Products
+                .AsTracking()
+                .Where(product =>
+                    product.ClinicId == clinicId.Value &&
+                    product.CategoryId == id)
+                .ToListAsync();
+
+            foreach (var product in products)
+            {
+                product.IsArchived = true;
+                product.ShowOnStore = false;
+                product.ShowOnPOS = false;
+                product.Featured = false;
+            }
+
             var deleted = await _service.DeleteAsync(
                 id,
                 clinicId.Value);

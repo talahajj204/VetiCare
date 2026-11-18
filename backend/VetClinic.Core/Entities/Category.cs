@@ -16,5 +16,7 @@ public class Category
 
     public int SortOrder { get; set; }
 
+    public bool IsArchived { get; set; }
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }

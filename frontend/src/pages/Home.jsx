@@ -4,7 +4,6 @@ import {
   useOutletContext,
 } from "react-router-dom";
 
-import StoreHeader from "./StoreHeader";
 
 import { getStoreProducts } from "../api/storeProductsApi";
 import { getStoreCategories } from "../api/storeCategoriesApi";
@@ -513,7 +512,7 @@ function Home() {
     "--home-button-text": colors.buttonTextColor,
   };  return (
     <div className="home-page" style={homeColors}>
-      <StoreHeader />
+      
 
       <style>{`
         .home-page {

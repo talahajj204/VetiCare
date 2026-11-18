@@ -130,7 +130,11 @@ public class ProductService : IProductService
             return false;
         }
 
-        _repository.Remove(product);
+        product.IsArchived = true;
+        product.ShowOnStore = false;
+        product.ShowOnPOS = false;
+        product.Featured = false;
+
         await _repository.SaveChangesAsync();
 
         return true;

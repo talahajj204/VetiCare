@@ -5,7 +5,6 @@ import {
   useSearchParams,
 } from "react-router-dom";
 
-import StoreHeader from "./StoreHeader";
 import { getStoreProducts } from "../api/storeProductsApi";
 import { getPublicStoreSettings } from "../api/storeSettingsApi";
 
@@ -534,7 +533,7 @@ function Products() {
     "--button-text": colors.buttonTextColor,
   };  return (
     <div className="products-page" style={pageColors}>
-      <StoreHeader />
+      
 
       <style>{`
         .products-page,

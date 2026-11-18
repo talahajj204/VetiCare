@@ -1625,6 +1625,27 @@ function POS() {
           .pos-success-card p { color: #667085; font-size: 13px; line-height: 1.6; }
           .pos-success-button { margin-top: 12px; }
 
+          @media (min-width: 951px) {
+            .pos-content {
+              grid-template-rows: minmax(0, 1fr);
+            }
+
+            .pos-products-section,
+            .pos-cart-panel {
+              min-height: 0;
+            }
+
+            .pos-cart-header,
+            .pos-cart-footer {
+              flex-shrink: 0;
+            }
+
+            .pos-cart-body {
+              flex: 1 1 0;
+              overscroll-behavior-y: contain;
+            }
+          }
+
           @media (max-width: 1100px) {
             .pos-content { grid-template-columns: minmax(0, 1fr) 300px; }
             .pos-products-grid { grid-template-columns: repeat(auto-fill, minmax(125px, 1fr)); }

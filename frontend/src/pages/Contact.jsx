@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { useOutletContext } from "react-router-dom";
 
-import StoreHeader from "./StoreHeader";
 import { getPublicStoreSettings } from "../api/storeSettingsApi";
 
 import {
@@ -758,7 +757,7 @@ function Contact() {
         }
       `}</style>
 
-      <StoreHeader />
+      
 
       <section className="contact-top">
         <div className="contact-top-badge">

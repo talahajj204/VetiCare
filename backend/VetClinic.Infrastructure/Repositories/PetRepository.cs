@@ -19,7 +19,7 @@ public class PetRepository : IPetRepository
         return await _context.Pets
             .AsNoTracking()
             .Include(pet => pet.Owner)
-            .Where(pet => pet.ClinicId == clinicId)
+            .Where(pet => pet.ClinicId == clinicId && !pet.IsArchived)
             .OrderBy(pet => pet.Name)
             .ThenBy(pet => pet.Id)
             .ToListAsync();
@@ -33,7 +33,8 @@ public class PetRepository : IPetRepository
             .Include(pet => pet.Owner)
             .SingleOrDefaultAsync(pet =>
                 pet.Id == id &&
-                pet.ClinicId == clinicId);
+                pet.ClinicId == clinicId &&
+                !pet.IsArchived);
     }
 
     public async Task<Pet> AddAsync(Pet pet)
@@ -52,7 +53,7 @@ public class PetRepository : IPetRepository
 
     public async Task DeleteAsync(Pet pet)
     {
-        _context.Pets.Remove(pet);
+        pet.IsArchived = true;
 
         await _context.SaveChangesAsync();
     }

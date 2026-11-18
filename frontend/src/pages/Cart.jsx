@@ -653,47 +653,12 @@ function Cart() {
       submittingRef.current = false;
       setIsSubmitting(false);
     }
-  };  const Header = () => (
-    <header className="cart-header">
-      <div
-        className="cart-logo"
-        onClick={() => navigate(storeBasePath)}
-      >
-        {branding.logo && (
-          <img
-            src={branding.logo}
-            alt={branding.name || "Clinic"}
-            className="cart-brand-image"
-          />
-        )}
-        <span>{branding.name}</span>
-      </div>
-
-      <div className="cart-header-right">
-        <button
-          type="button"
-          className="cart-orders-button"
-          onClick={() => navigate(`${storeBasePath}/orders`)}
-        >
-          <FaClipboardList />
-          My Orders
-        </button>
-
-        {!orderComplete && (
-          <div className="cart-header-cart">
-            <FaShoppingCart />
-            <span>{totalItems}</span>
-          </div>
-        )}
-      </div>
-    </header>
-  );
+  };
 
   if (orderComplete && savedOrder) {
     return (
       <div className="cart-page" style={pageColors}>
         <style>{styles}</style>
-        <Header />
 
         <main className="cart-success-wrapper">
           <section className="cart-success-card">
@@ -744,7 +709,6 @@ function Cart() {
   return (
     <div className="cart-page" style={pageColors}>
       <style>{styles}</style>
-      <Header />
 
       <main className="cart-container">
         <button

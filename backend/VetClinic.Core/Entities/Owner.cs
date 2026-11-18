@@ -2,6 +2,8 @@ namespace VetClinic.Core.Entities;
 
 public class Owner
 {
+    public bool IsArchived { get; set; }
+
     public int Id { get; set; }
 
     public int ClinicId { get; set; }

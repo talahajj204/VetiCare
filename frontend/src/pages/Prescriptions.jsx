@@ -747,7 +747,6 @@ function Prescriptions() {
     }
 
     for (const [field, label] of [
-      ["veterinarian", "Veterinarian"],
       ["medication", "Medication"],
       ["dosage", "Dosage"],
     ]) {
@@ -1324,6 +1323,19 @@ function Prescriptions() {
         </div>
 
        
+
+        <div className="form-field">
+          <label htmlFor="prescription-veterinarian">Veterinarian</label>
+          <input
+            id="prescription-veterinarian"
+            type="text"
+            name="veterinarian"
+            value={data.veterinarian || ""}
+            onChange={onChange}
+            maxLength={200}
+            disabled={isSaving}
+          />
+        </div>
 
         <div className="form-row">
           <div className="form-field">

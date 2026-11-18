@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import {
   useNavigate,
-  useOutletContext,
 } from "react-router-dom";
 
 import {
@@ -97,9 +96,8 @@ function readCartCount(clinicId) {
   }
 }
 
-function StoreHeader() {
+function StoreHeader({ clinicId, storeBasePath }) {
   const navigate = useNavigate();
-  const { clinicId, storeBasePath } = useOutletContext();
 
   const [branding, setBranding] = useState(() => ({
     clinicId: String(clinicId),
@@ -742,7 +740,7 @@ export default StoreHeader;const headerStyles = `
   background: var(--shx-primary);
   color: #fff;
   box-shadow: 0 7px 25px rgba(0,0,0,.09);
-  font-family: inherit;
+  font-family: Arial, Helvetica, sans-serif;
   direction: ltr;
 }
 

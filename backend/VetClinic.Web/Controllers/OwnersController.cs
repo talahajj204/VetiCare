@@ -161,6 +161,16 @@ public class OwnersController : ControllerBase
 
             return NoContent();
         }
+        catch (DbUpdateException exception) when (
+            exception.InnerException is Microsoft.Data.SqlClient.SqlException sql &&
+            sql.Number == 547 &&
+            sql.Message.Contains("FK_Pets_Owners_ClinicId_OwnerId", StringComparison.Ordinal))
+        {
+            return Conflict(new
+            {
+                message = "This owner still has pets linked to their record. Keep the owner inactive or transfer the pets before deleting."
+            });
+        }
         catch (ValidationException exception)
         {
             ModelState.AddModelError(

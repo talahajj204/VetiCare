@@ -1,3 +1,4 @@
+import { Fragment as StoreFragment } from "react";
 import SubscriptionGuard from "./components/SubscriptionGuard";
 import { useEffect, useState } from "react";
 import {
@@ -331,6 +332,8 @@ function StoreUnavailable() {
   );
 }
 
+import StoreHeader from "./pages/StoreHeader";
+
 function StoreRoute() {
   const { clinicId } = useParams();
 
@@ -343,14 +346,16 @@ function StoreRoute() {
     return <StoreUnavailable />;
   }
 
+  const store = {
+    clinicId: id,
+    storeBasePath: `/store/${clinicId}`,
+  };
+
   return (
-    <Outlet
-      key={clinicId}
-      context={{
-        clinicId: id,
-        storeBasePath: `/store/${clinicId}`,
-      }}
-    />
+    <StoreFragment key={clinicId}>
+      <StoreHeader {...store} />
+      <Outlet context={store} />
+    </StoreFragment>
   );
 }
 

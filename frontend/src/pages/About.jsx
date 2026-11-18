@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { useOutletContext } from "react-router-dom";
-import StoreHeader from "./StoreHeader";
 import { getPublicStoreSettings } from "../api/storeSettingsApi";
 
 import {
@@ -206,7 +205,7 @@ function About() {
     <div className="about-page" style={aboutColors}>
       <style>{aboutStyles}</style>
 
-      <StoreHeader />
+      
 
       <main className="about-main">
         {settingsError && (
